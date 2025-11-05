@@ -10,6 +10,7 @@ export interface IUser extends Document {
 
 const UserSchema: Schema = new Schema(
   {
+
     email: {
       type: String,
       required: true,
@@ -32,6 +33,11 @@ const UserSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+// Indexes for performance
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ role: 1 });
+UserSchema.index({ createdAt: -1 });
 
 export default mongoose.model<IUser>('User', UserSchema);
 

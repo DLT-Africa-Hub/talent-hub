@@ -26,7 +26,7 @@ const MatchSchema: Schema = new Schema(
       type: Number,
       required: true,
       min: 0,
-      max: 1,
+      max: 100,
     },
     status: {
       type: String,

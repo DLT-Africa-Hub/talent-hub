@@ -89,5 +89,14 @@ const JobSchema: Schema = new Schema(
   }
 );
 
+// Indexes for performance
+JobSchema.index({ companyId: 1 });
+JobSchema.index({ status: 1 });
+JobSchema.index({ 'requirements.skills': 1 });
+JobSchema.index({ location: 1 });
+JobSchema.index({ 'salary.min': 1, 'salary.max': 1 });
+JobSchema.index({ createdAt: -1 });
+JobSchema.index({ companyId: 1, status: 1 }); // Compound index for company jobs by status
+
 export default mongoose.model<IJob>('Job', JobSchema);
 

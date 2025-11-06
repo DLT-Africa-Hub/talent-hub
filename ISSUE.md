@@ -56,20 +56,17 @@ This document tracks all features and tasks needed to complete the Talent Hub pl
 
 **Tasks:**
 
-- [ ] `GET /api/companies/profile` - Get company profile
-- [ ] `POST /api/companies/profile` - Create company profile
-- [ ] `PUT /api/companies/profile` - Update company profile
-- [ ] `POST /api/companies/jobs` - Create job posting
-- [ ] `GET /api/companies/jobs` - Get all company jobs
-- [ ] `GET /api/companies/jobs/:jobId` - Get specific job details
-- [ ] `PUT /api/companies/jobs/:jobId` - Update job posting
-- [ ] `DELETE /api/companies/jobs/:jobId` - Delete job posting
-- [ ] `GET /api/companies/jobs/:jobId/matches` - Get candidates for a job
-- [ ] `PUT /api/companies/jobs/:jobId/matches/:matchId` - Accept/reject candidate
-- [ ] `GET /api/companies/applications` - Get all applications
-- [ ] Company logo upload endpoint
-- [ ] Job duplication endpoint
-- [ ] Bulk job operations endpoint
+- [x] `GET /api/companies/profile` - Get company profile
+- [x] `POST /api/companies/profile` - Create company profile
+- [x] `PUT /api/companies/profile` - Update company profile
+- [x] `POST /api/companies/jobs` - Create job posting
+- [x] `GET /api/companies/jobs` - Get all company jobs
+- [x] `GET /api/companies/jobs/:jobId` - Get specific job details
+- [x] `PUT /api/companies/jobs/:jobId` - Update job posting
+- [x] `DELETE /api/companies/jobs/:jobId` - Delete job posting
+- [x] `GET /api/companies/jobs/:jobId/matches` - Get candidates for a job
+- [x] `PUT /api/companies/jobs/:jobId/matches/:matchId` - Accept/reject candidate
+- [x] `GET /api/companies/applications` - Get all applications
 
 ---
 

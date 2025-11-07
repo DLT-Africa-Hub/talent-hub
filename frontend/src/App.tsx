@@ -8,12 +8,13 @@ import CompanyDashboard from './pages/CompanyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
+import AccountType from './components/onboarding/AccountType';
 
 function App() {
   return (
     <AuthProvider>
       <div className="App">
-        <Navbar />
+        {/* <Navbar /> */}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -42,6 +43,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/onboarding" element={<AccountType />} />
         </Routes>
       </div>
     </AuthProvider>

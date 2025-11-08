@@ -3,6 +3,7 @@ import { GraduateForm } from '../constants/type';
 import Personalnfo from '../components/onboarding/graduateOnboarding/Personalnfo';
 import RoleSelection from '../components/onboarding/graduateOnboarding/RoleSelection';
 import SkillSelection from '../components/onboarding/graduateOnboarding/SkillSelection';
+import { IoMdArrowBack } from 'react-icons/io';
 
 const GraduateOnboarding: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -10,14 +11,18 @@ const GraduateOnboarding: React.FC = () => {
     firstName: '',
     lastName: '',
     skills: [],
-    roles: '',
+    roles: [],
     interests: [],
     socials: {},
     portfolio: '',
     rank: '',
+    phoneNo:"",
+    yearsOfExperience:"",
     createdAt: new Date(),
     updatedAt: new Date(),
   });
+
+  console.log(form)
 
   const handleChange = (patch: Partial<GraduateForm>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -27,10 +32,16 @@ const GraduateOnboarding: React.FC = () => {
   const prevStep = () => setStep((prev) => Math.max(0, prev - 1));
 
   return (
-    <div className="flex flex-col items-center justify-center  bg-white md:py-[80px] md:px-[150px] font-inter">
-      <div className="flex flex-col md:items-center pt-[75px] px-5 md:justify-center w-full rounded-[50px] bg-[#F9F9F9] md:py-[124px] gap-[30px]">
+    <div className="flex flex-col items-center justify-center  lg:h-screen  bg-white md:py-[80px] md:px-[150px] font-inter">
+      <div className="flex flex-col md:items-center pt-[75px] px-5 md:justify-center w-full rounded-[50px] bg-[#F9F9F9] md:py-[85px] gap-[30px]">
+      <div className='flex flex-col w-full gap-2.5'>
+      {step !== 0 && (
+        <div className=" flex items-center cursor-pointer text-[18px] gap-2.5 justify-start " onClick={prevStep}>
+        <IoMdArrowBack />Previous
+        </div>
+      )}
         {/* ✅ Progress Bar */}
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col md:items-center  gap-2.5 w-full">
           <p className="text-left text-[#1C1C1CBF] text-[18px] font-normal">
             Step {step + 1} of 3
           </p>
@@ -42,6 +53,7 @@ const GraduateOnboarding: React.FC = () => {
             />
           </div>
         </div>
+      </div>
 
         {/* ✅ Form Steps */}
         {step === 0 && (

@@ -1,6 +1,9 @@
+import { CiMail } from 'react-icons/ci';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
+import { useNavigate } from 'react-router-dom';
 
 export interface Company {
+  id:number;
   name: string;
   role: string;
   match: number;
@@ -20,8 +23,23 @@ interface CompanyCardProps {
 const CompanyCard: React.FC<CompanyCardProps> = ({ 
   company, 
   buttonText = "Preview",
-  onButtonClick 
+ 
 }) => {
+
+  const navigate =useNavigate()
+
+  const handleButtonClick = (companyId: number, buttonText: string) => {
+    console.log(companyId)
+    if(buttonText === "Preview"){
+      navigate(`/company-preview/${companyId}`)
+    }
+    if(buttonText === "Get in Touch"){
+      navigate(`/contactCompany/${companyId}`)
+    }
+
+    
+  };
+
   return (
     <div className='flex flex-col items-center justify-between gap-[16px] py-[18px] px-[17px] border border-[#2E5EAA33] rounded-[10px] bg-white'>
       <div className='w-full h-[232px] relative'>
@@ -53,9 +71,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         </p>
       </div>
       <button 
-        onClick={onButtonClick}
-        className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] font-medium transition-all duration-200 hover:bg-[#A9B9D3]"
+        onClick={() => handleButtonClick(company.id, buttonText === "Preview"  ? "Preview" : "Get in Touch")}
+        className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 hover:bg-[#A9B9D3]"
       >
+           <CiMail className={`text-[24px] ${buttonText === "Preview" && "hidden"}`}/>
         {buttonText}
       </button>
     </div>

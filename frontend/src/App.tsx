@@ -1,13 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import GraduateDashboard from './pages/GraduateDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
-import Navbar from './components/Navbar';
 import AccountType from './pages/AccountType';
 import GraduateOnboarding from './pages/GraduateOnboarding';
 import SkillAssessment from './pages/SkillAssessment';
@@ -21,7 +18,7 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
-        {/* <Navbar /> */}
+      
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<AuthPage mode='login'/>} />

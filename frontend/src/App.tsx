@@ -10,6 +10,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import AccountType from './pages/AccountType';
 import GraduateOnboarding from './pages/GraduateOnboarding';
+import SkillAssessment from './pages/SkillAssessment';
+import Layout from './components/layout/Layout';
+import ExploreCompany from './pages/ExploreCompany';
 
 function App() {
   return (
@@ -46,6 +49,11 @@ function App() {
           />
           <Route path="/role" element={<AccountType />} />
           <Route path="/onboarding" element={<GraduateOnboarding />} />
+          <Route path="/assessment" element={<SkillAssessment />} />
+          <Route path="/explore" element={<Layout >
+            <ExploreCompany/>
+          </Layout>} />
+          
         </Routes>
       </div>
     </AuthProvider>

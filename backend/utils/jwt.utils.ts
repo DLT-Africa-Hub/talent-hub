@@ -1,26 +1,32 @@
 import jwt from 'jsonwebtoken';
+import type { StringValue } from 'ms';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret';
-const JWT_EXPIRE = process.env.JWT_EXPIRE || '7d';
+const DEFAULT_SECRET = 'default-secret';
 
-interface TokenPayload {
+const ACCESS_TOKEN_SECRET =
+  process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || DEFAULT_SECRET;
+const ACCESS_TOKEN_EXPIRE: StringValue | number =
+  (process.env.JWT_ACCESS_EXPIRE as StringValue | undefined) || '15m';
+
+export interface AccessTokenPayload {
   userId: string;
   role: string;
+  sessionId: string;
 }
 
 /**
- * Generate JWT token
+ * Generate a signed JWT access token.
  */
-export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRE,
+export function generateAccessToken(payload: AccessTokenPayload): string {
+  return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
+    expiresIn: ACCESS_TOKEN_EXPIRE,
   });
 }
 
 /**
- * Verify JWT token
+ * Verify and decode a JWT access token.
  */
-export function verifyToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+export function verifyAccessToken(token: string): AccessTokenPayload {
+  return jwt.verify(token, ACCESS_TOKEN_SECRET) as AccessTokenPayload;
 }
 

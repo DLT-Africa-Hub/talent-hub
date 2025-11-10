@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import Graduate from '../models/Graduate.model';
-import { generateEmbedding, generateFeedback } from '../services/aiService';
+import { generateEmbedding } from '../services/aiService';
 
 /**
  * Get graduate profile
@@ -87,9 +87,6 @@ export const submitAssessment = async (req: Request, res: Response): Promise<voi
       res.status(404).json({ message: 'Profile not found' });
       return;
     }
-
-    // TODO: Get assessment data from request body
-    const assessmentData = req.body;
 
     // Generate embedding for graduate profile
     const profileText = `

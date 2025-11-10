@@ -1,16 +1,23 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
-export interface IUser extends Document {
+export interface IUser {
+  _id: Types.ObjectId;
   email: string;
   password: string;
   role: 'graduate' | 'company' | 'admin';
+  emailVerified: boolean;
+  emailVerifiedAt?: Date;
+  lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const UserSchema: Schema = new Schema(
-  {
+export type UserDocument = HydratedDocument<IUser>;
 
+type UserModel = Model<IUser>;
+
+const UserSchema: Schema<IUser, UserModel> = new Schema(
+  {
     email: {
       type: String,
       required: true,
@@ -28,6 +35,17 @@ const UserSchema: Schema = new Schema(
       enum: ['graduate', 'company', 'admin'],
       required: true,
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    emailVerifiedAt: {
+      type: Date,
+    },
+    lastLoginAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -39,5 +57,5 @@ UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ createdAt: -1 });
 
-export default mongoose.model<IUser>('User', UserSchema);
+export default mongoose.model<IUser, UserModel>('User', UserSchema);
 

@@ -12,19 +12,19 @@ This document tracks all features and tasks needed to complete the Talent Hub pl
 
 **Tasks:**
 
-- [ ] User registration endpoint (graduate, company, admin)
-- [ ] User login with email/password
-- [ ] JWT token generation and validation
-- [ ] Password hashing with bcrypt
-- [ ] Token refresh mechanism
-- [ ] Password reset functionality
-- [ ] Email verification
-- [ ] Session management
-- [ ] Logout functionality
-- [ ] Role-based access control (RBAC)
-- [ ] Route protection middleware
-- [ ] Permission checks for API endpoints
-- [ ] Admin-only route protection
+- [x] User registration endpoint (graduate, company, admin)
+- [x] User login with email/password
+- [x] JWT token generation and validation
+- [x] Password hashing with bcrypt
+- [x] Token refresh mechanism
+- [x] Password reset functionality
+- [x] Email verification
+- [x] Session management
+- [x] Logout functionality
+- [x] Role-based access control (RBAC)
+- [x] Route protection middleware
+- [x] Permission checks for API endpoints
+- [x] Admin-only route protection
 
 ---
 

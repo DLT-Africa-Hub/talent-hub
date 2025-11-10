@@ -1,16 +1,29 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
-export interface IGraduate extends Document {
-  userId: mongoose.Types.ObjectId;
+export interface IEducationDetails {
+  degree: string;
+  field: string;
+  institution: string;
+  graduationYear: number;
+}
+
+export interface IWorkExperience {
+  _id?: Types.ObjectId;
+  company: string;
+  title: string;
+  startDate: Date;
+  endDate?: Date;
+  description?: string;
+}
+
+export interface IGraduate {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
   firstName: string;
   lastName: string;
+  profilePictureUrl?: string;
   skills: string[];
-  education: {
-    degree: string;
-    field: string;
-    institution: string;
-    graduationYear: number;
-  };
+  education: IEducationDetails;
   interests: string[];
   socials?: {
     github?: string;
@@ -18,6 +31,7 @@ export interface IGraduate extends Document {
     linkedin?: string;
   };
   portfolio?: string;
+  workExperiences: IWorkExperience[];
   assessmentData?: {
     submittedAt: Date;
     embedding?: number[];
@@ -28,7 +42,11 @@ export interface IGraduate extends Document {
   updatedAt: Date;
 }
 
-const GraduateSchema: Schema = new Schema(
+export type GraduateDocument = HydratedDocument<IGraduate>;
+
+type GraduateModel = Model<IGraduate>;
+
+const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -43,6 +61,9 @@ const GraduateSchema: Schema = new Schema(
     lastName: {
       type: String,
       required: true,
+    },
+    profilePictureUrl: {
+      type: String,
     },
     skills: {
       type: [String],
@@ -88,6 +109,31 @@ const GraduateSchema: Schema = new Schema(
       type: String,
       required: false, // Manual URL input
     },
+    workExperiences: {
+      type: [
+        {
+          company: {
+            type: String,
+            required: true,
+          },
+          title: {
+            type: String,
+            required: true,
+          },
+          startDate: {
+            type: Date,
+            required: true,
+          },
+          endDate: {
+            type: Date,
+          },
+          description: {
+            type: String,
+          },
+        },
+      ],
+      default: [],
+    },
     assessmentData: {
       submittedAt: Date,
       embedding: [Number],
@@ -111,5 +157,5 @@ GraduateSchema.index({ rank: 1 });
 GraduateSchema.index({ 'assessmentData.submittedAt': -1 });
 GraduateSchema.index({ createdAt: -1 });
 
-export default mongoose.model<IGraduate>('Graduate', GraduateSchema);
+export default mongoose.model<IGraduate, GraduateModel>('Graduate', GraduateSchema);
 

@@ -19,6 +19,9 @@ const sanitizeQueryString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const mapUserResponse = (user: IUser) => ({
   id: user._id.toString(),
   email: user.email,
@@ -47,7 +50,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
 
     const search = sanitizeQueryString(req.query.q ?? req.query.search);
     if (search) {
-      const regex = new RegExp(search, 'i');
+    const regex = new RegExp(escapeRegExp(search), 'i');
       filters.$or = [{ email: regex }];
     }
 

@@ -62,6 +62,7 @@ const getRefreshTokenTtlMs = (): number =>
   );
 
 const REFRESH_TOKEN_TTL_MS = getRefreshTokenTtlMs();
+const USER_TOKEN_HEX_LENGTH = 96;
 const EMAIL_VERIFICATION_TTL_MS = resolveTtlMs(
   'EMAIL_VERIFICATION_TTL_MS',
   'EMAIL_VERIFICATION_DAYS',
@@ -83,6 +84,42 @@ const buildUrlWithToken = (path: string, token: string): string => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${trimmedBase}${normalizedPath}?token=${token}`;
 };
+
+const isValidHexToken = (value: unknown, expectedLength: number): value is string => {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length !== expectedLength) {
+    return false;
+  }
+
+  return /^[a-f0-9]+$/i.test(normalized);
+};
+
+const normalizeEmailInput = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.toLowerCase();
+};
+
+const normalizePasswordInput = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return value.length > 0 ? value : null;
+};
+
+const normalizeHexToken = (value: string): string => value.trim().toLowerCase();
 
 const serializeSession = (session: SessionDocument) => ({
   id: session.id,
@@ -192,7 +229,7 @@ const findActiveTokenByValue = async (
   token: string,
   type: TokenType
 ): Promise<TokenDocument | null> => {
-  const tokenHash = hashToken(token);
+  const tokenHash = hashToken(normalizeHexToken(token));
   const tokenDoc = await Token.findOne({ tokenHash, type });
   if (!tokenDoc || !tokenDoc.isActive()) {
     return null;
@@ -261,7 +298,9 @@ const sendPasswordResetMessage = async (
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, role } = req.body;
+    const { role } = req.body;
+    const email = normalizeEmailInput(req.body?.email);
+    const password = normalizePasswordInput(req.body?.password);
 
     if (!email || !password || !role) {
       res.status(400).json({ message: 'Email, password, and role are required' });
@@ -316,7 +355,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const email = normalizeEmailInput(req.body?.email);
+    const password = normalizePasswordInput(req.body?.password);
 
     if (!email || !password) {
       res.status(400).json({ message: 'Email and password are required' });
@@ -358,12 +398,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const refresh = async (req: Request, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
+    if (!isValidHexToken(refreshToken, 128)) {
       res.status(400).json({ message: 'Refresh token is required' });
       return;
     }
 
-    const refreshTokenHash = hashToken(refreshToken);
+    const normalizedRefreshToken = normalizeHexToken(refreshToken);
+    const refreshTokenHash = hashToken(normalizedRefreshToken);
     const session = await Session.findOne({ refreshTokenHash });
 
     if (!session || !session.isActive()) {
@@ -581,13 +622,14 @@ export const requestEmailVerification = async (
 export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.body;
-    if (!token || typeof token !== 'string') {
+    if (!isValidHexToken(token, USER_TOKEN_HEX_LENGTH)) {
       res.status(400).json({ message: 'Verification token is required' });
       return;
     }
 
+    const normalizedToken = normalizeHexToken(token);
     const tokenDoc = await findActiveTokenByValue(
-      token,
+      normalizedToken,
       TOKEN_TYPES.EMAIL_VERIFICATION
     );
     if (!tokenDoc) {
@@ -627,13 +669,13 @@ export const requestPasswordReset = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { email } = req.body;
-    if (!email || typeof email !== 'string') {
+    const email = normalizeEmailInput(req.body?.email);
+    if (!email) {
       res.status(400).json({ message: 'Email is required' });
       return;
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email });
     if (user) {
       await invalidateExistingTokens(user._id, TOKEN_TYPES.PASSWORD_RESET);
 
@@ -664,24 +706,26 @@ export const requestPasswordReset = async (
  */
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { token, password } = req.body as {
-      token?: string;
-      password?: string;
-    };
+    const { token } = req.body as { token?: unknown };
+    const password = normalizePasswordInput(req.body?.password);
 
-    if (!token || typeof token !== 'string') {
+    if (!isValidHexToken(token, USER_TOKEN_HEX_LENGTH)) {
       res.status(400).json({ message: 'Reset token is required' });
       return;
     }
 
-    if (!password || typeof password !== 'string' || password.trim().length < 8) {
+    if (!password || password.trim().length < 8) {
       res.status(400).json({
         message: 'Password must be at least 8 characters long',
       });
       return;
     }
 
-    const tokenDoc = await findActiveTokenByValue(token, TOKEN_TYPES.PASSWORD_RESET);
+    const normalizedToken = normalizeHexToken(token);
+    const tokenDoc = await findActiveTokenByValue(
+      normalizedToken,
+      TOKEN_TYPES.PASSWORD_RESET
+    );
     if (!tokenDoc) {
       res.status(400).json({ message: 'Invalid or expired token' });
       return;

@@ -1,48 +1,44 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-
-interface JwtPayload {
-  userId: string;
-  role: string;
-}
-
-// Extend Express Request to include user info
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        role: string;
-      };
-    }
-  }
-}
+import Session from '../models/Session.model';
+import { verifyAccessToken } from '../utils/jwt.utils';
 
 /**
  * JWT Authentication Middleware
  * Verifies JWT token and attaches user info to request object
  */
-export const authenticate = (
+export const authenticate = async (
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   try {
-    const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
+      : undefined;
 
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
       return;
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'default-secret'
-    ) as JwtPayload;
+    const decoded = verifyAccessToken(token);
+
+    const session = await Session.findById(decoded.sessionId);
+    if (!session || !session.isActive()) {
+      res.status(401).json({ message: 'Invalid or expired session' });
+      return;
+    }
+
+    if (!session.user.equals(decoded.userId)) {
+      res.status(401).json({ message: 'Session user mismatch' });
+      return;
+    }
 
     req.user = {
       userId: decoded.userId,
       role: decoded.role,
+      sessionId: decoded.sessionId,
     };
 
     next();

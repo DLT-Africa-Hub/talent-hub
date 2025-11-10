@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import User from '../models/User.model';
-import Graduate from '../models/Graduate.model';
-import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
 
@@ -9,7 +7,7 @@ import Match from '../models/Match.model';
  * Get all users
  * GET /api/admin/users
  */
-export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+export const getAllUsers = async (_req: Request, res: Response): Promise<void> => {
   try {
     // TODO: Add pagination
     const users = await User.find().select('-password');
@@ -24,7 +22,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
  * Get all jobs
  * GET /api/admin/jobs
  */
-export const getAllJobs = async (req: Request, res: Response): Promise<void> => {
+export const getAllJobs = async (_req: Request, res: Response): Promise<void> => {
   try {
     // TODO: Add pagination and filters
     const jobs = await Job.find()
@@ -41,7 +39,7 @@ export const getAllJobs = async (req: Request, res: Response): Promise<void> => 
  * Get all matches
  * GET /api/admin/matches
  */
-export const getAllMatches = async (req: Request, res: Response): Promise<void> => {
+export const getAllMatches = async (_req: Request, res: Response): Promise<void> => {
   try {
     // TODO: Add pagination and filters
     const matches = await Match.find()
@@ -59,7 +57,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
  * Get AI activity and performance logs
  * GET /api/admin/ai-stats
  */
-export const getAIStats = async (req: Request, res: Response): Promise<void> => {
+export const getAIStats = async (_req: Request, res: Response): Promise<void> => {
   try {
     // TODO: Implement AI activity tracking
     // Track embedding generations, matches, feedback requests

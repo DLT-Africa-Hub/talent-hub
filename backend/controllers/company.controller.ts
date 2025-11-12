@@ -5,6 +5,7 @@ import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
 import Application from '../models/Application.model';
+import Graduate from '../models/Graduate.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
 import { queueJobMatching } from '../services/aiMatching.service';
 import {
@@ -21,6 +22,7 @@ import {
 } from '../utils/validation.utils';
 // Import middleware to ensure global types are loaded
 import '../middleware/auth.middleware';
+import { createNotification } from '../services/notification.service';
 
 /**
  * Get company profile
@@ -650,7 +652,37 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
   match.status = validatedStatus;
   await match.save();
 
-  const updatedMatch = await Match.findById(match._id)
+  const matchId = match._id as mongoose.Types.ObjectId;
+
+  try {
+    const graduate = await Graduate.findById(match.graduateId)
+      .select('firstName lastName userId')
+      .lean();
+
+    if (graduate?.userId) {
+      await createNotification({
+        userId: graduate.userId,
+        type: 'match',
+        title: validatedStatus === 'accepted' ? 'Match accepted' : 'Match rejected',
+        message: `${company.companyName} ${validatedStatus === 'accepted' ? 'accepted' : 'rejected'} your match for ${job.title}`,
+        relatedId: matchId,
+        relatedType: 'match',
+        email: {
+          subject: `Your match for ${job.title} was ${validatedStatus}`,
+          text: [
+            `Hi ${graduate.firstName ?? 'there'},`,
+            '',
+            `${company.companyName} has ${validatedStatus} your match for "${job.title}".`,
+            'Sign in to Talent Hub to review the details.',
+          ].join('\n'),
+        },
+      });
+    }
+  } catch (notificationError) {
+    console.error('Failed to notify graduate about match status change:', notificationError);
+  }
+
+  const updatedMatch = await Match.findById(matchId)
     .populate({
       path: 'graduateId',
       select: 'firstName lastName skills education rank',

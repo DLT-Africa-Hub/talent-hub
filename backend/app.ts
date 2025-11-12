@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes';
 import graduateRoutes from './routes/graduate.routes';
 import companyRoutes from './routes/company.routes';
 import adminRoutes from './routes/admin.routes';
+import notificationRoutes from './routes/notification.routes';
 import { loggingMiddleware } from './middleware/logging.middleware';
 import { responseFormatter } from './middleware/response.middleware';
 import { apiLimiter } from './middleware/rateLimit.middleware';
@@ -70,6 +71,7 @@ app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/graduates`, graduateRoutes);
 app.use(`${API_PREFIX}/companies`, companyRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
+app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -4,12 +4,14 @@ import Graduate, { GraduateDocument } from '../models/Graduate.model';
 import Match from '../models/Match.model';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
+import Company from '../models/Company.model';
 import {
   AIServiceError,
   generateFeedback,
   generateProfileEmbedding,
 } from '../services/aiService';
 import { queueGraduateMatching } from '../services/aiMatching.service';
+import { createNotification } from '../services/notification.service';
 
 const { ObjectId } = mongoose.Types;
 
@@ -1038,11 +1040,15 @@ export const applyToJob = async (
       return;
     }
 
-    const job = await Job.findById(jobId);
+    const job = await Job.findById(jobId).select('title companyId status').lean();
     if (!job || job.status !== 'active') {
       res.status(404).json({ message: 'Job not found or not active' });
       return;
     }
+
+    const company = await Company.findById(job.companyId)
+      .select('userId companyName')
+      .lean();
 
     const existingApplication = await Application.findOne({
       graduateId: graduate._id,
@@ -1073,10 +1079,36 @@ export const applyToJob = async (
       resume: typeof resume === 'string' ? resume.trim() : undefined,
     });
 
+    const persistedApplicationId = application._id as mongoose.Types.ObjectId;
+
     res.status(201).json({
       message: 'Application submitted',
       application: application.toObject({ versionKey: false }),
     });
+
+    if (company?.userId) {
+      try {
+        await createNotification({
+          userId: company.userId,
+          type: 'application',
+          title: 'New application received',
+          message: `${graduate.firstName} ${graduate.lastName} applied to ${job.title}`,
+          relatedId: persistedApplicationId,
+          relatedType: 'application',
+          email: {
+            subject: `New application for ${job.title}`,
+            text: [
+              `Hi ${company.companyName || 'there'},`,
+              '',
+              `${graduate.firstName} ${graduate.lastName} just applied to your job "${job.title}".`,
+              'Log in to Talent Hub to review the application details.',
+            ].join('\n'),
+          },
+        });
+      } catch (error) {
+        console.error('Failed to create company notification for application:', error);
+      }
+    }
   } catch (error) {
     console.error('Apply to job error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -1139,8 +1171,8 @@ export const updateApplicationStatus = async (
       return;
     }
 
-    const { applicationId } = req.params;
-    if (!applicationId || !ObjectId.isValid(applicationId)) {
+    const { applicationId: applicationIdParam } = req.params;
+    if (!applicationIdParam || !ObjectId.isValid(applicationIdParam)) {
       res.status(400).json({ message: 'Invalid applicationId' });
       return;
     }
@@ -1152,7 +1184,7 @@ export const updateApplicationStatus = async (
     }
 
     const application = await Application.findOne({
-      _id: applicationId,
+      _id: applicationIdParam,
       graduateId: graduate._id,
     });
     if (!application) {
@@ -1171,6 +1203,42 @@ export const updateApplicationStatus = async (
     application.status = 'withdrawn';
     application.reviewedAt = new Date();
     await application.save();
+
+    const persistedApplicationId = application._id as mongoose.Types.ObjectId;
+
+    try {
+      const job = await Job.findById(application.jobId)
+        .select('title companyId')
+        .lean();
+
+      if (job?.companyId) {
+        const company = await Company.findById(job.companyId)
+          .select('userId companyName')
+          .lean();
+
+        if (company?.userId) {
+          await createNotification({
+            userId: company.userId,
+            type: 'application',
+            title: 'Application withdrawn',
+            message: `${graduate.firstName} ${graduate.lastName} withdrew their application for ${job.title}`,
+            relatedId: persistedApplicationId,
+            relatedType: 'application',
+            email: {
+              subject: `Application withdrawn for ${job.title}`,
+              text: [
+                `Hi ${company.companyName || 'there'},`,
+                '',
+                `${graduate.firstName} ${graduate.lastName} has withdrawn their application for "${job.title}".`,
+                'Sign in to Talent Hub to update your pipeline if needed.',
+              ].join('\n'),
+            },
+          });
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to notify company about withdrawn application:', notificationError);
+    }
 
     res.json({
       message: 'Application status updated',

@@ -4,7 +4,12 @@ import Graduate, { GraduateDocument } from '../models/Graduate.model';
 import Match from '../models/Match.model';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
-import { generateEmbedding, generateFeedback } from '../services/aiService';
+import {
+  AIServiceError,
+  generateFeedback,
+  generateProfileEmbedding,
+} from '../services/aiService';
+import { queueGraduateMatching } from '../services/aiMatching.service';
 
 const { ObjectId } = mongoose.Types;
 
@@ -807,7 +812,22 @@ export const submitAssessment = async (
       summary,
       additionalContext
     );
-    const embedding = await generateEmbedding(profileText);
+
+    let embedding: number[];
+    try {
+      embedding = await generateProfileEmbedding(profileText);
+    } catch (embeddingError) {
+      if (embeddingError instanceof AIServiceError) {
+        res
+          .status(embeddingError.statusCode ?? 503)
+          .json({ message: embeddingError.message });
+        return;
+      }
+
+      console.error('Unexpected embedding generation error:', embeddingError);
+      res.status(500).json({ message: 'Failed to generate assessment embedding' });
+      return;
+    }
 
     let feedback: string | undefined;
     if (
@@ -840,7 +860,13 @@ export const submitAssessment = async (
         );
         feedback = aiFeedback.feedback;
       } catch (feedbackError) {
-        console.error('Feedback generation error:', feedbackError);
+        if (feedbackError instanceof AIServiceError) {
+          console.error('Feedback generation error:', feedbackError.message, {
+            statusCode: feedbackError.statusCode,
+          });
+        } else {
+          console.error('Feedback generation error:', feedbackError);
+        }
       }
     }
 
@@ -851,6 +877,8 @@ export const submitAssessment = async (
     };
 
     await graduate.save();
+
+    queueGraduateMatching(graduate._id);
 
     res.json({
       message: 'Assessment submitted successfully',

@@ -1,10 +1,8 @@
 import jwt from 'jsonwebtoken';
 import type { StringValue } from 'ms';
+import { securityConfig } from '../config/secrets';
 
-const DEFAULT_SECRET = 'default-secret';
-
-const ACCESS_TOKEN_SECRET =
-  process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || DEFAULT_SECRET;
+const ACCESS_TOKEN_SECRET = securityConfig.jwt.accessSecret;
 const ACCESS_TOKEN_EXPIRE: StringValue | number =
   (process.env.JWT_ACCESS_EXPIRE as StringValue | undefined) || '15m';
 

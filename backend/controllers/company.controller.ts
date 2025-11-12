@@ -5,7 +5,8 @@ import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
 import Application from '../models/Application.model';
-import { generateEmbedding } from '../services/aiService';
+import { AIServiceError, generateJobEmbedding } from '../services/aiService';
+import { queueJobMatching } from '../services/aiMatching.service';
 import {
   validateRequiredString,
   validateOptionalString,
@@ -215,8 +216,13 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 
   let embedding: number[];
   try {
-    embedding = await generateEmbedding(jobText);
+    embedding = await generateJobEmbedding(jobText);
   } catch (error) {
+    if (error instanceof AIServiceError) {
+      res.status(error.statusCode ?? 503).json({ message: error.message });
+      return;
+    }
+
     console.error('Error generating embedding:', error);
     res.status(500).json({ message: 'Failed to generate job embedding' });
     return;
@@ -242,6 +248,8 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   });
 
   await job.save();
+
+  queueJobMatching(job._id as mongoose.Types.ObjectId);
 
   res.status(201).json({
     message: 'Job created successfully',
@@ -433,8 +441,13 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     `;
 
     try {
-      job.embedding = await generateEmbedding(jobText);
+      job.embedding = await generateJobEmbedding(jobText);
     } catch (error) {
+      if (error instanceof AIServiceError) {
+        res.status(error.statusCode ?? 503).json({ message: error.message });
+        return;
+      }
+
       console.error('Error regenerating embedding:', error);
       res.status(500).json({ message: 'Failed to regenerate job embedding' });
       return;
@@ -449,6 +462,10 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     message: 'Job updated successfully',
     job: updatedJob,
   });
+
+  if (needsEmbeddingUpdate) {
+    queueJobMatching(job._id as mongoose.Types.ObjectId);
+  }
 };
 
 /**

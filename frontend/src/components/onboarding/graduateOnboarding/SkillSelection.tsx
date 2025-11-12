@@ -78,8 +78,8 @@ const SkillSelection: React.FC<Props> = ({ onChange, form}) => {
               onClick={() => handleSelectSkill(skill)}
               className={`flex items-center border-[1px] py-5 px-3.5 gap-2.5 rounded-xl max-w-[542px] justify-start transition-all duration-200 ${
                 isSelected
-                  ? "border-[#2E5EAA]"
-                  : "border-[#C8D7EFE5] bg-white"
+                  ? "border-button bg-white"
+                  : "border-fade "
               }`}
             >
               <p className="text-[#1C1C1C33] text-[18px] font-normal">{skill}</p>
@@ -105,7 +105,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form}) => {
             name="portfolio"
             value={form.portfolio}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
           />
         </div>
 
@@ -120,7 +120,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form}) => {
             name="socials.github"
             value={form.socials?.github}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
           />
         </div>
         <div className="w-full flex flex-col gap-[10px] max-w-[542px]">
@@ -133,7 +133,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form}) => {
             name="socials.linkedin"
             value={form.socials?.linkedin}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
           />
         </div>
 
@@ -146,8 +146,8 @@ const SkillSelection: React.FC<Props> = ({ onChange, form}) => {
           disabled={!filled}
           className={`cursor-pointer rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200  w-full max-w-[400px] ${
             !filled
-              ? "bg-[#A9B9D3] text-[#F8F8F8] cursor-not-allowed"
-              : "bg-[#2E5EAA] text-[#F8F8F8]"
+              ? "bg-[#1c770092] text-[#F8F8F8] cursor-not-allowed"
+              : "bg-button text-[#F8F8F8]"
           }`}
         >
           Continue

@@ -29,8 +29,9 @@ const AccountType: React.FC  = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-[#FFFF] md:py-[80px] md:px-[150px] font-inter">
-      <div className="flex flex-col md:items-center pt-[75px] px-5 md:justify-center h-full w-full rounded-[50px] bg-[#F9F9F9] md:py-[124px] gap-[74px]">
+    <div className="flex flex-col relative items-center justify-center h-screen bg-form bg-cover bg-center  md:py-[80px] md:px-[150px] font-inter">
+         <div className="absolute inset-0 bg-white/50"></div>
+      <div className="flex flex-col md:items-center pt-[75px] z-10 px-5 md:justify-center h-full w-full rounded-[50px] md:py-[124px] gap-[74px]">
         <div className="flex flex-col gap-2.5 text-left md:text-left justify-center">
           <p className="font-semibold text-[32px]">Account type</p>
           <p className="font-normal text-[#1C1C1CBF] text-[18px]">
@@ -49,13 +50,13 @@ const AccountType: React.FC  = () => {
                 className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border-[1px]
                   ${
                     isSelected
-                      ? "bg-[#EAEFFF] border-[#8EA0FFE5]"
-                      : "bg-[#EAEFFF] border-[#8EA0FF33]"
+                      ? "bg-[#EFFFE2] border-[#01732bd4]"
+                      : "bg-[#EFFFE2] border-[#1E950033]"
                   }`}
               >
                 <div
                   className={`flex h-[60px] w-[60px] items-center justify-center rounded-full ${
-                    role.role === "Company" ? "bg-[#4EA699]" : "bg-[#8EA0FF]"
+                    role.role === "Company" ? "bg-button" : "bg-button"
                   }`}
                 >
                   {role.role === "Company" ? (
@@ -69,12 +70,12 @@ const AccountType: React.FC  = () => {
                   <div className="max-w-[274px]">
                     <div className="flex flex-col gap-2.5 text-left">
                       <p
-                        className="font-inter font-medium text-[18px]"
+                        className="font-inter font-medium text-[18px] text-button"
                       >
                         {role.role}
                       </p>
                       <p
-                        className="font-inter font-normal text-[14px]"
+                        className="font-inter font-normal text-[14px] text-button"
                       >
                         {role.description}
                       </p>
@@ -86,8 +87,8 @@ const AccountType: React.FC  = () => {
                         key={tag}
                         className={`border-[1px] rounded-[20px] py-1 px-2 text-[12px] ${
                              role.role === "Company"
-                            ? "border-[#8EA0FF] text-[#8EA0FF]"
-                            : "border-[#4EA699] text-[#4EA699]"
+                            ? "border-button text-button"
+                            : "border-button text-button"
                         }`}
                       >
                         {tag}
@@ -103,8 +104,8 @@ const AccountType: React.FC  = () => {
         <button
           className={`md:w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             selectedRole
-              ? "bg-[#2E5EAA] text-[#F8F8F8]"
-              : "bg-[#2e5eaa92] text-[#F8F8F8] cursor-not-allowed"
+              ? "bg-button text-[#F8F8F8]"
+              : "bg-[#6fc406] text-[#F8F8F8] cursor-not-allowed"
           }`}
           disabled={!selectedRole}
         >

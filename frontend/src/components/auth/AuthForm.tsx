@@ -31,8 +31,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
   error
 }) => {
   return (
-    <div className="flex items-center justify-center h-screen w-full font-inter bg-[#FFFFFF]">
-      <div className="flex flex-col items-center justify-center gap-[20px] bg-[#F9F9F9] lg:pt-[124px] py-[45px] w-full h-full max-w-[1058px] lg:h-auto px-[15px] lg:px-[150px] rounded-[20px]">
+    <div className="flex items-center justify-center h-screen w-full font-inter bg-form bg-cover bg-center ">
+        <div className="absolute inset-0 bg-white/50"></div>
+      <div className="flex flex-col items-center justify-center gap-[20px] z-10  lg:pt-[124px] py-[45px] w-full h-full max-w-[1058px] lg:h-auto px-[15px] lg:px-[150px] rounded-[20px]">
         <form onSubmit={onSubmit} className="flex flex-col gap-[24px] justify-between h-full w-full max-w-[400px]">
           <div className="w-full flex flex-col text-left md:text-center">
             <p className="font-semibold text-[32px] text-[#1C1C1C]">{title}</p>
@@ -74,7 +75,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
 
             <Link
               to={linkPath}
-              className="text-center text-[14px] font-normal underline text-[#8EA0FF] cursor-pointer"
+              className="text-center text-[14px] font-normal underline text-[#1E9500] cursor-pointer"
             >
               {linkText}
             </Link>

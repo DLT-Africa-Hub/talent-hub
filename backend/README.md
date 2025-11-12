@@ -36,23 +36,11 @@ Node.js + Express + TypeScript backend for Talent Hub.
 | `AI_MATCH_BATCH_SIZE`          | Number of AI tasks processed per batch (default `10`)                  |
 | `AI_MATCH_MAX_JOBS`            | Maximum jobs evaluated per graduate matching run (default `50`)        |
 | `AI_MATCH_MAX_GRADUATES`       | Maximum graduates evaluated per job matching run (default `50`)        |
-| `API_KEY_HASHES`               | Comma-separated SHA-256 hashes of allowed API keys                     |
-| `API_KEY_HEADER_NAME`          | Header name checked for API keys (default `X-API-Key`)                 |
 | `CSRF_COOKIE_NAME`             | Name of the CSRF cookie (default `talenthub.csrf`)                     |
 | `CSRF_HEADER_NAME`             | Header used by clients to send the CSRF token (default `X-CSRF-Token`) |
 | `CSRF_COOKIE_SECURE`           | Set to `true` when serving over HTTPS                                  |
 | `CSRF_COOKIE_SAME_SITE`        | SameSite policy (`lax`, `strict`, `none`)                              |
 | `CSRF_COOKIE_MAX_AGE_SECONDS`  | CSRF token cookie lifetime                                             |
-
-### Managing API Keys
-
-API keys are compared using SHA-256 hashes. Generate a hash for each key and add it to `API_KEY_HASHES` (comma separated):
-
-```bash
-node -e "console.log(require('crypto').createHash('sha256').update('your-api-key').digest('hex'))"
-```
-
-Clients must send the raw API key in the `X-API-Key` header (or the header defined in `API_KEY_HEADER_NAME`).
 
 ### Security Utilities
 

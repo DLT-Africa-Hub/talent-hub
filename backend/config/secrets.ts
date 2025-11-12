@@ -23,9 +23,9 @@ const parseBoolean = (value: string | undefined, defaultValue: boolean): boolean
 const parseCommaSeparated = (value: string | undefined): string[] =>
   value
     ? value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
     : [];
 
 const parseTrustProxy = (value: string | undefined): boolean | string | number => {
@@ -91,15 +91,6 @@ const configSchema = z.object({
         'JWT_ACCESS_SECRET (or JWT_SECRET/ACCESS_TOKEN_SECRET) environment variable is required',
     })
     .min(32, 'JWT access secret must be at least 32 characters long for security'),
-  apiKeyHashes: z
-    .array(
-      z
-        .string()
-        .trim()
-        .regex(/^[a-f0-9]{64}$/i, 'API key hashes must be lowercase SHA-256 hex strings')
-    )
-    .default([]),
-  apiKeyHeaderName: z.string().min(1, 'API key header name cannot be empty').transform((value) => value.trim()),
   enforceHttps: z.boolean(),
   trustProxy: z.union([z.boolean(), z.string(), z.number()]),
   csrfCookieName: z
@@ -129,10 +120,6 @@ const configSchema = z.object({
 
 const parsedConfig = configSchema.parse({
   jwtAccessSecret: jwtSecretFromEnv,
-  apiKeyHashes: parseCommaSeparated(process.env.API_KEY_HASHES).map((hash) =>
-    hash.toLowerCase()
-  ),
-  apiKeyHeaderName: process.env.API_KEY_HEADER_NAME || 'x-api-key',
   enforceHttps: parseBoolean(
     process.env.ENFORCE_HTTPS,
     process.env.NODE_ENV === 'production'
@@ -156,11 +143,6 @@ const parsedConfig = configSchema.parse({
 export const securityConfig = {
   jwt: {
     accessSecret: parsedConfig.jwtAccessSecret,
-  },
-  apiKeys: {
-    headerName: parsedConfig.apiKeyHeaderName.toLowerCase(),
-    originalHeaderName: parsedConfig.apiKeyHeaderName,
-    hashes: parsedConfig.apiKeyHashes,
   },
   https: {
     enforce: parsedConfig.enforceHttps,

@@ -14,12 +14,10 @@ import {
   getDatabaseStats,
 } from '../controllers/admin.controller';
 import { authenticate, authorize } from '../middleware/auth.middleware';
-import { requireApiKey } from '../middleware/apiKey.middleware';
 
 const router = Router();
 
 // All routes require authentication and admin role
-router.use(requireApiKey());
 router.use(authenticate);
 router.use(authorize('admin'));
 

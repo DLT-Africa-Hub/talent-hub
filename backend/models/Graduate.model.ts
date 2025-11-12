@@ -150,7 +150,6 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
 );
 
 // Indexes for performance
-GraduateSchema.index({ userId: 1 }, { unique: true });
 GraduateSchema.index({ 'education.field': 1 });
 GraduateSchema.index({ skills: 1 });
 GraduateSchema.index({ rank: 1 });

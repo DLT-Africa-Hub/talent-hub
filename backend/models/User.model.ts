@@ -1,4 +1,5 @@
 import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
+import { isBcryptHash } from '../utils/security.utils';
 
 export interface IUser {
   _id: Types.ObjectId;
@@ -29,6 +30,10 @@ const UserSchema: Schema<IUser, UserModel> = new Schema(
       type: String,
       required: true,
       minlength: 6,
+      validate: {
+        validator: (value: string) => isBcryptHash(value),
+        message: 'Password must be stored as a bcrypt hash',
+      },
     },
     role: {
       type: String,
@@ -53,7 +58,6 @@ const UserSchema: Schema<IUser, UserModel> = new Schema(
 );
 
 // Indexes for performance
-UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ createdAt: -1 });
 

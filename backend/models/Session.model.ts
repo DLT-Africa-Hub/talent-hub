@@ -31,7 +31,6 @@ const SessionSchema: Schema<ISession, SessionModel, SessionMethods> = new Schema
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     userAgent: {
       type: String,

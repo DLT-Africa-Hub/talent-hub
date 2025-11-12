@@ -38,7 +38,6 @@ const TokenSchema: Schema<IToken, TokenModel, TokenMethods> = new Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     type: {
       type: String,

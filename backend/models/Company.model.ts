@@ -44,7 +44,6 @@ const CompanySchema: Schema = new Schema(
 );
 
 // Indexes for performance
-CompanySchema.index({ userId: 1 }, { unique: true });
 CompanySchema.index({ industry: 1 });
 CompanySchema.index({ companyName: 1 });
 CompanySchema.index({ location: 1 });

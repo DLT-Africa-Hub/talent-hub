@@ -238,7 +238,7 @@ const CompanyPreview: React.FC<CompanyPreviewProps>= ({ mode = "application" }) 
                 </button>
                 <button className='w-full  flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer'>
                     <BsSend className='text-[24px]'/>
-                    <p className='text-[16px] font-medium' >Apply</p>
+                    <p className='text-[16px] font-medium' >View CV</p>
                 </button>
               </div>
             ):(

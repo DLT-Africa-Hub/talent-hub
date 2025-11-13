@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PiGraduationCap, PiBuildingApartmentLight } from "react-icons/pi";
 
 interface Role {
@@ -8,6 +9,7 @@ interface Role {
 }
 
 const AccountType: React.FC  = () => {
+  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const roles: Role[] = [
@@ -26,6 +28,14 @@ const AccountType: React.FC  = () => {
 
   const handleSelect = (role: string) => {
     setSelectedRole(role);
+  };
+
+  const handleContinue = () => {
+    if (selectedRole === "Company") {
+      navigate("/company/onboarding");
+    } else if (selectedRole === "Bootcamp Graduate") {
+      navigate("/onboarding");
+    }
   };
 
   return (
@@ -47,7 +57,7 @@ const AccountType: React.FC  = () => {
               <div
                 key={role.role}
                 onClick={() => handleSelect(role.role)}
-                className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border-[1px]
+                className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border
                   ${
                     isSelected
                       ? "bg-[#EFFFE2] border-[#01732bd4]"
@@ -85,7 +95,7 @@ const AccountType: React.FC  = () => {
                     {role.tags.map((tag) => (
                       <div
                         key={tag}
-                        className={`border-[1px] rounded-[20px] py-1 px-2 text-[12px] ${
+                        className={`border rounded-[20px] py-1 px-2 text-[12px] ${
                              role.role === "Company"
                             ? "border-button text-button"
                             : "border-button text-button"
@@ -102,12 +112,13 @@ const AccountType: React.FC  = () => {
         </div>
 
         <button
+          onClick={handleContinue}
+          disabled={!selectedRole}
           className={`md:w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             selectedRole
-              ? "bg-button text-[#F8F8F8]"
-              : "bg-[#6fc406] text-[#F8F8F8] cursor-not-allowed"
+              ? "bg-button text-[#F8F8F8] cursor-pointer hover:bg-[#176300]"
+              : "bg-[#6fc406] text-[#F8F8F8] cursor-not-allowed opacity-60"
           }`}
-          disabled={!selectedRole}
         >
           Continue
         </button>

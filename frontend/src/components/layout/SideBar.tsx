@@ -6,12 +6,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { IconType } from 'react-icons';
 import { BiBell, BiChevronDown } from 'react-icons/bi';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
-
-
-
-
-
-
+import { PiUsersThreeLight } from 'react-icons/pi';
 
 
 
@@ -31,9 +26,19 @@ const SideBar = () => {
           icon: RiHomeSmile2Line
       },
       {
+          page: "Candidates",
+          link: "candidates",
+          icon: PiUsersThreeLight
+      },
+      {
           page: "Messages",
           link: "messages",
           icon: HiOutlineChatBubbleLeftRight
+      },
+      {
+          page: "Jobs",
+          link: "jobs",
+          icon: LuBriefcase
       },
       {
           page: "Explore",

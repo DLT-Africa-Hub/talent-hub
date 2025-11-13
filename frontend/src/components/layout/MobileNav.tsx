@@ -23,6 +23,16 @@ const MobileNav = () => {
             icon: RiHomeSmile2Line
         },
         {
+            page: "Candidates",
+            link: "candidates",
+            icon: CiUser
+        },
+        {
+            page: "Jobs",
+            link: "jobs",
+            icon: LuBriefcase
+        },
+        {
             page: "Explore",
             link: "explore",
             icon: BsSearch

@@ -18,6 +18,16 @@ const MobileHeader = () => {
    
     },
     {
+        page: "Candidates",
+        link: "candidates",
+    
+    },
+    {
+        page: "Jobs",
+        link: "jobs",
+       
+    },
+    {
         page: "Explore",
         link: "explore",
        

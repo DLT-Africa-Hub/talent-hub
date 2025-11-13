@@ -3,6 +3,10 @@ import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import GraduateDashboard from './pages/GraduateDashboard';
 import CompanyDashboard from './pages/company/CompanyDashboard';
+import CompanyCandidates from './pages/company/CompanyCandidates';
+import CompanyJobs from './pages/company/CompanyJobs';
+import CompanyJobForm from './pages/company/CompanyJobForm';
+import CompanyOnboarding from './pages/company/CompanyOnboarding';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AccountType from './pages/AccountType';
@@ -12,6 +16,8 @@ import Layout from './components/layout/Layout';
 import ExploreCompany from './pages/ExploreCompany';
 import GraduateApplications from './pages/GraduateApplications';
 import CompanyPreview from './pages/CompanyPreview';
+import CandidatePreview from './pages/company/CandidatePreview';
+import ExplorePreview from './pages/ExplorePreview';
 import AuthPage from './pages/AuthPage';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
@@ -51,12 +57,53 @@ function App() {
           />
           <Route path="/role" element={<AccountType />} />
           <Route path="/onboarding" element={<GraduateOnboarding />} />
+          <Route path="/company/onboarding" element={<CompanyOnboarding />} />
           <Route path="/assessment" element={<SkillAssessment />} />
           <Route path="/company-preview/:id" element={<CompanyPreview mode='application' />} />
           <Route path="/contactCompany/:id" element={<CompanyPreview mode='contact'/>} />
+          <Route
+            path="/candidates"
+            element={
+              <Layout>
+                <CompanyCandidates />
+              </Layout>
+            }
+          />
+          <Route
+            path="/candidate-preview/:id"
+            element={
+              <Layout>
+                <CandidatePreview />
+              </Layout>
+            }
+          />
+          <Route
+            path="/jobs"
+            element={
+              <Layout>
+                <CompanyJobs />
+              </Layout>
+            }
+          />
+          <Route
+            path="/jobs/new"
+            element={
+              <Layout>
+                <CompanyJobForm />
+              </Layout>
+            }
+          />
           <Route path="/explore" element={<Layout >
             <ExploreCompany/>
           </Layout>} />
+          <Route
+            path="/explore-preview/:id"
+            element={
+              <Layout>
+                <ExplorePreview />
+              </Layout>
+            }
+          />
           <Route path="/applications" element={<Layout >
             <GraduateApplications/>
           </Layout>} />

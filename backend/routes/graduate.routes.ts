@@ -11,6 +11,7 @@ import {
   addWorkExperience,
   updateWorkExperience,
   deleteWorkExperience,
+  getAssessmentQuestions,
   submitAssessment,
   getMatches,
   getMatchById,
@@ -41,6 +42,7 @@ router.post('/profile/work-experiences', addWorkExperience);
 router.put('/profile/work-experiences/:experienceId', updateWorkExperience);
 router.delete('/profile/work-experiences/:experienceId', deleteWorkExperience);
 
+router.get('/assessment/questions', getAssessmentQuestions);
 router.post('/assessment', submitAssessment);
 router.get('/matches', getMatches);
 router.get('/matches/:matchId', getMatchById);

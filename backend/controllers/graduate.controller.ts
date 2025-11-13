@@ -7,6 +7,7 @@ import Application from '../models/Application.model';
 import Company from '../models/Company.model';
 import {
   AIServiceError,
+  generateAssessmentQuestions,
   generateFeedback,
   generateProfileEmbedding,
 } from '../services/aiService';
@@ -58,6 +59,41 @@ const sanitizeStringArray = (value: unknown): string[] => {
     .filter((item): item is string => Boolean(item && item.length > 0));
   return Array.from(new Set(trimmed));
 };
+
+const EXPERIENCE_LEVELS = new Set(['entry', 'mid', 'senior'] as const);
+const POSITION_OPTIONS = new Set([
+  'frontend',
+  'backend',
+  'fullstack',
+  'mobile',
+  'devops',
+  'data',
+  'security',
+  'other',
+] as const);
+
+const parsePhoneNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const digitsOnly = value.replace(/\D+/g, '');
+    if (digitsOnly.length === 0) {
+      return null;
+    }
+    const parsed = Number(digitsOnly);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
+const validateExperienceLevel = (value: unknown): value is typeof EXPERIENCE_LEVELS extends Set<infer T> ? T : never =>
+  typeof value === 'string' && EXPERIENCE_LEVELS.has(value as never);
+
+const validatePosition = (value: unknown): value is typeof POSITION_OPTIONS extends Set<infer T> ? T : never =>
+  typeof value === 'string' && POSITION_OPTIONS.has(value as never);
 
 type PopulatedJobLean = {
   _id: mongoose.Types.ObjectId;
@@ -183,6 +219,10 @@ export const createProfile = async (
     const {
       firstName,
       lastName,
+      phoneNumber,
+      expLevel,
+      expYears,
+      position,
       skills = [],
       education,
       interests = [],
@@ -200,7 +240,37 @@ export const createProfile = async (
     ) {
       res.status(400).json({
         message:
-          'firstName, lastName, and education { degree, field, institution, graduationYear } are required',
+          'firstName, lastName, phoneNumber, expLevel, expYears, position, and education { degree, field, institution, graduationYear } are required',
+      });
+      return;
+    }
+
+    const parsedPhone = parsePhoneNumber(phoneNumber);
+    if (parsedPhone === null) {
+      res.status(400).json({ message: 'phoneNumber must be a valid numeric value' });
+      return;
+    }
+
+    if (!validateExperienceLevel(expLevel)) {
+      res.status(400).json({ message: 'expLevel must be one of entry, mid, or senior' });
+      return;
+    }
+
+    const yearsValue =
+      typeof expYears === 'number' && Number.isFinite(expYears)
+        ? expYears
+        : typeof expYears === 'string'
+          ? Number.parseFloat(expYears)
+          : NaN;
+    if (!Number.isFinite(yearsValue) || yearsValue < 0) {
+      res.status(400).json({ message: 'expYears must be a positive number' });
+      return;
+    }
+
+    if (!validatePosition(position)) {
+      res.status(400).json({
+        message:
+          'position must be one of frontend, backend, fullstack, mobile, devops, data, security, other',
       });
       return;
     }
@@ -219,10 +289,20 @@ export const createProfile = async (
       return;
     }
 
+    const existingPhone = await Graduate.findOne({ phoneNumber: parsedPhone }).lean();
+    if (existingPhone) {
+      res.status(400).json({ message: 'Phone number is already associated with another graduate' });
+      return;
+    }
+
     const graduate = await Graduate.create({
       userId: userObjectId,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      phoneNumber: parsedPhone,
+      expLevel,
+      expYears: yearsValue,
+      position,
       profilePictureUrl:
         typeof profilePictureUrl === 'string'
           ? profilePictureUrl.trim()
@@ -328,6 +408,10 @@ export const updateProfile = async (
       skills,
       education,
       profilePictureUrl,
+      phoneNumber,
+      expLevel,
+      expYears,
+      position,
     } = req.body;
 
     if (typeof firstName === 'string' && firstName.trim().length > 0) {
@@ -375,6 +459,63 @@ export const updateProfile = async (
 
     if (typeof profilePictureUrl === 'string') {
       graduate.profilePictureUrl = profilePictureUrl.trim();
+    }
+
+    if (phoneNumber !== undefined) {
+      const parsedPhone = parsePhoneNumber(phoneNumber);
+      if (parsedPhone === null) {
+        res.status(400).json({ message: 'phoneNumber must be a valid numeric value' });
+        return;
+      }
+
+      if (graduate.phoneNumber !== parsedPhone) {
+        const existingWithPhone = await Graduate.findOne({
+          phoneNumber: parsedPhone,
+          _id: { $ne: graduate._id },
+        }).lean();
+
+        if (existingWithPhone) {
+          res
+            .status(400)
+            .json({ message: 'Phone number is already associated with another graduate' });
+          return;
+        }
+
+        graduate.phoneNumber = parsedPhone;
+      }
+    }
+
+    if (expLevel !== undefined) {
+      if (!validateExperienceLevel(expLevel)) {
+        res.status(400).json({ message: 'expLevel must be one of entry, mid, or senior' });
+        return;
+      }
+      graduate.expLevel = expLevel;
+    }
+
+    if (expYears !== undefined) {
+      const yearsValue =
+        typeof expYears === 'number' && Number.isFinite(expYears)
+          ? expYears
+          : typeof expYears === 'string'
+            ? Number.parseFloat(expYears)
+            : NaN;
+      if (!Number.isFinite(yearsValue) || yearsValue < 0) {
+        res.status(400).json({ message: 'expYears must be a positive number' });
+        return;
+      }
+      graduate.expYears = yearsValue;
+    }
+
+    if (position !== undefined) {
+      if (!validatePosition(position)) {
+        res.status(400).json({
+          message:
+            'position must be one of frontend, backend, fullstack, mobile, devops, data, security, other',
+        });
+        return;
+      }
+      graduate.position = position;
     }
 
     if (education && typeof education === 'object') {
@@ -784,6 +925,72 @@ export const deleteWorkExperience = async (
   }
 };
 
+export const getAssessmentQuestions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    if (!graduate.skills || graduate.skills.length === 0) {
+      res.status(400).json({ message: 'Graduate profile must include at least one skill' });
+      return;
+    }
+
+    const rawCount = req.query.count;
+    let count: number | undefined;
+    if (typeof rawCount === 'string' && rawCount.trim().length > 0) {
+      const parsed = Number.parseInt(rawCount, 10);
+      if (Number.isNaN(parsed) || parsed <= 0 || parsed > 20) {
+        res.status(400).json({ message: 'count must be a positive integer up to 20' });
+        return;
+      }
+      count = parsed;
+    }
+
+    const language =
+      typeof req.query.language === 'string' && req.query.language.trim().length > 0
+        ? req.query.language.trim()
+        : undefined;
+
+    const questionSetVersion =
+      typeof graduate.assessmentData?.questionSetVersion === 'number'
+        ? graduate.assessmentData.questionSetVersion
+        : 1;
+
+    const attempts = graduate.assessmentData?.attempts ?? 0;
+
+    const questions = await generateAssessmentQuestions(graduate.skills, {
+      attempt: questionSetVersion,
+      numQuestions: count,
+      language,
+    });
+
+    res.json({
+      questionSetVersion,
+      attempts,
+      needsRetake: graduate.assessmentData?.needsRetake ?? false,
+      questions,
+    });
+  } catch (error) {
+    if (error instanceof AIServiceError) {
+      res.status(error.statusCode ?? 503).json({ message: error.message });
+      return;
+    }
+
+    console.error('Assessment question generation error:', error);
+    res.status(500).json({ message: 'Failed to generate assessment questions' });
+  }
+};
+
 export const submitAssessment = async (
   req: Request,
   res: Response
@@ -799,7 +1006,13 @@ export const submitAssessment = async (
       return;
     }
 
-    const { summary, additionalContext, jobRequirements } = req.body as {
+    const {
+      summary,
+      additionalContext,
+      jobRequirements,
+      feedbackLanguage,
+      feedbackTemplateOverrides,
+    } = req.body as {
       summary?: string;
       additionalContext?: string;
       jobRequirements?: {
@@ -807,6 +1020,8 @@ export const submitAssessment = async (
         education?: string;
         experience?: string;
       };
+      feedbackLanguage?: string;
+      feedbackTemplateOverrides?: Record<string, unknown>;
     };
 
     const profileText = buildProfileSummary(
@@ -850,6 +1065,25 @@ export const submitAssessment = async (
               : undefined,
         };
 
+        const templateOverrides =
+          feedbackTemplateOverrides && typeof feedbackTemplateOverrides === 'object'
+            ? Object.fromEntries(
+              Object.entries(
+                feedbackTemplateOverrides as Record<string, unknown>
+              )
+                .filter((entry): entry is [string, string] => {
+                  const [, value] = entry;
+                  return typeof value === 'string' && value.trim().length > 0;
+                })
+                .map(([key, value]) => [key, value.trim()])
+            )
+            : undefined;
+
+        const language =
+          typeof feedbackLanguage === 'string' && feedbackLanguage.trim().length >= 2
+            ? feedbackLanguage.trim()
+            : undefined;
+
         const aiFeedback = await generateFeedback(
           {
             skills: graduate.skills,
@@ -858,7 +1092,13 @@ export const submitAssessment = async (
               .map((exp) => `${exp.title} at ${exp.company}`)
               .join('; '),
           },
-          requirementsPayload
+          requirementsPayload,
+          {
+            language,
+            additionalContext:
+              typeof additionalContext === 'string' ? additionalContext : undefined,
+            templateOverrides,
+          }
         );
         feedback = aiFeedback.feedback;
       } catch (feedbackError) {
@@ -872,10 +1112,21 @@ export const submitAssessment = async (
       }
     }
 
+    const previousData = graduate.assessmentData;
+    const attempts = (previousData?.attempts ?? 0) + 1;
+    const questionSetVersion =
+      typeof previousData?.questionSetVersion === 'number'
+        ? previousData.questionSetVersion
+        : 1;
+
     graduate.assessmentData = {
       submittedAt: new Date(),
       embedding,
       feedback,
+      attempts,
+      needsRetake: false,
+      lastScore: undefined,
+      questionSetVersion,
     };
 
     await graduate.save();

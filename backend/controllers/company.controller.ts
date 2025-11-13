@@ -60,13 +60,16 @@ export const createProfile = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const { companyName, industry, description, website, location } = req.body;
+  const { companyName, industry, companySize, description, website, location } = req.body;
 
   const validatedName = validateRequiredString(companyName, 'Company name', res);
   if (!validatedName) return;
 
   const validatedIndustry = validateRequiredString(industry, 'Industry', res);
   if (!validatedIndustry) return;
+
+  const validatedSize = validateNumericRange(companySize, 1, 100000, 'Company size', res);
+  if (validatedSize === null) return;
 
   const validatedDescription = validateRequiredString(description, 'Description', res);
   if (!validatedDescription) return;
@@ -88,6 +91,7 @@ export const createProfile = async (req: Request, res: Response): Promise<void> 
     userId: new mongoose.Types.ObjectId(userId),
     companyName: validatedName,
     industry: validatedIndustry,
+    companySize: validatedSize,
     description: validatedDescription,
     ...deleteUndefined({
       website: validatedWebsite,
@@ -122,7 +126,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const { companyName, industry, description, website, location } = req.body;
+  const { companyName, industry, companySize, description, website, location } = req.body;
 
   if (companyName !== undefined) {
     const validated = validateRequiredString(companyName, 'Company name', res);
@@ -134,6 +138,12 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     const validated = validateRequiredString(industry, 'Industry', res);
     if (!validated) return;
     company.industry = validated;
+  }
+
+  if (companySize !== undefined) {
+    const validated = validateNumericRange(companySize, 1, 100000, 'Company size', res);
+    if (validated === null) return;
+    company.companySize = validated;
   }
 
   if (description !== undefined) {
@@ -181,10 +191,27 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, description, requirements, location, salary, status } = req.body;
+  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
+    req.body;
 
   const validatedTitle = validateRequiredString(title, 'Title', res);
   if (!validatedTitle) return;
+
+  const validatedJobType = validateEnum(
+    jobType,
+    ['Full time', 'Part time', 'Contract', 'Internship'] as const,
+    'Job type',
+    res
+  );
+  if (!validatedJobType) return;
+
+  const validatedPreferedRank = validateEnum(
+    preferedRank,
+    ['A', 'B', 'C', 'D', 'A and B', 'B and C', 'C and D'] as const,
+    'Preferred rank',
+    res
+  );
+  if (!validatedPreferedRank) return;
 
   const validatedDescription = validateRequiredString(description, 'Description', res);
   if (!validatedDescription) return;
@@ -210,10 +237,10 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 
   const jobText = `
     Title: ${validatedTitle}
+    Type: ${validatedJobType}
+    Preferred Rank: ${validatedPreferedRank}
     Description: ${validatedDescription}
     Required Skills: ${validatedSkills.join(', ')}
-    Education: ${requirements.education || ''}
-    Experience: ${requirements.experience || ''}
   `;
 
   let embedding: number[];
@@ -233,13 +260,11 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   const job = new Job({
     companyId: company._id,
     title: validatedTitle,
+    jobType: validatedJobType,
+    preferedRank: validatedPreferedRank,
     description: validatedDescription,
     requirements: {
       skills: validatedSkills,
-      ...deleteUndefined({
-        education: requirements.education?.trim(),
-        experience: requirements.experience?.trim(),
-      }),
     },
     ...deleteUndefined({
       location: validatedLocation,
@@ -385,13 +410,38 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, description, requirements, location, salary, status } = req.body;
+  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
+    req.body;
   let needsEmbeddingUpdate = false;
 
   if (title !== undefined) {
     const validated = validateRequiredString(title, 'Title', res);
     if (!validated) return;
     job.title = validated;
+    needsEmbeddingUpdate = true;
+  }
+
+  if (jobType !== undefined) {
+    const validated = validateEnum(
+      jobType,
+      ['Full time', 'Part time', 'Contract', 'Internship'] as const,
+      'Job type',
+      res
+    );
+    if (!validated) return;
+    job.jobType = validated;
+    needsEmbeddingUpdate = true;
+  }
+
+  if (preferedRank !== undefined) {
+    const validated = validateEnum(
+      preferedRank,
+      ['A', 'B', 'C', 'D', 'A and B', 'B and C', 'C and D'] as const,
+      'Preferred rank',
+      res
+    );
+    if (!validated) return;
+    job.preferedRank = validated;
     needsEmbeddingUpdate = true;
   }
 
@@ -407,10 +457,6 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     if (!validatedSkills) return;
     job.requirements = {
       skills: validatedSkills,
-      ...deleteUndefined({
-        education: requirements.education?.trim(),
-        experience: requirements.experience?.trim(),
-      }),
     };
     needsEmbeddingUpdate = true;
   }
@@ -436,10 +482,10 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
   if (needsEmbeddingUpdate) {
     const jobText = `
       Title: ${job.title}
+      Type: ${job.jobType}
+      Preferred Rank: ${job.preferedRank}
       Description: ${job.description}
       Required Skills: ${job.requirements.skills.join(', ')}
-      Education: ${job.requirements.education || ''}
-      Experience: ${job.requirements.experience || ''}
     `;
 
     try {

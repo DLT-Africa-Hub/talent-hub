@@ -21,6 +21,10 @@ export interface IGraduate {
   userId: Types.ObjectId;
   firstName: string;
   lastName: string;
+  phoneNumber: number;
+  expLevel: 'entry' | 'mid' | 'senior';
+  expYears: number;
+  position: 'frontend' | 'backend' | 'fullstack' | 'mobile' | 'devops' | 'data' | 'security' | 'other';
   profilePictureUrl?: string;
   skills: string[];
   education: IEducationDetails;
@@ -36,6 +40,10 @@ export interface IGraduate {
     submittedAt: Date;
     embedding?: number[];
     feedback?: string;
+    attempts?: number;
+    needsRetake?: boolean;
+    lastScore?: number;
+    questionSetVersion?: number;
   };
   rank?: string;
   createdAt: Date;
@@ -60,6 +68,25 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
     },
     lastName: {
       type: String,
+      required: true,
+    },
+    phoneNumber: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
+    expLevel: {
+      type: String,
+      enum: ['entry', 'mid', 'senior'],
+      required: true,
+    },
+    expYears: {
+      type: Number,
+      required: true,
+    },
+    position: {
+      type: String,
+      enum: ['frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data', 'security', 'other'],
       required: true,
     },
     profilePictureUrl: {
@@ -138,6 +165,19 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
       submittedAt: Date,
       embedding: [Number],
       feedback: String,
+      attempts: {
+        type: Number,
+        default: 0,
+      },
+      needsRetake: {
+        type: Boolean,
+        default: false,
+      },
+      lastScore: Number,
+      questionSetVersion: {
+        type: Number,
+        default: 1,
+      },
     },
     rank: {
       type: String,

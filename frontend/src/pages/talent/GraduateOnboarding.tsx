@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { GraduateForm } from '../constants/type';
-import Personalnfo from '../components/onboarding/graduateOnboarding/Personalnfo';
-import RoleSelection from '../components/onboarding/graduateOnboarding/RoleSelection';
-import SkillSelection from '../components/onboarding/graduateOnboarding/SkillSelection';
+
+
 import { IoMdArrowBack } from 'react-icons/io';
+import { GraduateForm } from '../../constants/type';
+import Personalnfo from '../../components/onboarding/graduateOnboarding/Personalnfo';
+import RoleSelection from '../../components/onboarding/graduateOnboarding/RoleSelection';
+import SkillSelection from '../../components/onboarding/graduateOnboarding/SkillSelection';
 
 const GraduateOnboarding: React.FC = () => {
   const [step, setStep] = useState(0);

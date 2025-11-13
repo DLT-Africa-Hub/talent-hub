@@ -1,8 +1,10 @@
 import { BsSearch } from "react-icons/bs";
-import { companies } from "../data/companies";
 
-import CompanyFlatCard from "../components/explore/CompanyFlatCard";
-import CompanyCard from "../components/explore/CompanyCard";
+import CompanyFlatCard from "../../components/explore/CompanyFlatCard";
+import CompanyCard from "../../components/explore/CompanyCard";
+import { companies } from "../../data/companies";
+
+
 
 
 

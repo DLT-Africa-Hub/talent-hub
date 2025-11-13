@@ -1,20 +1,20 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
-import GraduateDashboard from './pages/GraduateDashboard';
-import CompanyDashboard from './pages/CompanyDashboard';
+import GraduateDashboard from './pages/talent/GraduateDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AccountType from './pages/AccountType';
-import GraduateOnboarding from './pages/GraduateOnboarding';
-import SkillAssessment from './pages/SkillAssessment';
 import Layout from './components/layout/Layout';
-import ExploreCompany from './pages/ExploreCompany';
-import GraduateApplications from './pages/GraduateApplications';
-import CompanyPreview from './pages/CompanyPreview';
+import CompanyPreview from './pages/talent/CompanyPreview';
 import AuthPage from './pages/AuthPage';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
+import GraduateOnboarding from './pages/talent/GraduateOnboarding';
+import SkillAssessment from './pages/talent/SkillAssessment';
+import ExploreCompany from './pages/talent/ExploreCompany';
+import GraduateApplications from './pages/talent/GraduateApplications';
+import CompanyDashboard from './pages/CompanyDashboard';
 
 function App() {
   return (

@@ -1,6 +1,7 @@
-import CompanyCard from '../components/explore/CompanyCard';
-import CompanyFlatCard from '../components/explore/CompanyFlatCard';
-import { companies } from '../data/companies';
+import CompanyCard from "../../components/explore/CompanyCard";
+import CompanyFlatCard from "../../components/explore/CompanyFlatCard";
+import { companies } from "../../data/companies";
+
 
 const GraduateApplications = () => {
   return (

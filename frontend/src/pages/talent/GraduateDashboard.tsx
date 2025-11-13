@@ -1,6 +1,6 @@
 import {  useMemo } from 'react';
-import CompanyCard, {Company} from '../components/explore/CompanyCard';
-import { companies } from '../data/companies';
+import CompanyCard, {Company} from '../../components/explore/CompanyCard';
+import { companies } from '../../data/companies';
 
 
 

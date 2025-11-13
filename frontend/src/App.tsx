@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import GraduateDashboard from './pages/GraduateDashboard';
-import CompanyDashboard from './pages/CompanyDashboard';
+import CompanyDashboard from './pages/company/CompanyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AccountType from './pages/AccountType';

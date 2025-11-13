@@ -107,10 +107,18 @@ const aiConfigSchema = z.object({
   maxBackoffMs: z.number().int().positive().default(2000),
   cacheTtlMs: z.number().int().positive().default(15 * 60 * 1000),
   cacheMaxEntries: z.number().int().positive().default(500),
+  rateLimit: z.object({
+    maxConcurrent: z.number().int().positive().default(3),
+    requestsPerInterval: z.number().int().positive().default(60),
+    intervalMs: z.number().int().positive().default(60_000),
+  }),
+  metricsEnabled: z.boolean().default(true),
   match: z.object({
     batchSize: z.number().int().positive().default(10),
     maxJobs: z.number().int().positive().default(50),
     maxGraduates: z.number().int().positive().default(50),
+    minScore: z.number().min(0).max(1).default(0.6),
+    maxResults: z.number().int().positive().default(20),
   }),
 });
 
@@ -138,6 +146,14 @@ const parsedAiConfig = aiConfigSchema.parse({
   cacheTtlMs: parseMsEnv(process.env.AI_SERVICE_CACHE_TTL_MS, 15 * 60 * 1000),
   cacheMaxEntries:
     parsePositiveIntOrUndefined(process.env.AI_SERVICE_CACHE_MAX_ENTRIES) ?? 500,
+  rateLimit: {
+    maxConcurrent:
+      parsePositiveIntOrUndefined(process.env.AI_SERVICE_RATE_LIMIT_MAX_CONCURRENCY) ?? 3,
+    requestsPerInterval:
+      parsePositiveIntOrUndefined(process.env.AI_SERVICE_RATE_LIMIT_REQUESTS_PER_INTERVAL) ?? 60,
+    intervalMs: parseMsEnv(process.env.AI_SERVICE_RATE_LIMIT_INTERVAL_MS, 60_000),
+  },
+  metricsEnabled: parseBoolean(process.env.AI_SERVICE_METRICS_ENABLED, true),
   match: {
     batchSize:
       parsePositiveIntOrUndefined(process.env.AI_MATCH_BATCH_SIZE) ?? 10,
@@ -145,6 +161,19 @@ const parsedAiConfig = aiConfigSchema.parse({
       parsePositiveIntOrUndefined(process.env.AI_MATCH_MAX_JOBS) ?? 50,
     maxGraduates:
       parsePositiveIntOrUndefined(process.env.AI_MATCH_MAX_GRADUATES) ?? 50,
+    minScore: (() => {
+      if (process.env.AI_MATCH_MIN_SCORE === undefined) {
+        return undefined;
+      }
+
+      const parsed = Number.parseFloat(process.env.AI_MATCH_MIN_SCORE);
+      if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
+        return undefined;
+      }
+      return parsed;
+    })(),
+    maxResults:
+      parsePositiveIntOrUndefined(process.env.AI_MATCH_MAX_RESULTS) ?? 20,
   },
 });
 
@@ -161,10 +190,20 @@ export const aiConfig = {
     ttlMs: parsedAiConfig.cacheTtlMs,
     maxEntries: parsedAiConfig.cacheMaxEntries,
   },
+  rateLimit: {
+    maxConcurrent: parsedAiConfig.rateLimit.maxConcurrent,
+    requestsPerInterval: parsedAiConfig.rateLimit.requestsPerInterval,
+    intervalMs: parsedAiConfig.rateLimit.intervalMs,
+  },
+  metrics: {
+    enabled: parsedAiConfig.metricsEnabled,
+  },
   match: {
     batchSize: parsedAiConfig.match.batchSize,
     maxJobs: parsedAiConfig.match.maxJobs,
     maxGraduates: parsedAiConfig.match.maxGraduates,
+    minScore: parsedAiConfig.match.minScore,
+    maxResults: parsedAiConfig.match.maxResults,
   },
 };
 

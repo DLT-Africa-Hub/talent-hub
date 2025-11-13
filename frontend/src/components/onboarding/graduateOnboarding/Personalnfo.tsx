@@ -74,7 +74,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
             name="firstName"
             value={form.firstName}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
           />
         </div>
 
@@ -89,7 +89,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
             name="lastName"
             value={form.lastName}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
           />
         </div>
 
@@ -98,15 +98,15 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           <label className="text-[#1C1C1CBF] text-[18px] font-normal">
             Phone Number
           </label>
-          <div className="flex items-center border border-[#C8D7EF] rounded-xl bg-[#FFFFFF]">
+          <div className="flex items-center border border-fade rounded-xl bg-[#FFFFFF]">
             <select
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value)}
-              className="h-[62px] px-3 border-r border-[#C8D7EF] bg-transparent text-[16px] focus:outline-none"
+              className="h-[62px] px-3 border-r border-fade bg-transparent text-[24px] focus:outline-none"
             >
               {countryCodes.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.flag} {c.code}
+                  {c.flag} 
                 </option>
               ))}
             </select>
@@ -129,7 +129,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
             name="rank"
             value={form.rank}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] text-[#1C1C1C] focus:outline-none"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] text-[#1C1C1C] focus:outline-none"
           >
             <option value="">Select level</option>
             {experienceLevels.map((lvl) => (
@@ -149,7 +149,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
             name="yearsOfExperience"
             value={form.yearsOfExperience}
             onChange={handleInputChange}
-            className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] text-[#1C1C1C] focus:outline-none"
+            className="h-[62px] border border-fade rounded-xl w-full px-5 bg-[#FFFFFF] text-[#1C1C1C] focus:outline-none"
           >
             <option value="">Select range</option>
             {experienceYears.map((yr) => (
@@ -168,8 +168,8 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           disabled={!isFormComplete}
           className={`md:w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 w-full ${
             isFormComplete
-              ? "bg-[#2E5EAA] text-[#F8F8F8]"
-              : "bg-[#A9B9D3] text-[#F8F8F8] cursor-not-allowed"
+              ? "bg-button text-[#F8F8F8]"
+              : "bg-[#1c770092] text-[#F8F8F8] cursor-not-allowed"
           }`}
         >
           Continue

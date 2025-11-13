@@ -59,17 +59,17 @@ const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
               onClick={() => handleSelectRole(role)}
               className={`flex items-center border-[1px] p-5 gap-2.5 rounded-xl w-full max-w-[542px] justify-start transition-all duration-200 ${
                 isSelected
-                  ? "border-[#2E5EAA]"
-                  : "border-[#C8D7EFE5] bg-white"
+                  ? "border-button  bg-white"
+                  : "border-fade"
               }`}
             >
               <div
                 className={`rounded-full h-5 w-5 p-1 border-[1px] flex items-center justify-center ${
-                  isSelected ? "border-[#2E5EAA]" : "border-[#C8D7EFE5]"
+                  isSelected ? "border-button" : "border-fade"
                 }`}
               >
                 {isSelected && (
-                  <div className="h-full w-full bg-[#2E5EAA] rounded-full" />
+                  <div className="h-full w-full bg-button rounded-full" />
                 )}
               </div>
               <p className="text-[#1C1C1C]">{role}</p>
@@ -87,8 +87,8 @@ const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
           disabled={selectedRoles.length === 0}
           className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200  w-full max-w-[400px] ${
             selectedRoles.length === 0
-              ? "bg-[#A9B9D3] text-[#F8F8F8] cursor-not-allowed"
-              : "bg-[#2E5EAA] text-[#F8F8F8]"
+              ? "bg-[#1c770092] text-[#F8F8F8] cursor-not-allowed"
+              : "bg-button text-[#F8F8F8]"
           }`}
         >
           Continue

@@ -11,7 +11,7 @@ const AuthPage:React.FC<AuthPageProps> = ({mode = "login"}) => {
     const isLogin = mode === "login";
   
     return (
-        <div>
+        <div className=''>
           {isLogin ? <Login /> : <Register />}
         </div>
       );

@@ -1,89 +1,239 @@
 """
-Feedback generation using OpenAI GPT-4 for skill gap analysis
+Feedback generation utilities powered by OpenAI GPT-4.
+
+Responsibilities:
+  * Produce structured skill-gap analysis and recommendations
+  * Enforce JSON response contract with robust validation/parsing
+  * Support language localisation and optional template overrides
+  * Gracefully handle and classify API errors for upstream callers
 """
 
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
 import os
-from openai import OpenAI
-from typing import Dict, List
+import re
+from typing import Any, Dict, Final, Optional
+
+from openai import (
+    APIConnectionError,
+    APIError,
+    APITimeoutError,
+    BadRequestError,
+    OpenAI,
+    OpenAIError,
+    RateLimitError,
+)
+
 from app.main import GraduateProfile, JobRequirements
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+logger = logging.getLogger(__name__)
 
-FEEDBACK_MODEL = "gpt-4"
+_api_key = os.getenv("OPENAI_API_KEY")
+if not _api_key:
+    raise RuntimeError("OPENAI_API_KEY environment variable is required for feedback generation")
+
+client = OpenAI(api_key=_api_key)
+
+FEEDBACK_MODEL: Final[str] = os.getenv("FEEDBACK_MODEL", "gpt-4.1-mini")
+FEEDBACK_TEMPERATURE: Final[float] = float(os.getenv("FEEDBACK_TEMPERATURE", "0.4"))
+FEEDBACK_MAX_TOKENS: Final[int] = int(os.getenv("FEEDBACK_MAX_TOKENS", "900"))
+
+DEFAULT_LANGUAGE: Final[str] = os.getenv("FEEDBACK_DEFAULT_LANGUAGE", "en")
+DEFAULT_TEMPLATE: Dict[str, str] = {
+    "introduction": "Offer encouragement and summarise the graduate's current readiness.",
+    "skill_gaps": "Identify the most impactful skill gaps preventing success in the target role.",
+    "recommendations": "Provide specific, actionable steps the graduate can complete within the next 30-60 days.",
+    "formatting": "Respond with concise paragraphs and bullet lists where appropriate.",
+}
+
+
+class FeedbackGenerationError(RuntimeError):
+    """Raised when feedback generation fails."""
+
+
+def _merge_templates(overrides: Optional[Dict[str, str]]) -> Dict[str, str]:
+    if not overrides:
+        return DEFAULT_TEMPLATE.copy()
+    merged = DEFAULT_TEMPLATE.copy()
+    for key, value in overrides.items():
+        if isinstance(value, str) and value.strip():
+            merged[key] = value.strip()
+    return merged
+
+
+def _serialise_list(values: Optional[Any]) -> str:
+    if not values:
+        return "Not specified"
+    if isinstance(values, (list, tuple, set)):
+        return ", ".join(sorted({str(item).strip() for item in values if str(item).strip()})) or "Not specified"
+    return str(values)
+
+
+def _build_prompt(
+    graduate_profile: GraduateProfile,
+    job_requirements: JobRequirements,
+    language: str,
+    additional_context: Optional[str],
+    template: Dict[str, str],
+) -> str:
+    context_block = (
+        f"\nAdditional Context:\n{additional_context.strip()}\n"
+        if additional_context and additional_context.strip()
+        else ""
+    )
+    prompt = f"""
+You are an expert career counsellor who communicates in {language.upper()}.
+Compare the graduate's background with the job requirements and produce an honest yet constructive review.
+
+Graduate Profile:
+- Skills: {_serialise_list(graduate_profile.skills)}
+- Education: {graduate_profile.education.strip() if graduate_profile.education else 'Not specified'}
+- Experience: {(graduate_profile.experience or 'Not specified').strip()}
+
+Job Requirements:
+- Required Skills: {_serialise_list(job_requirements.skills)}
+- Education: {(job_requirements.education or 'Not specified').strip()}
+- Experience: {(job_requirements.experience or 'Not specified').strip()}
+{context_block}
+
+Follow these guidelines:
+- Introduction: {template['introduction']}
+- Skill Gaps: {template['skill_gaps']}
+- Recommendations: {template['recommendations']}
+- Formatting: {template['formatting']}
+
+Respond **only** with valid JSON using this schema:
+{{
+  "feedback": "A concise narrative (max 3 paragraphs) written in {language.upper()}",
+  "skill_gaps": ["Skill gap summary in {language.upper()} (sentence case)", "..."],
+  "recommendations": ["Actionable recommendation in {language.upper()} (sentence case)", "..."]
+}}
+
+Ensure that each list contains between 2 and 5 items. Do not include Markdown code fences or extra commentary.
+"""
+    return prompt.strip()
+
+
+def _extract_json_block(text: str) -> str:
+    fenced = re.search(r"```(?:json)?\s*(.+?)\s*```", text, re.IGNORECASE | re.DOTALL)
+    if fenced:
+        return fenced.group(1)
+    return text.strip()
+
+
+def _parse_response(content: str, language: str) -> Dict[str, Any]:
+    cleaned = _extract_json_block(content)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        logger.error("Unable to parse feedback JSON: %s", exc)
+        raise FeedbackGenerationError("Feedback generation returned invalid JSON") from exc
+
+    feedback = str(parsed.get("feedback", "")).strip()
+    if not feedback:
+        raise FeedbackGenerationError("Feedback response is missing narrative content")
+
+    def normalise_list(key: str) -> list[str]:
+        values = parsed.get(key)
+        if not isinstance(values, list):
+            return []
+        result: list[str] = []
+        for item in values:
+            if not isinstance(item, str):
+                continue
+            normalised = item.strip()
+            if normalised:
+                result.append(normalised)
+        return result
+
+    skill_gaps = normalise_list("skill_gaps")
+    recommendations = normalise_list("recommendations")
+
+    if not skill_gaps:
+        logger.info("Feedback response missing skill gaps; synthesising placeholder.")
+        skill_gaps = [f"No explicit skill gaps identified. Consider verifying requirements in {language.upper()}."]
+
+    if not recommendations:
+        logger.info("Feedback response missing recommendations; synthesising placeholder.")
+        recommendations = [
+            f"Schedule a follow-up coaching session to determine concrete next steps ({language.upper()})."
+        ]
+
+    return {
+        "feedback": feedback,
+        "skill_gaps": skill_gaps,
+        "recommendations": recommendations,
+    }
+
+
+async def _call_openai(prompt: str) -> str:
+    try:
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model=FEEDBACK_MODEL,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert career counsellor. Always respond with JSON that matches the requested schema."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=FEEDBACK_TEMPERATURE,
+            max_tokens=FEEDBACK_MAX_TOKENS,
+        )
+    except (RateLimitError, APITimeoutError) as exc:
+        logger.warning("Feedback generation rate limited or timed out: %s", exc)
+        raise FeedbackGenerationError("Feedback service is currently unavailable, please retry shortly.") from exc
+    except (BadRequestError, APIConnectionError, APIError) as exc:
+        logger.error("Feedback generation API error: %s", exc)
+        raise FeedbackGenerationError("Feedback service rejected the request payload.") from exc
+    except OpenAIError as exc:
+        logger.exception("Unexpected OpenAI error during feedback generation")
+        raise FeedbackGenerationError("Unexpected error from feedback service.") from exc
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("Unhandled error during feedback generation")
+        raise FeedbackGenerationError("Unable to generate feedback.") from exc
+
+    choice = response.choices[0]
+    content = choice.message.content if choice.message and choice.message.content else ""
+    if not content:
+        raise FeedbackGenerationError("Feedback generation returned an empty response.")
+    return content
 
 
 async def generate_feedback_text(
     graduate_profile: GraduateProfile,
-    job_requirements: JobRequirements
-) -> Dict[str, any]:
+    job_requirements: JobRequirements,
+    *,
+    language: Optional[str] = None,
+    additional_context: Optional[str] = None,
+    template_overrides: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
     """
-    Generate skill gap analysis and improvement tips using GPT-4
-    
-    Args:
-        graduate_profile: Graduate's profile data
-        job_requirements: Job requirements
-        
-    Returns:
-        Dictionary containing feedback, skill gaps, and recommendations
+    Generate skill gap analysis and improvement recommendations using GPT-4.
     """
-    try:
-        # Construct prompt for GPT-4
-        prompt = f"""
-        Analyze the following graduate profile against the job requirements and provide:
-        1. A comprehensive feedback summary
-        2. List of skill gaps
-        3. Actionable recommendations for improvement
-        
-        Graduate Profile:
-        - Skills: {', '.join(graduate_profile.skills)}
-        - Education: {graduate_profile.education}
-        - Experience: {graduate_profile.experience or 'Not specified'}
-        
-        Job Requirements:
-        - Required Skills: {', '.join(job_requirements.skills)}
-        - Education: {job_requirements.education or 'Not specified'}
-        - Experience: {job_requirements.experience or 'Not specified'}
-        
-        Provide your response in the following JSON format:
-        {{
-            "feedback": "Comprehensive feedback text...",
-            "skill_gaps": ["gap1", "gap2", ...],
-            "recommendations": ["recommendation1", "recommendation2", ...]
-        }}
-        """
-        
-        # TODO: Add prompt optimization and few-shot examples
-        # TODO: Add response validation and parsing
-        
-        response = client.chat.completions.create(
-            model=FEEDBACK_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an expert career counselor helping graduates improve their skills to match job requirements."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.7,
-            max_tokens=1000
-        )
-        
-        # Extract response
-        feedback_text = response.choices[0].message.content
-        
-        # TODO: Parse JSON response and extract structured data
-        # For now, return a basic structure
-        return {
-            "feedback": feedback_text,
-            "skill_gaps": [],  # TODO: Extract from GPT response
-            "recommendations": []  # TODO: Extract from GPT response
-        }
-    
-    except Exception as e:
-        # TODO: Add proper error handling and logging
-        raise Exception(f"Failed to generate feedback: {str(e)}")
+    if not graduate_profile.skills:
+        logger.warning("Graduate profile contains no skills; feedback quality may be limited.")
+    if not job_requirements.skills:
+        logger.warning("Job requirements contain no skills; feedback quality may be limited.")
+
+    target_language = (language or DEFAULT_LANGUAGE).strip() or DEFAULT_LANGUAGE
+    template = _merge_templates(template_overrides)
+
+    prompt = _build_prompt(
+        graduate_profile=graduate_profile,
+        job_requirements=job_requirements,
+        language=target_language,
+        additional_context=additional_context,
+        template=template,
+    )
+
+    raw_response = await _call_openai(prompt)
+    return _parse_response(raw_response, target_language)
 

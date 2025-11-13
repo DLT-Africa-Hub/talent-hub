@@ -33,9 +33,15 @@ Node.js + Express + TypeScript backend for Talent Hub.
 | `AI_SERVICE_MAX_BACKOFF_MS`    | Maximum retry delay (default `2000`)                                   |
 | `AI_SERVICE_CACHE_TTL_MS`      | TTL for in-memory AI response cache (default `900000`)                 |
 | `AI_SERVICE_CACHE_MAX_ENTRIES` | Max entries kept in AI cache (default `500`)                           |
+| `AI_SERVICE_RATE_LIMIT_MAX_CONCURRENCY` | Maximum concurrent outbound AI requests (default `3`)        |
+| `AI_SERVICE_RATE_LIMIT_REQUESTS_PER_INTERVAL` | Number of AI requests allowed per interval (default `60`) |
+| `AI_SERVICE_RATE_LIMIT_INTERVAL_MS` | Interval window for AI rate limiting in ms (default `60000`)        |
+| `AI_SERVICE_METRICS_ENABLED`   | Enable AI client metrics collection (default `true`)                   |
 | `AI_MATCH_BATCH_SIZE`          | Number of AI tasks processed per batch (default `10`)                  |
 | `AI_MATCH_MAX_JOBS`            | Maximum jobs evaluated per graduate matching run (default `50`)        |
 | `AI_MATCH_MAX_GRADUATES`       | Maximum graduates evaluated per job matching run (default `50`)        |
+| `AI_MATCH_MIN_SCORE`           | Minimum score threshold when persisting matches (default `0.3`)        |
+| `AI_MATCH_MAX_RESULTS`         | Maximum matches persisted per run (default `20`)                       |
 
 ### Security Utilities
 
@@ -46,6 +52,8 @@ Node.js + Express + TypeScript backend for Talent Hub.
 - CSRF protection backed by signed cookies and the `X-CSRF-Token` header
 - Rate limiting per IP/user session using `express-rate-limit`
 - AI operations are queued and processed asynchronously to avoid blocking HTTP requests
+- Outbound AI requests share a throttled queue with keep-alive connection pooling to honour OpenAI limits
+- Request/response timings, success rates, and last failures are tracked for operational insight
 - Profile/job embeddings and feedback responses are cached in-memory to minimise duplicate AI calls
 
 ### AI Service Integration

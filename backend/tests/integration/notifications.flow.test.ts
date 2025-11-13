@@ -30,6 +30,7 @@ describe('Notification workflows', () => {
   const buildCompanyProfilePayload = () => ({
     companyName: 'Acme Inc.',
     industry: 'Software',
+    companySize: 250,
     description: 'We build products.',
     website: 'https://acme.example.com',
     location: 'Remote',
@@ -37,11 +38,11 @@ describe('Notification workflows', () => {
 
   const buildJobPayload = () => ({
     title: 'Frontend Engineer',
+    jobType: 'Full time' as const,
+    preferedRank: 'A and B' as const,
     description: 'Work on client applications.',
     requirements: {
       skills: ['React', 'TypeScript'],
-      education: 'BSc Computer Science',
-      experience: '2+ years',
     },
     location: 'Remote',
     salary: {
@@ -55,6 +56,10 @@ describe('Notification workflows', () => {
   const buildGraduateProfilePayload = () => ({
     firstName: 'Jane',
     lastName: 'Doe',
+    phoneNumber: 1234567890,
+    expLevel: 'mid' as const,
+    expYears: 3,
+    position: 'frontend' as const,
     skills: ['JavaScript', 'React'],
     interests: ['UX'],
     education: {

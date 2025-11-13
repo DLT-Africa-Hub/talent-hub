@@ -4,8 +4,22 @@
 @theme {
   --font-inter: Inter, "sans-serif";
   --font-mid:  MedievalSharp, "cursive";
-  --color-button:  #2E5EAA;
+  --color-button:  #1B7700;
+  --color-fade:#1B770033;
   --font-sf:  Rubik, "sans-serif";
+  --background-image-form: url('/formBg.png');
+  --background-image-onBoard: url('/group.png');
+}
+
+@layer utilities {
+  .bg-form {
+    background-image: var(--background-image-form);
+  }
+
+  .bg-onBoard{
+    background-image:var( --background-image-onBoard);
+    background-size: 150%;
+  }
 }
 
 
@@ -30,4 +44,6 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+
 

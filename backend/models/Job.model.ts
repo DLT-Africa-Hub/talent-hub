@@ -3,11 +3,10 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IJob extends Document {
   companyId: mongoose.Types.ObjectId;
   title: string;
+  jobType: "Full time" | "Part time" | "Contract" | "Internship";
   description: string;
   requirements: {
     skills: string[];
-    education?: string;
-    experience?: string;
   };
   location?: string;
   salary?: {
@@ -15,6 +14,7 @@ export interface IJob extends Document {
     max: number;
     currency: string;
   };
+  preferedRank: "A" | "B" | "C" | "D" | "A and B" | "B and C" | "C and D";
   status: 'active' | 'closed' | 'draft';
   embedding?: number[];
   matches?: {
@@ -38,6 +38,16 @@ const JobSchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    jobType: {
+      type: String,
+      enum: ['Full time', 'Part time', 'Contract', 'Internship'],
+      required: true,
+    },
+    preferedRank: {
+      type: String,
+      enum: ['A', 'B', 'C', 'D', 'A and B', 'B and C', 'C and D'],
+      required: true,
+    },
     description: {
       type: String,
       required: true,
@@ -47,8 +57,6 @@ const JobSchema: Schema = new Schema(
         type: [String],
         required: true,
       },
-      education: String,
-      experience: String,
     },
     location: String,
     salary: {

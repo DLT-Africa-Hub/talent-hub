@@ -32,7 +32,7 @@ const SideBar = () => {
       },
       {
           page: "Messages",
-          link: "message",
+          link: "messages",
           icon: HiOutlineChatBubbleLeftRight
       },
       {

@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Header />
 
     
-      <div className="hidden lg:flex gap-[43px] h-[calc(100vh-72px)]">
+      <div className="hidden lg:flex gap-[43px] h-[calc(100vh-72px)]  bg-onBoard">
       
         <aside className="self-start sticky top-4">
           <SideBar />

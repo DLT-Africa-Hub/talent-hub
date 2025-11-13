@@ -18,7 +18,7 @@ const ExploreCompany = () => {
 
 
   return (
-    <div className='py-[35px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center '>
+    <div className='py-[20px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center '>
       
       <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>
        <div className=" flex flex-col-reverse gap-[43px] lg:flex-row justify-between items-start lg:items-center">

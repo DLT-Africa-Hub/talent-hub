@@ -13,6 +13,7 @@ import ExploreCompany from './pages/ExploreCompany';
 import GraduateApplications from './pages/GraduateApplications';
 import CompanyPreview from './pages/CompanyPreview';
 import AuthPage from './pages/AuthPage';
+import Messages from './pages/Messages';
 
 function App() {
   return (
@@ -57,6 +58,9 @@ function App() {
           </Layout>} />
           <Route path="/applications" element={<Layout >
             <GraduateApplications/>
+          </Layout>} />
+          <Route path="/messages" element={<Layout >
+            <Messages/>
           </Layout>} />
           
         </Routes>

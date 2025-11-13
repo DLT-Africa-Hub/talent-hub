@@ -27,7 +27,7 @@ const GraduateDashboard = () => {
   };
 
   return (
-    <div className='py-[35px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center bg-[#FFFFFF]'>
+    <div className='py-[20px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center '>
 
       
     <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>

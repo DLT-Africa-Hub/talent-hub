@@ -172,7 +172,7 @@ const CompanyPreview: React.FC<CompanyPreviewProps>= ({ mode = "application" }) 
 
   return (
     <div className="flex items-center justify-center h-full lg:h-screen w-full font-inter">
-      <div className="border flex flex-col gap-[20px] border-[#C8D7EF] py-[45px] w-full h-full max-w-[1058px] lg:h-auto px-[15px] lg:px-[150px] rounded-[20px] ">
+      <div className="border flex flex-col gap-[20px] border-fade py-[45px] w-full h-full max-w-[1058px] lg:h-auto px-[15px] lg:px-[150px] rounded-[20px] ">
         <div className="w-full h-[232px] relative">
           <img
             src={company.image}
@@ -192,7 +192,7 @@ const CompanyPreview: React.FC<CompanyPreviewProps>= ({ mode = "application" }) 
               {company.role}
             </p>
           </div>
-          <div className="flex items-center  h-[49px]  bg-[#2E5EAA33] text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
+          <div className="flex items-center  h-[49px]  bg-fade text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
             {company.match}% match
           </div>
         </div>
@@ -209,7 +209,7 @@ const CompanyPreview: React.FC<CompanyPreviewProps>= ({ mode = "application" }) 
         <div className="flex flex-col gap-[27px]">
           <div className="flex items-center gap-[6px]">
             {company.skills.map((skill) => (
-              <button className="border border-[#2E5EAACC] text-[#2E5EAACC] rounded-[50px] py-[5px] px-2.5 text-[14px]">
+              <button className="border border-button text-button rounded-[50px] py-[5px] px-2.5 text-[14px]">
                 {skill}
               </button>
             ))}

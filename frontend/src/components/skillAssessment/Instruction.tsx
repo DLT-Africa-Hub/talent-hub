@@ -48,9 +48,9 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
       <div className="flex flex-col w-full max-w-[542px]">
         {guides.map((guide) => (
           <div
-            className={`border-[1px] flex items-center justify-start gap-4 rounded-xl border-[#C8D7EF] p-5 ${guide.guide === 'Passing Score' && 'border-none'}`}
+            className={`border-[1px] flex items-center justify-start gap-4 rounded-xl border-fade p-5 ${guide.guide === 'Passing Score' && 'border-none'}`}
           >
-            <div className="bg-[#C8D7EF] w-[60px] h-[60px] rounded-full flex items-center text-[20px] text-[#2E5EAA] justify-center text-center">
+            <div className="bg-button w-[60px] h-[60px] rounded-full flex items-center text-[20px] text-white justify-center text-center">
               <guide.icon />
             </div>
             <div className="flex flex-col items-start gap-2.5 justify-center">
@@ -67,7 +67,7 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
 
       <button
         onClick={onStart}
-        className="max-w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 w-full bg-button text-[#F8F8F8] hover:bg-[#A9B9D3] "
+        className="max-w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 w-full bg-button text-[#F8F8F8] cursor-pointer"
       >
         Start
       </button>

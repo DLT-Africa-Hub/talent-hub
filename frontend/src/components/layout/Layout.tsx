@@ -1,17 +1,36 @@
 import React from 'react'
-import Nav from './Nav'
 import Header from './Header'
+import SideBar from './SideBar'
+import MobileHeader from './MobileHeader'
+import MobileNav from './MobileNav'
 
-interface LayoutProps {
-  children: React.ReactNode
-}
+interface LayoutProps { children: React.ReactNode }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+
   return (
-    <div className="flex flex-col relative w-full bg-[#F9F9F9]">
+    <div className="min-h-screen flex flex-col bg-white">
+      <MobileHeader/>
       <Header />
-      <main className="flex-grow">{children}</main>
-      <Nav />
+
+    
+      <div className="hidden lg:flex gap-[43px] h-[calc(100vh-72px)]  bg-onBoard">
+      
+        <aside className="self-start sticky top-4">
+          <SideBar />
+        </aside>
+
+      
+        <main className="flex-grow overflow-auto">
+          {children}
+        </main>
+      </div>
+
+      <div className='lg:hidden'>
+        {children}
+      </div>
+
+      <MobileNav/>
     </div>
   )
 }

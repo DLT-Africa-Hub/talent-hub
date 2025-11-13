@@ -32,8 +32,9 @@ const GraduateOnboarding: React.FC = () => {
   const prevStep = () => setStep((prev) => Math.max(0, prev - 1));
 
   return (
-    <div className="flex flex-col items-center justify-center  lg:h-screen  bg-white md:py-[80px] md:px-[150px] font-inter">
-      <div className="flex flex-col md:items-center pt-[75px] px-5 md:justify-center w-full rounded-[50px] bg-[#F9F9F9] md:py-[85px] gap-[30px]">
+    <div className="flex flex-col items-center justify-center  lg:h-screen bg-onBoard  bg-center  bg-white md:py-[80px] md:px-[150px] font-inter">
+       <div className="absolute inset-0 bg-white/25"></div>
+      <div className="flex flex-col md:items-center pt-[75px] z-10 px-5 md:justify-center w-full rounded-[50px] md:py-[85px] gap-[30px]">
       <div className='flex flex-col w-full gap-2.5'>
       {step !== 0 && (
         <div className=" flex items-center cursor-pointer text-[18px] gap-2.5 justify-start " onClick={prevStep}>
@@ -48,7 +49,7 @@ const GraduateOnboarding: React.FC = () => {
 
           <div className="h-[10px] w-full md:w-[542px] bg-[#D9D9D9] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#2E5EAA] transition-all duration-500 ease-in-out"
+              className="h-full bg-button transition-all duration-500 ease-in-out"
               style={{ width: `${((step + 1) / 3) * 100}%` }}
             />
           </div>

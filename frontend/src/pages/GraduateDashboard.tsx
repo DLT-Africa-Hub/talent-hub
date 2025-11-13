@@ -27,7 +27,7 @@ const GraduateDashboard = () => {
   };
 
   return (
-    <div className='py-[35px] px-[20px] pb-[120px] lg:px-[150px] flex flex-col gap-[43px] items-start justify-center bg-[#F9F9F9]'>
+    <div className='py-[20px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center '>
 
       
     <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>
@@ -35,7 +35,7 @@ const GraduateDashboard = () => {
           Available Opportunites
         </p>
      
-      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 gap-8  w-full'>
+      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8  w-full'>
         {availableCompanies.map((company, index) => (
           <CompanyCard
             key={index}
@@ -51,7 +51,7 @@ const GraduateDashboard = () => {
           Contract offers
         </p>
      
-      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 gap-8  w-full'>
+      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8  w-full'>
         {contractCompanies.map((company, index) => (
           <CompanyCard
             key={index}

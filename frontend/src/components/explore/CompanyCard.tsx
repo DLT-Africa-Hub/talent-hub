@@ -41,7 +41,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   };
 
   return (
-    <div className='flex flex-col items-center justify-between gap-[16px] py-[18px] px-[17px] border border-[#2E5EAA33] rounded-[10px] bg-white'>
+    <div className='flex flex-col items-center justify-between gap-[16px] max-w-[400px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white'>
       <div className='w-full h-[232px] relative'>
         <img src={company.image} className='object-cover w-full h-full rounded-[10px]' alt={company.name} />
         <div className='absolute top-2 left-2 bg-white/20 backdrop-blur-xs text-[18px] border border-white/30 p-[12px] rounded-full shadow-lg'>
@@ -53,7 +53,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">{company.name}</p>
           <p className="font-sf font-normal text-[16px] max-w-[114px]  text-[#1C1C1CBF]">{company.role}</p>
         </div>
-        <div className="flex items-center  h-[49px]  bg-[#2E5EAA33] text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
+        <div className="flex items-center  h-[49px]  bg-fade text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
           {company.match}% match
         </div>
       </div>

@@ -4,6 +4,7 @@ import { LuBriefcase } from "react-icons/lu";
 import { CiUser } from "react-icons/ci";
 import { Link, useLocation } from 'react-router-dom';
 import { IconType } from 'react-icons';
+import { BiBell } from "react-icons/bi";
 
 interface Page  {
     page: string;
@@ -11,13 +12,13 @@ interface Page  {
   icon: IconType;
 }
 
-const Nav = () => {
+const MobileNav = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
     const pages: Page[] = [
         {
-            page: "Home",
+            page: "Dashboard",
             link: "graduate",
             icon: RiHomeSmile2Line
         },
@@ -32,9 +33,9 @@ const Nav = () => {
             icon: LuBriefcase
         },
         {
-            page: "Profile",
-            link: "profile",
-            icon: CiUser
+            page: "Notifications",
+            link: "notifications",
+            icon: BiBell
         },
        
     ]
@@ -45,7 +46,7 @@ const Nav = () => {
     };
 
   return (
-    <div className='  px-[20px] gap-[15px] fixed bottom-0 w-full border-b-[#00000033] text-[#1C1C1C] md:border-b  font-inter md:pb-[46px] md:px-[150px] bg-[#F9F9F9]'>
+    <div className='  px-[20px] gap-[15px] fixed bottom-0 w-full border-b-[#00000033] text-[#1C1C1C] md:border-b  font-inter lg:hidden bg-[#F9F9F9]'>
         <div className='flex items-center justify-between border-t border-t-[#2E5EAA33]'>
                 {
                     pages.map((page) => {
@@ -57,7 +58,7 @@ const Nav = () => {
                                 className={`flex flex-col items-center justify-center text-[24px] text-center p-2.5 cursor-pointer transition-all duration-300 ease-in-out ${
                                     active
                                         ? 'text-button border-t border-button'
-                                        : 'text-[#97B6E2] hover:text-button hover:border-t hover:border-button'
+                                        : 'text-fade hover:text-button hover:border-t hover:border-button'
                                 }`}
                             >
                                 <page.icon/>
@@ -71,4 +72,4 @@ const Nav = () => {
   )
 }
 
-export default Nav
+export default MobileNav

@@ -104,6 +104,7 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
         'security',
         'other',
       ],
+      enum: ['frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data', 'security', 'other'],
       required: true,
     },
     profilePictureUrl: {

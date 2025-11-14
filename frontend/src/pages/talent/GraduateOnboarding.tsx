@@ -24,6 +24,8 @@ const GraduateOnboarding: React.FC = () => {
     updatedAt: new Date(),
   });
 
+  console.log(form)
+
   const handleChange = (patch: Partial<GraduateForm>) => {
     setForm((prev) => ({ ...prev, ...patch }));
   };

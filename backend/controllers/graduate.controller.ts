@@ -254,16 +254,12 @@ export const createProfile = async (
 
     const parsedPhone = parsePhoneNumber(phoneNumber);
     if (parsedPhone === null) {
-      res
-        .status(400)
-        .json({ message: 'phoneNumber must be a valid numeric value' });
+      res.status(400).json({ message: 'phoneNumber must be a valid numeric value' });
       return;
     }
 
     if (!validateExperienceLevel(expLevel)) {
-      res
-        .status(400)
-        .json({ message: 'expLevel must be one of entry, mid, or senior' });
+      res.status(400).json({ message: 'expLevel must be one of entry, mid, or senior' });
       return;
     }
 

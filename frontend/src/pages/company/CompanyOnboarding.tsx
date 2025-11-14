@@ -54,7 +54,6 @@ const CompanyOnboarding = () => {
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.preferredRank) {
-      console.log('Company onboarding data:', formData);
       // TODO: Submit to API and navigate to dashboard
       navigate('/company');
     }

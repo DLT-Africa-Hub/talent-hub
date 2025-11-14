@@ -10,7 +10,7 @@ const CompanyJobForm = () => {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log('Submit new job');
+    // TODO: Submit job data to API
   };
 
   return (

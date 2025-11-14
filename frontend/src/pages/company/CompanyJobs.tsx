@@ -11,7 +11,7 @@ const CompanyJobs = () => {
   };
 
   const handleViewMatches = (job: CompanyJob) => {
-    console.log('View matches for job:', job);
+    // TODO: Navigate to matched candidates for this job
   };
 
   return (

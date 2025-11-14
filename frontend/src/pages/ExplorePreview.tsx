@@ -35,12 +35,10 @@ const ExplorePreview = () => {
   };
 
   const handleChat = () => {
-    console.log('Chat with', company.name);
     // TODO: Navigate to chat
   };
 
   const handleApply = () => {
-    console.log('Apply to', company.name);
     // TODO: Handle application
   };
 

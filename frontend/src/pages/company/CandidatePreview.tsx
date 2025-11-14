@@ -36,12 +36,10 @@ const CandidatePreview = () => {
   };
 
   const handleChat = () => {
-    console.log('Chat with', candidate.name);
     // TODO: Navigate to chat
   };
 
   const handleAccept = () => {
-    console.log('Accept candidate', candidate.name);
     // TODO: Handle accept candidate
   };
 

@@ -17,7 +17,6 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
   const navigate = useNavigate();
 
   const handleButtonClick = (companyId: number, buttonText: string) => {
-    console.log(companyId);
     if (buttonText === 'Preview') {
       navigate(`/explore-preview/${companyId}`);
     }

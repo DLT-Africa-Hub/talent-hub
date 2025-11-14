@@ -23,7 +23,7 @@ const GraduateDashboard = () => {
   const contractCompanies = useMemo(() => getRandom(companies, 4), []);
 
   const handleButtonClick = (companyName: string, buttonText: string) => {
-    console.log(`${buttonText} clicked for ${companyName}`);
+    // Handle button click action
   };
 
   return (

@@ -1,160 +1,277 @@
-import React, { useMemo, useState } from 'react';
-import { BsSearch } from 'react-icons/bs';
+import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// Example notification list
-const notifications = [
-  {
-    id: 1,
-    type: 'job',
-    title: 'Congratulations! You got the job',
-    description: 'Your application for Frontend Developer has been approved.',
-    company: {
-      name: 'Acme Corp',
-      image:
-        'https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069',
-    },
-    date: new Date(),
-  },
-  {
-    id: 2,
-    type: 'message',
-    title: 'New message from Tech Co.',
-    description: 'Hey, we want to discuss your interview...',
-    company: {
-      name: 'Tech Co.',
-      image:
-        'https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069',
-    },
-    date: new Date(new Date().setDate(new Date().getDate() - 1)),
-  },
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
+import { notificationApi } from '../api/notification';
+import {
+  DEFAULT_COMPANY_IMAGE,
+  formatNotificationDate,
+  getCompanyName,
+  mapNotificationType,
+} from '../utils/job.utils';
+import { LoadingSpinner } from '../index';
+import { SearchBar } from '../components/ui';
 
 interface Company {
   name: string;
   image: string;
 }
 
-interface NotificationType {
+interface NotificationItem {
   id: string;
   type: string;
   title: string;
   description: string;
   company: Company;
   date: Date;
-  img: string;
+  read: boolean;
+  relatedId?: string | null;
+  relatedType?: string | null;
 }
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
-  const [readMap, setReadMap] = useState<Record<string, boolean>>({});
+
+  const {
+    data: notificationsData,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const response = await notificationApi.getNotifications({
+        page: 1,
+        limit: 100,
+      });
+      return response.notifications || [];
+    },
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      await notificationApi.markAsRead(notificationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const notifications = useMemo(() => {
+    if (!notificationsData) return [];
+
+    return notificationsData.map((notif: any): NotificationItem => {
+      const date = formatNotificationDate(notif.createdAt);
+      const companyName = getCompanyName(notif, user?.role);
+
+      return {
+        id: notif.id,
+        type: mapNotificationType(notif.type, notif.relatedType),
+        title: notif.title,
+        description: notif.message,
+        company: {
+          name: companyName,
+          image: DEFAULT_COMPANY_IMAGE,
+        },
+        date,
+        read: notif.read || false,
+        relatedId: notif.relatedId,
+        relatedType: notif.relatedType,
+      };
+    });
+  }, [notificationsData, user?.role]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return notifications;
     const q = query.toLowerCase();
     return notifications.filter(
-      (n) =>
+      (n: NotificationItem) =>
         n.title.toLowerCase().includes(q) ||
         n.description.toLowerCase().includes(q) ||
         n.company.name.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [notifications, query]);
 
-  const openNotification = (notification: NotificationType) => {
-    setReadMap((prev) => ({ ...prev, [notification.id]: true }));
+  const groupedNotifications = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (notification.type === 'job') {
-      navigate(`/company-preview/${notification.id}`);
-    } else if (notification.type === 'message') {
-      navigate(`/messages/${notification.id}`);
-    } else {
-      console.warn('Unknown notification type:', notification.type);
-    }
-  };
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-  const today = filtered.filter(
-    (n) => n.date.toDateString() === new Date().toDateString()
+    const todayList: NotificationItem[] = [];
+    const yesterdayList: NotificationItem[] = [];
+    const olderList: NotificationItem[] = [];
+
+    filtered.forEach((notif: NotificationItem) => {
+      const notifDate = new Date(notif.date);
+      notifDate.setHours(0, 0, 0, 0);
+
+      if (notifDate.getTime() === today.getTime()) {
+        todayList.push(notif);
+      } else if (notifDate.getTime() === yesterday.getTime()) {
+        yesterdayList.push(notif);
+      } else {
+        olderList.push(notif);
+      }
+    });
+
+    return { today: todayList, yesterday: yesterdayList, older: olderList };
+  }, [filtered]);
+
+  const openNotification = useCallback(
+    (notification: NotificationItem) => {
+      if (!notification.read) {
+        markAsReadMutation.mutate(notification.id);
+      }
+
+      if (user?.role === 'graduate') {
+        if (notification.type === 'job' && notification.relatedId) {
+          navigate(`/company-preview/${notification.relatedId}`);
+        } else if (notification.type === 'match' && notification.relatedId) {
+          navigate(`/explore-preview/${notification.relatedId}`);
+        } else if (notification.type === 'message' && notification.relatedId) {
+          navigate(`/messages/${notification.relatedId}`);
+        } else if (
+          notification.type === 'application' &&
+          notification.relatedId
+        ) {
+          navigate(`/applications`);
+        }
+      } else if (user?.role === 'company') {
+        if (notification.type === 'application' && notification.relatedId) {
+          navigate(`/candidate-preview/${notification.relatedId}`);
+        } else if (notification.type === 'match' && notification.relatedId) {
+          navigate(`/candidates`);
+        } else if (notification.type === 'message' && notification.relatedId) {
+          navigate(`/messages/${notification.relatedId}`);
+        } else if (notification.type === 'job' && notification.relatedId) {
+          navigate(`/jobs`);
+        }
+      }
+    },
+    [navigate, user?.role, markAsReadMutation]
   );
-  const yesterday = filtered.filter(
-    (n) =>
-      n.date.toDateString() ===
-      new Date(new Date().setDate(new Date().getDate() - 1)).toDateString()
-  );
 
-  const renderNotification = (n: NotificationType) => {
-    const isRead = !!readMap[n.id];
-    return (
-      <button
-        key={n.id}
-        onClick={() => openNotification(n)}
-        className="w-full text-left py-4 px-2 flex items-center border-b border-fade justify-between gap-4 hover:bg-[#00000008] cursor-pointer"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-[10px] overflow-hidden flex-shrink-0">
-            <img
-              src={n.company.image}
-              alt={n.company.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <p className="text-[#1C1C1C] font-medium">{n.title}</p>
-              {!isRead && (
-                <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
-              )}
+  const renderNotification = useCallback(
+    (n: NotificationItem) => {
+      return (
+        <button
+          key={n.id}
+          onClick={() => openNotification(n)}
+          className="w-full text-left py-4 px-2 flex items-center border-b border-fade justify-between gap-4 hover:bg-[#00000008] cursor-pointer transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-[10px] overflow-hidden shrink-0">
+              <img
+                src={n.company.image}
+                alt={n.company.name}
+                className="w-full h-full object-cover"
+              />
             </div>
-            <p className="text-[#1C1C1C80] text-sm truncate max-w-[300px]">
-              {n.description}
-            </p>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <p className="text-[#1C1C1C] font-medium">{n.title}</p>
+                {!n.read && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                )}
+              </div>
+              <p className="text-[#1C1C1C80] text-sm truncate max-w-[300px]">
+                {n.description}
+              </p>
+            </div>
           </div>
-        </div>
-        <p className="text-[#1C1C1C80] text-[12px]">
-          {isRead ? 'Read' : 'New'}
-        </p>
-      </button>
+          <p className="text-[#1C1C1C80] text-[12px]">
+            {n.read ? 'Read' : 'New'}
+          </p>
+        </button>
+      );
+    },
+    [openNotification]
+  );
+
+  const error = useMemo(() => {
+    if (!queryError) return null;
+    const err = queryError as any;
+    return (
+      err.response?.data?.message ||
+      'Failed to load notifications. Please try again.'
     );
-  };
+  }, [queryError]);
 
   return (
     <div className="py-5 px-5 min-h-screen flex flex-col gap-6">
       <div className="flex justify-between items-center">
         <p className="font-medium text-[22px] text-[#1C1C1C]">Notifications</p>
-        <div className="flex gap-2.5 items-center text-fade px-4 py-2 border border-button rounded-[10px] w-full max-w-[500px]">
-          <BsSearch />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            type="text"
-            placeholder="Search notifications"
-            className="w-full outline-none bg-transparent text-[#1C1C1C]"
-          />
-        </div>
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder="Search notifications"
+          maxWidth="max-w-[500px]"
+        />
       </div>
 
-      {today.length > 0 && (
-        <div>
-          <p className="font-semibold text-[#1C1C1C] mb-2">Today</p>
-          <div className="flex flex-col divide-y">
-            {today.map(renderNotification)}
-          </div>
+      {error && (
+        <div className="rounded-[12px] bg-red-50 border border-red-200 p-[16px]">
+          <p className="text-[14px] text-red-600">{error}</p>
         </div>
       )}
 
-      {yesterday.length > 0 && (
-        <div>
-          <p className="font-semibold text-[#1C1C1C] mb-2">Yesterday</p>
-          <div className="flex flex-col divide-y">
-            {yesterday.map(renderNotification)}
-          </div>
-        </div>
+      {loading && (
+        <LoadingSpinner message="Loading notifications..." fullPage />
       )}
 
-      {filtered.length === 0 && (
-        <p className="text-center text-[#1C1C1C80] py-8">
-          No notifications found
-        </p>
+      {!loading && (
+        <>
+          {groupedNotifications.today.length > 0 && (
+            <div>
+              <p className="font-semibold text-[#1C1C1C] mb-2">Today</p>
+              <div className="flex flex-col divide-y">
+                {groupedNotifications.today.map(renderNotification)}
+              </div>
+            </div>
+          )}
+
+          {groupedNotifications.yesterday.length > 0 && (
+            <div>
+              <p className="font-semibold text-[#1C1C1C] mb-2">Yesterday</p>
+              <div className="flex flex-col divide-y">
+                {groupedNotifications.yesterday.map(renderNotification)}
+              </div>
+            </div>
+          )}
+
+          {groupedNotifications.older.length > 0 && (
+            <div>
+              <p className="font-semibold text-[#1C1C1C] mb-2">Older</p>
+              <div className="flex flex-col divide-y">
+                {groupedNotifications.older.map(renderNotification)}
+              </div>
+            </div>
+          )}
+
+          {filtered.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center py-[80px]">
+              <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
+                <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
+                  <span className="text-[32px] text-button font-bold">
+                    ×
+                  </span>
+                </div>
+              </div>
+              <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
+                {query ? 'No notifications found' : 'No notifications yet'}
+              </p>
+              <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
+                {query
+                  ? 'Try adjusting your search to find notifications.'
+                  : 'You will receive notifications about matches, applications, and messages here.'}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

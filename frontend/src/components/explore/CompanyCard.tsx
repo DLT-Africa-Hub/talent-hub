@@ -23,14 +23,20 @@ interface CompanyCardProps {
 const CompanyCard: React.FC<CompanyCardProps> = ({
   company,
   buttonText = 'Preview',
+  onButtonClick,
 }) => {
   const navigate = useNavigate();
 
   const handleButtonClick = (companyId: number, buttonText: string) => {
+    if (onButtonClick) {
+      // Use the provided callback if available
+      onButtonClick();
+      return;
+    }
 
-    if(buttonText === "Preview"){
-      navigate(`/explore-preview/${companyId}`)
-
+    // Fallback to default navigation
+    if (buttonText === 'Preview') {
+      navigate(`/explore-preview/${companyId}`);
     }
     if (buttonText === 'Get in Touch') {
       navigate(`/contactCompany/${companyId}`);

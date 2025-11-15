@@ -40,6 +40,15 @@ body {
   background-color: #F9F9F9;
 }
 
+/* Ensure all buttons have pointer cursor unless disabled */
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

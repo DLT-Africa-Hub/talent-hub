@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '../index';
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,11 @@ const AdminDashboard = () => {
   }, []);
 
   if (loading) {
-    return <div style={containerStyle}>Loading...</div>;
+    return (
+      <div style={containerStyle}>
+        <LoadingSpinner message="Loading dashboard..." fullPage />
+      </div>
+    );
   }
 
   return (

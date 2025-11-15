@@ -243,18 +243,28 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     Required Skills: ${validatedSkills.join(', ')}
   `;
 
-  let embedding: number[];
+  // Try to generate embedding, but allow job creation without it as fallback
+  let embedding: number[] | undefined;
+  let embeddingWarning: string | undefined;
+  
   try {
     embedding = await generateJobEmbedding(jobText);
   } catch (error) {
     if (error instanceof AIServiceError) {
-      res.status(error.statusCode ?? 503).json({ message: error.message });
-      return;
+      // For quota errors, allow job creation but warn about limited matching
+      if (error.statusCode === 402 || error.message.toLowerCase().includes('quota')) {
+        embeddingWarning = 'Job created without AI matching capabilities due to OpenAI quota limits. Please check your OpenAI account billing settings. The job will not be automatically matched with candidates until the issue is resolved.';
+        console.warn('Job created without embedding due to quota error:', error.message);
+      } else {
+        // For other AI service errors, still allow creation but with a warning
+        embeddingWarning = 'Job created without AI matching capabilities. The job will not be automatically matched with candidates.';
+        console.warn('Job created without embedding due to AI service error:', error.message);
+      }
+    } else {
+      // For unknown errors, allow creation with warning
+      embeddingWarning = 'Job created without AI matching capabilities. The job will not be automatically matched with candidates.';
+      console.error('Error generating embedding:', error);
     }
-
-    console.error('Error generating embedding:', error);
-    res.status(500).json({ message: 'Failed to generate job embedding' });
-    return;
   }
 
   const job = new Job({
@@ -270,17 +280,23 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
       location: validatedLocation,
       salary: validatedSalary,
       status: validatedStatus,
+      embedding,
     }),
-    embedding,
   });
 
   await job.save();
 
-  queueJobMatching(job._id as mongoose.Types.ObjectId);
+  // Only queue matching if embedding was successfully generated
+  if (embedding) {
+    queueJobMatching(job._id as mongoose.Types.ObjectId);
+  }
 
   res.status(201).json({
-    message: 'Job created successfully',
+    message: embeddingWarning 
+      ? 'Job created successfully, but without AI matching capabilities' 
+      : 'Job created successfully',
     job,
+    warning: embeddingWarning,
   });
 };
 

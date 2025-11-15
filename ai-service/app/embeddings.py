@@ -161,12 +161,58 @@ async def _fetch_embeddings_from_openai(texts: Sequence[str]) -> List[List[float
 
         return embeddings
 
-    except (RateLimitError, APITimeoutError) as exc:
+    except RateLimitError as exc:
         logger.warning("OpenAI embedding request throttled: %s", exc)
+        # Check if this is actually a quota error (429 can mean either rate limit or quota)
+        error_msg = str(exc)
+        
+        # Try to access error details from the exception
+        error_body = None
+        if hasattr(exc, 'response'):
+            error_body = exc.response
+        elif hasattr(exc, 'body'):
+            error_body = exc.body
+        
+        error_data = None
+        if error_body:
+            if hasattr(error_body, 'body'):
+                error_data = error_body.body
+            elif isinstance(error_body, dict):
+                error_data = error_body
+        
+        # Check for quota error indicators in multiple places
+        is_quota_error = (
+            'quota' in error_msg.lower() or
+            'insufficient_quota' in error_msg.lower() or
+            'exceeded your current quota' in error_msg.lower() or
+            (isinstance(error_data, dict) and (
+                error_data.get('error', {}).get('code') == 'insufficient_quota' or
+                error_data.get('error', {}).get('type') == 'insufficient_quota' or
+                'quota' in str(error_data).lower()
+            )) or
+            (error_data and 'quota' in str(error_data).lower())
+        )
+        
+        if is_quota_error:
+            # Extract the full error message if available
+            full_error = error_msg
+            if isinstance(error_data, dict) and error_data.get('error', {}).get('message'):
+                full_error = error_data['error']['message']
+            raise EmbeddingError(f"OpenAI API quota exceeded: {full_error}") from exc
         raise EmbeddingError("Embedding service is currently rate limited") from exc
-    except (BadRequestError, APIConnectionError, APIError) as exc:
+    except APITimeoutError as exc:
+        logger.warning("OpenAI embedding request timeout: %s", exc)
+        raise EmbeddingError("Embedding service request timed out") from exc
+    except BadRequestError as exc:
         logger.error("OpenAI embedding API error: %s", exc)
-        raise EmbeddingError("Embedding service rejected the request") from exc
+        # Preserve the original error message, especially for quota errors
+        error_msg = str(exc)
+        if 'quota' in error_msg.lower() or 'insufficient_quota' in error_msg.lower():
+            raise EmbeddingError(f"OpenAI API quota exceeded: {error_msg}") from exc
+        raise EmbeddingError(f"Embedding service rejected the request: {error_msg}") from exc
+    except (APIConnectionError, APIError) as exc:
+        logger.error("OpenAI embedding API error: %s", exc)
+        raise EmbeddingError(f"Embedding service error: {str(exc)}") from exc
     except OpenAIError as exc:
         logger.exception("Unexpected OpenAI error while generating embeddings")
         raise EmbeddingError("Unexpected OpenAI error") from exc

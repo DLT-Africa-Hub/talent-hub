@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { graduateApi } from '../../api/graduate';
-
+import { LoadingSpinner } from '../../index';
 
 interface Question {
   question: string;
@@ -19,23 +19,19 @@ const Assessment: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(60); // 60 seconds timer
+  const [timeRemaining, setTimeRemaining] = useState(60);
   const [timerActive, setTimerActive] = useState(false);
   const navigate = useNavigate();
-
+  const queryClient = useQueryClient();
 
   const handleSubmit = useCallback(async () => {
-    setTimerActive(false); // Stop timer
+    setTimerActive(false);
 
- 
-
-    // Ensure we have answers for all questions
     const allAnswers: string[] = questions.map((_, index) => {
       const answer = answers[index];
       return answer && typeof answer === 'string' ? answer.trim() : '';
     });
 
-    // Check if all questions are answered
     const unansweredCount = allAnswers.filter((a) => a === '').length;
     if (unansweredCount > 0) {
       setError(
@@ -50,8 +46,11 @@ const Assessment: React.FC = () => {
     }
 
     try {
-      // Submit assessment to backend
       await graduateApi.submitAssessment({ answers: allAnswers });
+
+      queryClient.invalidateQueries({
+        queryKey: ['graduateProfile', 'assessment'],
+      });
       setShowResults(true);
     } catch (err: any) {
       setError(
@@ -65,7 +64,6 @@ const Assessment: React.FC = () => {
     fetchQuestions();
   }, [attempt]);
 
-  // Timer effect
   useEffect(() => {
     if (!timerActive || showResults || questions.length === 0) return;
 
@@ -88,7 +86,6 @@ const Assessment: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      // Verify token exists before making request
       const token = localStorage.getItem('token');
       if (!token) {
         setError('Authentication required. Please log in again.');
@@ -97,7 +94,6 @@ const Assessment: React.FC = () => {
       }
 
       const response = await graduateApi.getAssessmentQuestions();
-      // Transform API response to match our Question interface
       const transformedQuestions: Question[] = response.questions.map(
         (q: any) => ({
           question: q.question,
@@ -110,21 +106,20 @@ const Assessment: React.FC = () => {
       setAnswers([]);
       setStep(0);
       setShowResults(false);
-      setTimeRemaining(60); // Reset timer
-      setTimerActive(true); // Start timer
+        setTimeRemaining(60);
+      setTimerActive(true);
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         'Failed to load questions. Please try again.';
       setError(errorMessage);
 
-      // If token is invalid/expired, redirect to login
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setTimeout(() => {
           navigate('/login', { replace: true });
-        }, 2000); // Give user time to see the error message
+        }, 2000);
       }
 
       setQuestions([]);
@@ -177,7 +172,7 @@ const Assessment: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
-        <p className="text-[18px] text-[#1C1C1CBF]">Loading questions...</p>
+        <LoadingSpinner message="Loading questions..." size="lg" />
       </div>
     );
   }
@@ -201,7 +196,6 @@ const Assessment: React.FC = () => {
   const selectedOption = answers[step];
   const isLastQuestion = step === totalSteps - 1;
 
-  // Results Screen
   if (showResults) {
     const score = calculateScore();
     const passed = score.percentage >= 60;
@@ -242,22 +236,18 @@ const Assessment: React.FC = () => {
                   Almost there!
                 </p>
                 <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-
                   You got {score.percentage}%, you need 60% to pass. But
                   don&apos;t worry you can try again
-
                 </p>
               </div>
             )}
           </div>
-
 
           <button
             onClick={passed ? handleGoToDashboard : handleRetry}
             className="bg-button w-full max-w-[400px] py-[18px] rounded-[10px] text-[#F8F8F8] text-[16px] font-medium"
           >
             {passed ? 'Go to Dashboard' : 'Try Again'}
-
           </button>
         </div>
       </div>
@@ -271,7 +261,7 @@ const Assessment: React.FC = () => {
           {error}
         </div>
       )}
-      {/* ✅ Progress Bar */}
+
       <div className="w-full flex flex-col gap-6 max-w-[542px] mx-auto mt-6">
         <div className="flex flex-col md:items-center gap-2.5 w-full">
           <div className="flex justify-between items-center w-full">
@@ -304,7 +294,7 @@ const Assessment: React.FC = () => {
         </div>
 
         <div className="flex flex-col w-full gap-2.5 text-left md:text-center max-w-[542px] mx-auto">
-          <h2 className="font-semibold text-[20px] md:text-[24px] text-[#1C1C1C] leading-relaxed break-words">
+          <h2 className="font-semibold text-[20px] md:text-[24px] text-[#1C1C1C] leading-relaxed wrap-break-word">
             {currentQuestion.question}
           </h2>
           {currentQuestion.skill && (
@@ -315,7 +305,6 @@ const Assessment: React.FC = () => {
         </div>
       </div>
 
-      {/* ✅ Options */}
       <div className="flex flex-col gap-3 justify-center items-center w-full max-w-[542px] mx-auto">
         {currentQuestion.options.map((option) => {
           const isSelected = selectedOption === option;
@@ -324,14 +313,14 @@ const Assessment: React.FC = () => {
               key={option}
               type="button"
               onClick={() => handleSelectOption(option)}
-              className={`flex items-start border-[1px] p-4 gap-3 rounded-xl w-full justify-start transition-all duration-200 hover:border-button/50 ${
+              className={`flex items-start border p-4 gap-3 rounded-xl w-full justify-start transition-all duration-200 hover:border-button/50 ${
                 isSelected
                   ? 'border-button bg-[#F0F5FF]'
                   : 'border-fade bg-white'
               }`}
             >
               <div
-                className={`rounded-full h-5 w-5 p-1 border-[1px] flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                className={`rounded-full h-5 w-5 p-1 border flex items-center justify-center shrink-0 mt-0.5 ${
                   isSelected ? 'border-button' : 'border-fade'
                 }`}
               >
@@ -339,7 +328,7 @@ const Assessment: React.FC = () => {
                   <div className="h-full w-full bg-button rounded-full" />
                 )}
               </div>
-              <p className="text-[#1C1C1C] text-[15px] leading-relaxed break-words text-left flex-1">
+              <p className="text-[#1C1C1C] text-[15px] leading-relaxed wrap-break-word text-left flex-1">
                 {option}
               </p>
             </button>
@@ -347,15 +336,14 @@ const Assessment: React.FC = () => {
         })}
       </div>
 
-      {/* ✅ Navigation Buttons */}
       <div className="flex justify-start w-full max-w-[542px] gap-4 mx-auto">
         <button
           onClick={prevStep}
           disabled={step === 0}
           className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             step === 0
-              ? 'bg-fade text-[#F8F8F8] cursor-not-allowed border-[1px] border-transparent'
-              : 'border-[1px] border-button text-button bg-white hover:bg-[#F0F4F9]'
+              ? 'bg-fade text-[#F8F8F8] cursor-not-allowed border border-transparent'
+              : 'border border-button text-button bg-white hover:bg-[#F0F4F9]'
           }`}
         >
           Previous
@@ -367,7 +355,7 @@ const Assessment: React.FC = () => {
           className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             !selectedOption
               ? 'bg-fade text-[#F8F8F8] cursor-not-allowed'
-              : 'bg-button text-[#F8F8F8] hover:bg-[#1B7700]'
+              : 'bg-button text-[#F8F8F8] hover:bg-button/90'
           }`}
         >
           {isLastQuestion ? 'Submit' : 'Next'}

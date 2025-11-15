@@ -1,29 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
-
-type RankOption = 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
+import CompanyInfo, {
+  CompanyInfoData,
+} from '../../components/onboarding/companyOnboarding/CompanyInfo';
+import RankSelector, {
+  RankOption,
+} from '../../components/onboarding/companyOnboarding/job/RankSelector';
+import { companyApi } from '../../api/company';
 
 const CompanyOnboarding = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState<
+    CompanyInfoData & { preferredRank: RankOption | '' }
+  >({
     companyName: '',
     industry: '',
     companySize: '',
     location: '',
-    preferredRank: '' as RankOption | '',
+    preferredRank: '',
   });
-
-  const rankOptions: RankOption[] = [
-    'A',
-    'B',
-    'C',
-    'D',
-    'A and B',
-    'B and C',
-    'C and D',
-  ];
 
   const handleBack = () => {
     if (step === 1) {
@@ -38,24 +37,81 @@ const CompanyOnboarding = () => {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setError('');
   };
 
   const handleRankSelect = (rank: RankOption) => {
     setFormData((prev) => ({ ...prev, preferredRank: rank }));
+    setError('');
   };
 
-  const handleStep1Submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.companyName && formData.industry && formData.companySize && formData.location) {
-      setStep(2);
+  const convertCompanySizeToNumber = (size: string): number => {
+    // Convert size string to number for backend
+    if (size === '500+') {
+      return 500;
     }
+    const parts = size.split('-');
+    if (parts.length === 2) {
+      // Return the upper bound
+      return parseInt(parts[1], 10);
+    }
+    // Fallback to 1 if parsing fails
+    return 1;
   };
 
-  const handleStep2Submit = (e: React.FormEvent) => {
+  const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.preferredRank) {
-      // TODO: Submit to API and navigate to dashboard
-      navigate('/company');
+    setError('');
+
+    if (
+      !formData.companyName ||
+      !formData.industry ||
+      !formData.companySize ||
+      !formData.location
+    ) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setStep(2);
+  };
+
+  const handleStep2Submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!formData.preferredRank) {
+      setError('Please select a preferred rank');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Convert companySize from string to number
+      const companySizeNumber = convertCompanySizeToNumber(
+        formData.companySize
+      );
+
+      // Create company profile
+      // Note: Backend requires description, so we'll use a default value
+      await companyApi.createProfile({
+        companyName: formData.companyName,
+        industry: formData.industry,
+        companySize: companySizeNumber,
+        location: formData.location,
+        description: `Company profile for ${formData.companyName}`,
+      });
+
+      // Navigate to company dashboard
+      navigate('/company', { replace: true });
+    } catch (err: any) {
+      console.error('Error creating company profile:', err);
+      setError(
+        err.response?.data?.message ||
+          'Failed to create company profile. Please try again.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,7 +120,7 @@ const CompanyOnboarding = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-form bg-cover bg-center px-[20px] py-[40px] font-inter">
       <div className="absolute inset-0 bg-white/50"></div>
-      
+
       <div className="relative z-10 w-full max-w-[600px]">
         {/* Progress Header */}
         <div className="mb-[32px] flex items-center gap-[12px]">
@@ -88,9 +144,19 @@ const CompanyOnboarding = () => {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-[20px] rounded-[12px] bg-red-50 border border-red-200 p-[16px]">
+            <p className="text-[14px] text-red-600">{error}</p>
+          </div>
+        )}
+
         {/* Step 1: Company Profile */}
         {step === 1 && (
-          <form onSubmit={handleStep1Submit} className="flex flex-col gap-[24px]">
+          <form
+            onSubmit={handleStep1Submit}
+            className="flex flex-col gap-[24px]"
+          >
             <div className="mb-[8px] text-center">
               <h1 className="mb-[8px] text-[32px] font-semibold text-[#1C1C1C]">
                 Company Profile
@@ -100,83 +166,15 @@ const CompanyOnboarding = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-[20px] rounded-[20px] border border-[#1B77001A] bg-white p-[28px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)]">
-              <div className="flex flex-col gap-[8px]">
-                <label className="text-[16px] font-medium text-[#1C1C1C]">
-                  Company name
-                </label>
-                <input
-                  type="text"
-                  name="companyName"
-                  value={formData.companyName}
-                  onChange={handleInputChange}
-                  placeholder="John"
-                  className="h-[60px] rounded-[14px] border border-[#D9E6C9] bg-[#F8F8F8] px-[18px] text-[16px] text-[#1C1C1C] placeholder:text-[#1C1C1C66] focus:border-button focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-[8px]">
-                <label className="text-[16px] font-medium text-[#1C1C1C]">
-                  Industry
-                </label>
-                <select
-                  name="industry"
-                  value={formData.industry}
-                  onChange={handleInputChange}
-                  className="h-[60px] rounded-[14px] border border-[#D9E6C9] bg-[#F8F8F8] px-[18px] text-[16px] text-[#1C1C1C] focus:border-button focus:outline-none"
-                  required
-                >
-                  <option value="">Industry type</option>
-                  <option value="Technology">Technology</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Healthcare">Healthcare</option>
-                  <option value="Education">Education</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-[8px]">
-                <label className="text-[16px] font-medium text-[#1C1C1C]">
-                  Company size
-                </label>
-                <select
-                  name="companySize"
-                  value={formData.companySize}
-                  onChange={handleInputChange}
-                  className="h-[60px] rounded-[14px] border border-[#D9E6C9] bg-[#F8F8F8] px-[18px] text-[16px] text-[#1C1C1C] focus:border-button focus:outline-none"
-                  required
-                >
-                  <option value="">Select size</option>
-                  <option value="1-10">1-10 employees</option>
-                  <option value="11-50">11-50 employees</option>
-                  <option value="51-200">51-200 employees</option>
-                  <option value="201-500">201-500 employees</option>
-                  <option value="500+">500+ employees</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-[8px]">
-                <label className="text-[16px] font-medium text-[#1C1C1C]">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="City/State"
-                  className="h-[60px] rounded-[14px] border border-[#D9E6C9] bg-[#F8F8F8] px-[18px] text-[16px] text-[#1C1C1C] placeholder:text-[#1C1C1C66] focus:border-button focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
+            <CompanyInfo
+              formData={formData}
+              onInputChange={handleInputChange}
+            />
 
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="flex h-[55px] w-full max-w-[400px] items-center justify-center rounded-[14px] bg-button text-[18px] font-semibold text-[#F8F8F8] transition hover:bg-[#176300]"
+                className="flex h-[55px] w-full max-w-[400px] items-center justify-center rounded-[14px] bg-button text-[18px] font-semibold text-[#F8F8F8] transition hover:bg-[#176300] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue
               </button>
@@ -186,7 +184,10 @@ const CompanyOnboarding = () => {
 
         {/* Step 2: Preferred Rank Selection */}
         {step === 2 && (
-          <form onSubmit={handleStep2Submit} className="flex flex-col gap-[24px]">
+          <form
+            onSubmit={handleStep2Submit}
+            className="flex flex-col gap-[24px]"
+          >
             <div className="mb-[8px] text-center">
               <h1 className="mb-[8px] text-[32px] font-semibold text-[#1C1C1C]">
                 Select your preferred rank
@@ -196,40 +197,18 @@ const CompanyOnboarding = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-[12px] rounded-[20px] border border-[#1B77001A] bg-white p-[28px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)]">
-              {rankOptions.map((rank) => {
-                const isSelected = formData.preferredRank === rank;
-                return (
-                  <label
-                    key={rank}
-                    className={`flex cursor-pointer items-center gap-[12px] rounded-[12px] border-2 p-[16px] transition ${
-                      isSelected
-                        ? 'border-button bg-[#EFFFE2]'
-                        : 'border-[#D9E6C9] bg-[#F8F8F8] hover:border-[#1B770080]'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="preferredRank"
-                      value={rank}
-                      checked={isSelected}
-                      onChange={() => handleRankSelect(rank)}
-                      className="h-[20px] w-[20px] cursor-pointer accent-button"
-                    />
-                    <span className="text-[16px] font-medium text-[#1C1C1C]">
-                      {rank} Rank
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
+            <RankSelector
+              selectedRank={formData.preferredRank}
+              onRankSelect={handleRankSelect}
+            />
 
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="flex h-[55px] w-full max-w-[400px] items-center justify-center rounded-[14px] bg-button text-[18px] font-semibold text-[#F8F8F8] transition hover:bg-[#176300]"
+                disabled={loading}
+                className="flex h-[55px] w-full max-w-[400px] items-center justify-center rounded-[14px] bg-button text-[18px] font-semibold text-[#F8F8F8] transition hover:bg-[#176300] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue
+                {loading ? 'Creating Profile...' : 'Continue'}
               </button>
             </div>
           </form>

@@ -102,8 +102,9 @@ const validatePosition = (
 type PopulatedJobLean = {
   _id: mongoose.Types.ObjectId;
   title?: string;
-  companyId?: mongoose.Types.ObjectId;
+  companyId?: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId; companyName: string };
   location?: string;
+  jobType?: string;
   requirements?: {
     skills?: string[];
     education?: string;
@@ -1295,7 +1296,14 @@ export const getMatches = async (
     const matchesRaw = await Match.find(matchQuery)
       .populate<{
         jobId: mongoose.Types.ObjectId | PopulatedJobLean;
-      }>('jobId', 'title companyId location requirements salary status createdAt updatedAt')
+      }>({
+        path: 'jobId',
+        select: 'title companyId location requirements salary status jobType createdAt updatedAt',
+        populate: {
+          path: 'companyId',
+          select: 'companyName',
+        },
+      })
       .sort({ score: -1, createdAt: -1 })
       .lean();
 
@@ -1309,11 +1317,25 @@ export const getMatches = async (
         if (jobSource instanceof mongoose.Types.ObjectId) {
           job = { id: jobSource.toString() };
         } else if (isPopulatedJob(jobSource)) {
+          // Extract company name if companyId is populated
+          let companyName: string | undefined;
+          if (
+            jobSource.companyId &&
+            typeof jobSource.companyId === 'object' &&
+            'companyName' in jobSource.companyId
+          ) {
+            companyName = (jobSource.companyId as { companyName: string }).companyName;
+          }
+
           job = {
             id: jobSource._id.toHexString(),
             title: jobSource.title,
-            companyId: jobSource.companyId,
+            companyId: jobSource.companyId instanceof mongoose.Types.ObjectId
+              ? jobSource.companyId
+              : jobSource.companyId?._id || jobSource.companyId,
+            companyName,
             location: jobSource.location,
+            jobType: jobSource.jobType,
             requirements: jobSource.requirements,
             salary: jobSource.salary,
             status: jobSource.status,

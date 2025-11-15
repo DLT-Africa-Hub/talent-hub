@@ -1,98 +1,244 @@
-import { useMemo, useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiFilter, FiSearch } from 'react-icons/fi';
+import { useQuery } from '@tanstack/react-query';
+import { HiOutlineFilter } from 'react-icons/hi';
 import CandidateCard from '../../components/company/CandidateCard';
+import { CandidateProfile, CandidateStatus } from '../../data/candidates';
+import { companyApi } from '../../api/company';
 import {
-  CandidateProfile,
-  CandidateStatus,
-  companyCandidates,
-} from '../../data/candidates';
-
-const statusFilters: { label: string; value: CandidateStatus }[] = [
-  { label: 'Applied', value: 'applied' },
-  { label: 'Matched', value: 'matched' },
-  { label: 'Hired', value: 'hired' },
-  { label: 'Pending', value: 'pending' },
-];
+  candidateStatusFilters,
+  mapApplicationStatusToCandidateStatus,
+  formatExperience,
+  formatLocation,
+  getCandidateRank,
+  DEFAULT_PROFILE_IMAGE,
+} from '../../utils/job.utils';
+import { LoadingSpinner, SearchBar } from '../../index';
 
 const CompanyCandidates = () => {
   const navigate = useNavigate();
-  const [activeStatus, setActiveStatus] = useState<CandidateStatus>('applied');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeStatus, setActiveStatus] = useState<CandidateStatus | 'all'>(
+    'applied'
+  );
+
+  // Transform API application to CandidateProfile using useCallback
+  const transformApplication = useCallback(
+    (app: any, index: number): CandidateProfile => {
+      const graduate = app.graduateId || {};
+      const job = app.jobId || {};
+
+      const hasMatch = !!app.matchId;
+      const candidateStatus = mapApplicationStatusToCandidateStatus(
+        app.status,
+        hasMatch
+      );
+
+      const fullName = `${graduate.firstName || ''} ${
+        graduate.lastName || ''
+      }`.trim();
+
+      return {
+        id: app._id || index,
+        name: fullName || 'Unknown Candidate',
+        role: job.title || graduate.position || 'Developer',
+        status: candidateStatus,
+        rank: getCandidateRank(graduate.rank),
+        statusLabel:
+          candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
+        experience: formatExperience(graduate.expYears || 0),
+        location: formatLocation(job.location),
+        skills: (graduate.skills || []).slice(0, 3),
+        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+      };
+    },
+    []
+  );
+
+  // Fetch candidates using React Query
+  const {
+    data: applicationsResponse,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['companyApplications'],
+    queryFn: async () => {
+      const response = await companyApi.getApplications({
+        page: 1,
+        limit: 100,
+      });
+      return response;
+    },
+  });
+
+  // Extract applications array from response
+  const applicationsData = useMemo(() => {
+    if (!applicationsResponse) return [];
+    // Handle both cases: direct array or object with applications property
+    if (Array.isArray(applicationsResponse)) {
+      return applicationsResponse;
+    }
+    if (applicationsResponse?.applications && Array.isArray(applicationsResponse.applications)) {
+      return applicationsResponse.applications;
+    }
+    return [];
+  }, [applicationsResponse]);
+
+  // Transform applications to candidates using useMemo
+  const candidates = useMemo(() => {
+    if (!applicationsData || !Array.isArray(applicationsData)) return [];
+    return applicationsData.map((app: any, index: number) =>
+      transformApplication(app, index)
+    );
+  }, [applicationsData, transformApplication]);
+
+  // Extract error message
+  const error = useMemo(() => {
+    if (!queryError) return null;
+    const err = queryError as any;
+    return err.response?.data?.message || 'Failed to load candidates. Please try again.';
+  }, [queryError]);
 
   const filteredCandidates = useMemo(() => {
-    return companyCandidates.filter(
-      (candidate) => candidate.status === activeStatus
+    let filtered = candidates;
+
+    // Filter by status
+    if (activeStatus !== 'all') {
+      filtered = filtered.filter(
+        (candidate: CandidateProfile) => candidate.status === activeStatus
     );
-  }, [activeStatus]);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (candidate: CandidateProfile) =>
+          candidate.name.toLowerCase().includes(query) ||
+          candidate.role.toLowerCase().includes(query) ||
+          candidate.skills.some((skill: string) =>
+            skill.toLowerCase().includes(query)
+          ) ||
+          candidate.location.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [candidates, activeStatus, searchQuery]);
 
   const handlePreview = (candidate: CandidateProfile) => {
     navigate(`/candidate-preview/${candidate.id}`);
   };
 
   return (
-    <section className="flex flex-col gap-[32px] px-[20px] py-[24px] pb-[120px] font-inter lg:px-0 lg:pr-[24px]">
-      <div className="flex flex-col gap-[16px]">
-        <div className="flex w-full flex-col items-stretch gap-[12px] lg:items-end">
-          <div className="flex w-full justify-start lg:w-auto lg:justify-end">
-            <div className="relative flex h-[60px] w-full max-w-[360px] items-center rounded-[14px] border border-fade bg-white px-[20px]">
-              <FiSearch className="text-[22px] text-[#1C1C1C80]" />
-              <input
-                type="text"
-                placeholder="Search candidates"
-                className="h-full w-full border-0 bg-transparent pl-[12px] text-[16px] text-[#1C1C1C] placeholder:text-[#1C1C1C66] focus:outline-none"
-              />
-              <button
-                type="button"
-                className="ml-[12px] flex h-[40px] w-[40px] items-center justify-center rounded-full border border-fade bg-[#F8F8F8]"
+    <div className="relative py-[24px] px-[24px]">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
+              <svg
+                className="w-full h-full"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 1440 320"
+                preserveAspectRatio="none"
               >
-                <FiFilter className="text-[18px] text-[#1C1C1C]" />
-              </button>
+                <path
+                  fill="#1B7700"
+                  d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+                />
+              </svg>
             </div>
-          </div>
 
-          <div className="flex flex-wrap justify-start gap-[12px] lg:justify-end">
-            {statusFilters.map((filter) => {
+            <div className="relative z-10">
+              {/* Search and Filter Section */}
+              <div className="flex flex-col gap-[16px] mb-[24px]">
+                <div className="flex items-center gap-[10px]">
+                  <div className="flex-1">
+                    <SearchBar
+                      value={searchQuery}
+                      onChange={setSearchQuery}
+                      placeholder="Search candidates"
+                      maxWidth="max-w-none"
+                      className="py-[10px]"
+                    />
+                  </div>
+                  <button className="h-[44px] w-[44px] flex items-center justify-center rounded-[10px] border border-[#D9E6C9] bg-[#F8F8F8] text-[#1C1C1C] hover:bg-[#F0F0F0] transition-colors">
+                    <HiOutlineFilter className="text-[18px]" />
+                  </button>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex gap-[10px] flex-wrap">
+                  {candidateStatusFilters.map((filter) => {
               const isActive = filter.value === activeStatus;
               return (
                 <button
                   key={filter.value}
                   type="button"
                   onClick={() => setActiveStatus(filter.value)}
-                  className={`flex items-center gap-[10px] rounded-full px-[20px] py-[12px] text-[14px] font-medium transition ${
+                        className={`flex items-center gap-[6px] px-[16px] py-[8px] rounded-full border transition-colors ${
                     isActive
-                      ? 'border border-fade bg-[#DBFFC0] text-[#1C1C1C]'
-                      : 'border border-transparent bg-[#F0F0F0] text-[#1C1C1C80]'
+                            ? 'border-button bg-[#DBFFC0] text-[#1C1C1C]'
+                            : 'border-[#D9E6C9] bg-[#F8F8F8] text-[#1C1C1C80] hover:border-[#1B770080] hover:bg-[#F0F0F0]'
                   }`}
                 >
+                        <span className="text-[14px] font-medium">
                   {filter.label}
+                        </span>
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
+              </div>
 
-      <div className="grid grid-cols-1 gap-[24px] sm:grid-cols-2 xl:grid-cols-4">
+              {/* Error State */}
+              {error && (
+                <div className="mb-[24px] rounded-[12px] bg-red-50 border border-red-200 p-[16px]">
+                  <p className="text-[14px] text-red-600">{error}</p>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {loading && (
+                <LoadingSpinner message="Loading candidates..." fullPage />
+              )}
+
+              {/* Candidates Grid */}
+              {!loading && (
+                <>
         {filteredCandidates.length > 0 ? (
-          filteredCandidates.map((candidate) => (
+                    <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {filteredCandidates.map((candidate: CandidateProfile) => (
             <CandidateCard
               key={candidate.id}
               candidate={candidate}
               onPreview={handlePreview}
             />
-          ))
+                      ))}
+                    </div>
         ) : (
-          <div className="col-span-full flex h-[240px] flex-col items-center justify-center rounded-[20px] border border-fade bg-white text-center text-[#1C1C1C80]">
-            <p className="text-[18px] font-medium text-[#1C1C1CE5]">
-              No candidates in this stage yet
+                    <div className="flex flex-col items-center justify-center py-[80px] bg-white rounded-[16px] border border-[#1B770033]">
+                      <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
+                        <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
+                          <span className="text-[32px] text-[#1B7700] font-bold">
+                            ×
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
+                        {searchQuery || activeStatus !== 'all'
+                          ? 'No candidates found'
+                          : 'No candidates yet'}
             </p>
-            <p className="text-[14px] text-[#1C1C1C80]">
-              Try adjusting your filters to discover more talents.
+                      <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
+                        {searchQuery || activeStatus !== 'all'
+                          ? 'Try adjusting your search or filters to discover more candidates.'
+                          : 'Candidates will appear here once they apply to your job postings.'}
             </p>
           </div>
         )}
+                </>
+              )}
+            </div>
       </div>
-    </section>
   );
 };
 

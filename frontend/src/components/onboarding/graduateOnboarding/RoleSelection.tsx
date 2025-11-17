@@ -49,7 +49,7 @@ const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
       </div>
 
       {/* Roles List */}
-      <div className="flex flex-col gap-2.5 justify-center items-center w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4 justify-center w-full max-w-[900px]">
         {positions.map((position) => {
           const isSelected = selectedRoles.includes(position.value);
           return (
@@ -57,12 +57,12 @@ const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
               key={position.value}
               type="button"
               onClick={() => handleSelectRole(position.value)}
-              className={`flex items-center border-[1px] p-5 gap-2.5 rounded-xl w-full max-w-[542px] justify-start transition-all duration-200 ${
+              className={`flex items-center border p-5 gap-2.5 rounded-xl w-full justify-start transition-all duration-200 ${
                 isSelected ? 'border-button  bg-white' : 'border-fade'
               }`}
             >
               <div
-                className={`rounded-full h-5 w-5 p-1 border-[1px] flex items-center justify-center ${
+                className={`rounded-full h-5 w-5 p-1 border flex items-center justify-center ${
                   isSelected ? 'border-button' : 'border-fade'
                 }`}
               >

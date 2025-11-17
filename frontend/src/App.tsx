@@ -1,9 +1,11 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import {
   Home,
   GraduateDashboard,
+  GraduateProfile,
   CompanyDashboard,
+  CompanyProfile,
   CompanyCandidates,
   CompanyJobs,
   CompanyJobForm,
@@ -47,10 +49,37 @@ function App() {
             }
           />
           <Route
+            path="/graduate/profile"
+            element={
+              <ProtectedRoute allowedRoles={['graduate']}>
+                <AssessmentGuard>
+                  <Layout>
+                    <GraduateProfile />
+                  </Layout>
+                </AssessmentGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/talent/profile"
+            element={<Navigate to="/graduate/profile" replace />}
+          />
+          <Route path="/talent/*" element={<Navigate to="/graduate" replace />} />
+          <Route 
             path="/company/*"
             element={
               <ProtectedRoute allowedRoles={['company']}>
                 <CompanyDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/profile"
+            element={
+              <ProtectedRoute allowedRoles={['company']}>
+                <Layout>
+                  <CompanyProfile />
+                </Layout>
               </ProtectedRoute>
             }
           />

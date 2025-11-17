@@ -33,7 +33,7 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
   ];
 
   return (
-    <div className="flex items-center justify-center w-full flex-col gap-6 md:gap-8 font-inter max-w-[542px] mx-auto">
+    <div className="flex items-center justify-center w-full flex-col gap-6 md:gap-8 font-inter max-w-[542px] mx-auto ">
       {/* Header */}
       <div className="flex flex-col w-full gap-2.5 text-left md:text-center">
         <h2 className="font-semibold text-[32px] text-[#1C1C1C]">
@@ -44,11 +44,11 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-4 w-full ">
         {guides.map((guide) => (
           <div
             key={guide.guide}
-            className="border border-fade flex items-center justify-start gap-4 rounded-xl p-4 bg-white hover:border-button/50 transition-all duration-200"
+            className="border border-fade flex items-center justify-start gap-4 rounded-xl p-4 bg-white hover:border-button/50 transition-all duration-200 "
           >
             <div className="bg-button w-[56px] h-[56px] rounded-full flex items-center justify-center text-white flex-shrink-0">
               <guide.icon className="text-[24px]" />

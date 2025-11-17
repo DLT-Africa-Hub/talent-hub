@@ -58,6 +58,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
                 value={field.value}
                 onChange={field.onChange}
                 required
+                error={error ? ' ' : undefined}
               />
             ))}
             {error && (

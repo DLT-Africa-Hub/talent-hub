@@ -1,6 +1,8 @@
 export { default as Home } from './pages/Home';
 export { default as GraduateDashboard } from './pages/talent/GraduateDashboard';
+export { default as GraduateProfile } from './pages/talent/GraduateProfile';
 export { default as CompanyDashboard } from './pages/company/CompanyDashboard';
+export { default as CompanyProfile } from './pages/company/CompanyProfile';
 export { default as CompanyCandidates } from './pages/company/CompanyCandidates';
 export { default as CompanyJobs } from './pages/company/CompanyJobs';
 export { default as CompanyJobForm } from './components/onboarding/companyOnboarding/job/CompanyJobForm';

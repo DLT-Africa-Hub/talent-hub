@@ -71,7 +71,7 @@ const AccountType: React.FC = () => {
       if (selectedRoleData.backendRole === 'graduate') {
         navigate('/onboarding');
       } else {
-        navigate('/company');
+        navigate('/company/onboarding');
       }
     } catch (err: any) {
       setError(
@@ -95,7 +95,7 @@ const AccountType: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-6">
+        <div className="flex flex-col items-center justify-center gap-6 ">
           {roles.map((role) => {
             const isSelected = selectedRole === role.role;
 
@@ -103,7 +103,7 @@ const AccountType: React.FC = () => {
               <div
                 key={role.role}
                 onClick={() => handleSelect(role.role)}
-                className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border
+                className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border rounded-[10px]
                   ${
                     isSelected
                       ? 'bg-[#EFFFE2] border-[#01732bd4]'
@@ -140,7 +140,7 @@ const AccountType: React.FC = () => {
                     {role.tags.map((tag) => (
                       <div
                         key={tag}
-                        className={`border-[1px] rounded-[20px] py-1 px-2 text-[12px] ${
+                        className={`border rounded-[20px] py-1 px-2 text-[12px] ${
                           role.role === 'Company'
                             ? 'border-button text-button'
                             : 'border-button text-button'

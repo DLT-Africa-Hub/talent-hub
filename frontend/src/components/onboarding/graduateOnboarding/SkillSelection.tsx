@@ -1,12 +1,13 @@
-
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduateForm } from '../../../constants/type';
-import { getSkillsForPositions, rolesToPosition } from '../../../utils/material.utils';
+import {
+  getSkillsForPositions,
+  rolesToPosition,
+} from '../../../utils/material.utils';
 import { graduateApi } from '../../../api/graduate';
 import Modal from '../../auth/Modal';
 import { Input, Button } from '../../ui';
-
 
 interface Props {
   form: GraduateForm;
@@ -68,7 +69,8 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
     } catch (err: any) {
       console.error('Profile creation error:', err);
       setProfileError(
-        err.response?.data?.message || 'Failed to create profile. Please try again.'
+        err.response?.data?.message ||
+          'Failed to create profile. Please try again.'
       );
     } finally {
       setIsCreatingProfile(false);
@@ -79,7 +81,6 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
   const availableSkills = useMemo(() => {
     return getSkillsForPositions(form.roles || []);
   }, [form.roles]);
-
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -114,11 +115,8 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
   };
 
   return (
-
     <div className="flex items-center justify-center w-full flex-col gap-6 md:gap-8 font-inter max-w-[542px] mx-auto">
-
-      {/* Header */}
-      <div className="flex flex-col w-full gap-2.5 text-left md:text-center">
+      <div className="flex flex-col w-full gap-2 text-left md:text-center">
         <h2 className="font-semibold text-[32px] text-[#1C1C1C]">
           Your Skills and Links
         </h2>
@@ -127,8 +125,6 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         </p>
       </div>
 
-
-      {/* Form */}
       <form
         className="flex flex-col gap-4 w-full"
         onSubmit={(e) => {
@@ -138,11 +134,9 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
           }
         }}
       >
-      {/* Skill List */}
         <div className="flex flex-col gap-2">
           <label className="text-[#1C1C1C] text-[16px] font-medium">
             Skills <span className="text-red-500">*</span>
-
           </label>
           {form.roles && form.roles.length > 0 && (
             <p className="text-[#1C1C1CBF] text-[14px] font-normal">
@@ -152,27 +146,27 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
           )}
           <div className="flex gap-2.5 justify-start items-center w-full flex-wrap">
             {availableSkills.map((skill) => {
-            const isSelected = selectedSkills.includes(skill);
-            return (
-              <button
-                key={skill}
-                type="button"
-                onClick={() => handleSelectSkill(skill)}
-                  className={`flex items-center border rounded-xl py-2.5 px-4 transition-all duration-200 ${
+              const isSelected = selectedSkills.includes(skill);
+              return (
+                <button
+                  key={skill}
+                  type="button"
+                  onClick={() => handleSelectSkill(skill)}
+                  className={`flex items-center border rounded-xl py-2 px-2 transition-all duration-200 ${
                     isSelected
                       ? 'border-button bg-button/10 text-[#1C1C1C] font-medium'
                       : 'border-fade bg-white text-[#1C1C1CBF] hover:border-button/50'
                   }`}
                 >
                   <span className="text-[15px]">{skill}</span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
         {/* Links Section */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <Input
             label="Portfolio URL"
             type="url"
@@ -182,22 +176,18 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
             onChange={handleInputChange}
           />
 
-
           <Input
             label="GitHub"
             type="url"
-
             placeholder="https://github.com/you"
             name="github"
             value={form.socials?.github || ''}
             onChange={handleInputChange}
           />
 
-
           <Input
             label="LinkedIn"
             type="url"
-
             placeholder="https://linkedin.com/you"
             name="linkedin"
             value={form.socials?.linkedin || ''}
@@ -205,13 +195,12 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
           />
         </div>
 
-
         {/* Continue Button */}
         <div className="pt-2">
           <Button type="submit" disabled={!filled}>
             Continue
           </Button>
-      </div>
+        </div>
       </form>
 
       {/* Consent Modal */}
@@ -258,7 +247,6 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
           </div>
         </div>
       </Modal>
-
     </div>
   );
 };

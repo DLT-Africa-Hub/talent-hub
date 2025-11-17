@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { graduateApi } from '../api/graduate';
 import { ReactNode } from 'react';
-import { LoadingSpinner } from '../index';
 
 interface AssessmentGuardProps {
   children: ReactNode;
@@ -19,7 +18,11 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
   const currentUser = user || (storedUser ? JSON.parse(storedUser) : null);
 
   const shouldFetch = Boolean(isAuth && currentUser?.role === 'graduate');
-  const { data: profileData, isLoading, error } = useQuery({
+  const {
+    data: profileData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['graduateProfile', 'assessment'],
     queryFn: async () => {
       const response = await graduateApi.getProfile();
@@ -45,11 +48,7 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <LoadingSpinner message="Loading..." size="lg" />
-      </div>
-    );
+    return null;
   }
 
   if (error) {
@@ -68,4 +67,3 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
 };
 
 export default AssessmentGuard;
-

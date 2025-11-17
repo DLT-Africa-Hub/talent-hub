@@ -5,7 +5,7 @@ import { BsSearch } from 'react-icons/bs';
 import { LuBriefcase } from 'react-icons/lu';
 import { RiHomeSmile2Line } from 'react-icons/ri';
 import { IconType } from 'react-icons';
-import { BiBell, BiChevronDown, BiLogOut } from 'react-icons/bi';
+import { BiBell, BiChevronDown, BiLogOut, BiUser } from 'react-icons/bi';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiUsersThreeLight } from 'react-icons/pi';
 import { useAuth } from '../../context/AuthContext';
@@ -174,7 +174,7 @@ const SideBar: React.FC = () => {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="bg-[#F0F0F0] p-[10px] flex items-center justify-center gap-[8px] rounded-[10px] w-full hover:bg-[#E8E8E8] transition-colors"
           >
-            <div className="w-[40px] h-[40px] rounded-[8px] bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-semibold text-[16px] shadow-sm">
+            <div className="w-[40px] h-[40px] rounded-[8px] bg-linear-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-semibold text-[16px] shadow-sm">
               {displayName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 text-left min-w-0">
@@ -194,6 +194,18 @@ const SideBar: React.FC = () => {
 
           {isDropdownOpen && (
             <div className="absolute bottom-full left-0 mb-[8px] w-full bg-white rounded-[12px] border border-fade shadow-lg overflow-hidden z-50">
+              <button
+                onClick={() => {
+                  const basePath =
+                    user?.role === 'company' ? '/company' : '/graduate';
+                  setIsDropdownOpen(false);
+                  navigate(`${basePath}/profile`);
+                }}
+                className="w-full flex items-center gap-[10px] px-[16px] py-[12px] text-[#1C1C1C] hover:bg-[#F8F8F8] transition-colors text-[14px] font-medium"
+              >
+                <BiUser className="text-[18px]" />
+                <span>View Profile</span>
+              </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-[10px] px-[16px] py-[12px] text-[#DC2626] hover:bg-[#FEF2F2] transition-colors text-[14px] font-medium"

@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface LoadingSpinnerProps {
   message?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -7,12 +5,12 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+const LoadingSpinner = ({
   message,
   size = 'md',
   fullPage = false,
   className = '',
-}) => {
+}: LoadingSpinnerProps) => {
   const sizeClasses = {
     sm: 'h-[24px] w-[24px] border-2',
     md: 'h-[40px] w-[40px] border-4',
@@ -42,7 +40,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   if (fullPage) {
     return (
-      <div className="flex items-center justify-center py-[80px] min-h-[400px]">
+      <div className="w-full flex items-center justify-center py-[80px] min-h-[400px]">
         {content}
       </div>
     );

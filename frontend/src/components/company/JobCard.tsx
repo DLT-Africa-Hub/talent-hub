@@ -20,37 +20,9 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
 
   // Truncate description to 120 characters
   const truncatedDescription =
-    job.description && job.description.length > 120
-      ? `${job.description.substring(0, 120)}...`
+    job.description && job.description.length > 150
+      ? `${job.description.substring(0, 150)}...`
       : job.description || 'No description provided.';
-
-  // Format date if available
-  const formatDate = (date?: string | Date): string => {
-    if (!date) return '';
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    const now = new Date();
-
-    // Reset time to midnight for day comparison
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const jobDate = new Date(
-      dateObj.getFullYear(),
-      dateObj.getMonth(),
-      dateObj.getDate()
-    );
-
-    // Calculate difference in days
-    const diffTime = today.getTime() - jobDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return dateObj.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   return (
     <article className="group flex max-w-[560px] flex-col gap-[18px] rounded-[20px] border border-fade bg-white p-[18px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)] transition-all hover:shadow-[0_24px_48px_-24px_rgba(47,81,43,0.18)] hover:border-button/20">
@@ -61,12 +33,11 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
           alt={job.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
-            // Fallback to a gradient if image fails to load
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
           }}
         />
-        <div className="absolute left-[14px] top-[14px] flex h-[44px] w-[44px] items-center justify-center rounded-full border border-white/40 bg-white/30 backdrop-blur-sm text-button text-[22px] shadow-lg">
+        <div className="absolute left-[14px] top-[14px] flex h-[44px] w-[44px] items-center justify-center rounded-full border border-white/40 bg-white/30 backdrop-blur-sm text-white text-[22px] shadow-lg">
           <HiOutlineBriefcase />
         </div>
         {job.preferedRank && (

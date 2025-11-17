@@ -123,7 +123,10 @@ const Login = () => {
           type: 'email',
           placeholder: 'John@example.com',
           value: email,
-          onChange: (e) => setEmail(e.target.value),
+          onChange: (e) => {
+            setEmail(e.target.value);
+            if (error) setError('');
+          },
         },
         {
           label: 'Password',
@@ -131,7 +134,10 @@ const Login = () => {
           type: 'password',
           placeholder: 'password',
           value: password,
-          onChange: (e) => setPassword(e.target.value),
+          onChange: (e) => {
+            setPassword(e.target.value);
+            if (error) setError('');
+          },
         },
       ]}
       error={error}

@@ -18,32 +18,37 @@ const CompanyJobs = () => {
   const navigate = useNavigate();
 
   // Transform API job to CompanyJob format using useCallback
-  const transformJob = useCallback((job: any): CompanyJob & {
-    skills?: string[];
-    preferedRank?: string;
-    createdAt?: string | Date;
-  } => {
-    const matchedCount = job.matches?.length || 0;
-    const salaryRange = formatSalaryRange(job.salary);
-    const duration = formatJobType(job.jobType || 'Full time');
-    const salaryType = getSalaryType(job.jobType || 'Full time');
+  const transformJob = useCallback(
+    (
+      job: any
+    ): CompanyJob & {
+      skills?: string[];
+      preferedRank?: string;
+      createdAt?: string | Date;
+    } => {
+      const matchedCount = job.matches?.length || 0;
+      const salaryRange = formatSalaryRange(job.salary);
+      const duration = formatJobType(job.jobType || 'Full time');
+      const salaryType = getSalaryType(job.jobType || 'Full time');
 
-    return {
-      id: job._id || job.id,
-      title: job.title || 'Untitled Job',
-      location: job.location || 'Location not specified',
-      description: job.description || 'No description provided.',
-      duration,
-      salaryRange,
-      salaryType,
-      matchedCount,
-      status: mapJobStatus(job.status || 'draft'),
-      image: DEFAULT_JOB_IMAGE,
-      skills: job.requirements?.skills || [],
-      preferedRank: job.preferedRank,
-      createdAt: job.createdAt,
-    };
-  }, []);
+      return {
+        id: job._id || job.id,
+        title: job.title || 'Untitled Job',
+        location: job.location || 'Location not specified',
+        description: job.description || 'No description provided.',
+        duration,
+        salaryRange,
+        salaryType,
+        matchedCount,
+        status: mapJobStatus(job.status || 'draft'),
+        image: DEFAULT_JOB_IMAGE,
+        skills: job.requirements?.skills || [],
+        preferedRank: job.preferedRank,
+        createdAt: job.createdAt,
+      };
+    },
+    []
+  );
 
   // Fetch jobs using React Query
   const {
@@ -68,7 +73,9 @@ const CompanyJobs = () => {
   const error = useMemo(() => {
     if (!queryError) return null;
     const err = queryError as any;
-    return err.response?.data?.message || 'Failed to load jobs. Please try again.';
+    return (
+      err.response?.data?.message || 'Failed to load jobs. Please try again.'
+    );
   }, [queryError]);
 
   const handleNewJob = () => {
@@ -99,23 +106,23 @@ const CompanyJobs = () => {
 
       <div className="relative z-10 flex flex-col gap-[32px]">
         {/* Header Section */}
-      <div className="flex w-full flex-col gap-[16px] lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-[6px] text-[#1C1C1C]">
-          <h1 className="text-[28px] font-semibold">Jobs</h1>
-          <p className="text-[15px] text-[#1C1C1C80]">
-            Review open roles and manage your job postings.
-          </p>
-        </div>
+        <div className="flex w-full flex-col gap-[16px] lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-[6px] text-[#1C1C1C]">
+            <h1 className="text-[28px] font-semibold">Jobs</h1>
+            <p className="text-[15px] text-[#1C1C1C80]">
+              Review open roles and manage your job postings.
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={handleNewJob}
+          <button
+            type="button"
+            onClick={handleNewJob}
             className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-[#1B770033] bg-[#EAF4E2] px-[22px] py-[14px] text-[16px] font-medium text-button transition hover:border-button hover:bg-[#DBFFC0] lg:w-auto"
-        >
-          <FiPlus className="text-[20px]" />
-          New Job
-        </button>
-      </div>
+          >
+            <FiPlus className="text-[20px]" />
+            New Job
+          </button>
+        </div>
 
         {/* Error State */}
         {error && (
@@ -125,15 +132,13 @@ const CompanyJobs = () => {
         )}
 
         {/* Loading State */}
-        {loading && (
-          <LoadingSpinner message="Loading jobs..." fullPage />
-        )}
+        {loading && <LoadingSpinner message="Loading jobs..." fullPage />}
 
         {/* Jobs Grid */}
         {!loading && (
           <>
             {jobs.length > 0 ? (
-      <div className="grid grid-cols-1 gap-[24px] xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-[24px] xl:grid-cols-2">
                 {jobs.map((job: CompanyJob) => (
                   <JobCard
                     key={job.id}

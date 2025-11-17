@@ -1,5 +1,9 @@
 import { JobStatus } from '../data/jobs';
 import { CandidateStatus } from '../data/candidates';
+import { PiPlugsConnectedDuotone } from 'react-icons/pi';
+import { MdCheckCircleOutline } from 'react-icons/md';
+import { FaRegHand } from 'react-icons/fa6';
+import { IconType } from 'react-icons';
 
 // Default job image
 export const DEFAULT_JOB_IMAGE =
@@ -80,11 +84,15 @@ export const candidateRankBadgeStyles: Record<CandidateStatus, string> = {
 };
 
 // Candidate status filters
-export const candidateStatusFilters: { label: string; value: CandidateStatus | 'all' }[] = [
+export const candidateStatusFilters: {
+  label: string;
+  value: CandidateStatus | 'all';
+  icon?: IconType;
+}[] = [
   { label: 'Applied', value: 'applied' },
-  { label: 'Matched', value: 'matched' },
-  { label: 'Hired', value: 'hired' },
-  { label: 'Pending', value: 'pending' },
+  { label: 'Matched', value: 'matched', icon: PiPlugsConnectedDuotone },
+  { label: 'Hired', value: 'hired', icon: MdCheckCircleOutline },
+  { label: 'Pending', value: 'pending', icon: FaRegHand },
 ];
 
 // Map API application status to candidate status

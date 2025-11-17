@@ -1,10 +1,14 @@
 import { RiHomeSmile2Line } from "react-icons/ri";
 import { BsSearch } from "react-icons/bs";
 import { LuBriefcase } from "react-icons/lu";
-import { CiUser } from "react-icons/ci";
 import { Link, useLocation } from 'react-router-dom';
 import { IconType } from 'react-icons';
 import { BiBell } from "react-icons/bi";
+import { useAuth } from "../../context/AuthContext";
+import { PiUsersThreeLight } from "react-icons/pi";
+
+
+
 
 interface Page  {
     page: string;
@@ -12,32 +16,33 @@ interface Page  {
     icon: IconType;
 }
 
-const user = {
-    role: "company"  
-}
+
 
 const MobileNav = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const dashboardLink = user.role === "company" ? "company" : "graduate";
+    const {user} = useAuth()
+
+    const dashboardLink = user?.role === "company" ? "company" : "graduate";
 
   
     const allPages: Page[] = [
         { page: "Dashboard", link: dashboardLink, icon: RiHomeSmile2Line },
-        { page: "Candidates", link: "candidates", icon: CiUser },
+        { page: "Candidates", link: "candidates", icon: PiUsersThreeLight },
         { page: "Explore", link: "explore", icon: BsSearch },
         { page: "Applications", link: "applications", icon: LuBriefcase },
         { page: "Notifications", link: "notifications", icon: BiBell },
+        { page: 'Jobs', link: 'jobs', icon: LuBriefcase },
     ];
 
  
     const rolePagesMap: Record<string, string[]> = {
-        company: [dashboardLink, "candidates", "explore", "notifications"],
-        graduate: ["graduate", "explore", "applications", "notifications"],
+        company: [dashboardLink, "candidates", "explore", "jobs"],
+        graduate: ["graduate", "explore", "applications"],
     };
 
-    const allowed = rolePagesMap[user.role] || rolePagesMap["graduate"];
+    const allowed = rolePagesMap[user?.role] || rolePagesMap["graduate"];
     const pages = allPages.filter(p => allowed.includes(p.link));
 
     const isActive = (link: string) => {
@@ -46,7 +51,7 @@ const MobileNav = () => {
     };
 
     return (
-        <div className='px-[20px] gap-[15px] fixed bottom-0 w-full border-b-[#00000033] text-[#1C1C1C] md:border-b font-inter lg:hidden bg-[#F9F9F9]'>
+        <div className='px-[20px] gap-[15px] fixed z-10 bottom-0 w-full border-b-[#00000033] text-[#1C1C1C] md:border-b font-inter lg:hidden bg-[#F9F9F9]'>
             <div className='flex items-center justify-between border-t border-t-[#2E5EAA33]'>
                 {pages.map((page) => {
                     const active = isActive(page.link);

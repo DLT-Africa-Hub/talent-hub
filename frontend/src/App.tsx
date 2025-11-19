@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 import {
   Home,
   GraduateDashboard,
@@ -30,7 +32,8 @@ import {
 
 function App() {
   return (
-    <AuthProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+       <AuthProvider>
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -213,6 +216,8 @@ function App() {
         </Routes>
       </div>
     </AuthProvider>
+    </GoogleOAuthProvider>
+   
   );
 }
 

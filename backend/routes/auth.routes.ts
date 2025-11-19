@@ -11,6 +11,9 @@ import {
   verifyEmail,
   requestPasswordReset,
   resetPassword,
+  googleSignIn,
+  getGoogleAuthUrl,
+  googleOAuthCallback,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validateRequest } from '../middleware/validation.middleware';
@@ -59,5 +62,9 @@ router.post(
   validateRequest(resetPasswordSchema),
   resetPassword
 );
+
+router.post('/auth/google', googleSignIn); 
+router.get('/auth/google/url', getGoogleAuthUrl); 
+router.get('/auth/google/callback', googleOAuthCallback); 
 
 export default router;

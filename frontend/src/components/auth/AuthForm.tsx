@@ -1,7 +1,7 @@
 import React from 'react';
-import { FcGoogle } from 'react-icons/fc';
 import { Link } from 'react-router-dom';
 import { Input, Button } from '../ui';
+import { GoogleLoginButton } from './GoogleButton';
 
 interface AuthFormProps {
   title: string;
@@ -74,13 +74,14 @@ const AuthForm: React.FC<AuthFormProps> = ({
               {buttonText}
             </Button>
 
-            <button
-              type="button"
-              className="w-full flex items-center justify-center gap-3 text-[16px] font-medium border-2 border-button py-3 rounded-[10px] text-[#1C1C1C] hover:bg-button/5 transition-all duration-200"
-            >
-              <FcGoogle className="text-[24px]" />
-              Continue with Google
-            </button>
+            <GoogleLoginButton
+            onSuccess={(data) => {
+              console.log('Logged in user:', data);
+             
+              // optionally store refreshToken in localStorage
+              localStorage.setItem('refreshToken', data.refreshToken);
+            }}
+          />
 
             <Link
               to={linkPath}

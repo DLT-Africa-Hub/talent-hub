@@ -128,26 +128,40 @@ const Notifications: React.FC = () => {
       }
 
       if (user?.role === 'graduate') {
-        if (notification.type === 'job' && notification.relatedId) {
-          navigate(`/company-preview/${notification.relatedId}`);
-        } else if (notification.type === 'match' && notification.relatedId) {
-          navigate(`/explore-preview/${notification.relatedId}`);
+        if (notification.relatedType === 'job' && notification.relatedId) {
+          navigate(`/explore?preview=${notification.relatedId}`);
+        } else if (notification.relatedType === 'match' && notification.relatedId) {
+          // For match notifications, navigate to explore with the match ID
+          navigate(`/explore?match=${notification.relatedId}`);
         } else if (notification.type === 'message' && notification.relatedId) {
           navigate(`/messages/${notification.relatedId}`);
         } else if (
-          notification.type === 'application' &&
+          notification.relatedType === 'application' &&
           notification.relatedId
         ) {
           navigate(`/applications`);
+        } else if (notification.type === 'match' && notification.relatedId) {
+          // Fallback for match type
+          navigate(`/explore?match=${notification.relatedId}`);
+        } else if (notification.type === 'application' && notification.relatedId) {
+          navigate(`/applications`);
         }
       } else if (user?.role === 'company') {
-        if (notification.type === 'application' && notification.relatedId) {
+        if (notification.relatedType === 'application' && notification.relatedId) {
           navigate(`/candidate-preview/${notification.relatedId}`);
+        } else if (notification.type === 'application' && notification.relatedId) {
+          navigate(`/candidate-preview/${notification.relatedId}`);
+        } else if (notification.relatedType === 'match' && notification.relatedId) {
+          navigate(`/candidates`);
         } else if (notification.type === 'match' && notification.relatedId) {
           navigate(`/candidates`);
         } else if (notification.type === 'message' && notification.relatedId) {
           navigate(`/messages/${notification.relatedId}`);
-        } else if (notification.type === 'job' && notification.relatedId) {
+        } else if (notification.relatedType === 'job' && notification.relatedId) {
+          navigate(`/jobs`);
+        } else if (notification.type === 'job_alert' && notification.relatedId) {
+          navigate(`/jobs`);
+        } else if (notification.type === 'system' && notification.relatedType === 'job' && notification.relatedId) {
           navigate(`/jobs`);
         }
       }

@@ -33,6 +33,14 @@ api.interceptors.response.use(
                 window.location.href = '/login';
             }
         }
+        // Handle email verification required - don't redirect, let frontend handle with modals
+        // The modal will show on dashboard/assessment pages for unverified users
+        // if (error.response?.status === 403 && error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        //     const currentPath = window.location.pathname;
+        //     if (!currentPath.includes('/verify-email')) {
+        //         window.location.href = '/verify-email';
+        //     }
+        // }
         return Promise.reject(error);
     }
 );

@@ -19,6 +19,13 @@ interface AuthFormProps {
   linkText: string;
   linkPath: string;
   error: string;
+  forgotPasswordLink?: {
+    text: string;
+    path: string;
+    fieldIndex?: number; // Index of the password field to add the link after
+  };
+  showGoogleButton?: boolean; // Option to show/hide Google button
+  isButtonDisabled?: boolean; // Disable submit button
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({
@@ -30,6 +37,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
   linkText,
   linkPath,
   error,
+  forgotPasswordLink,
+  showGoogleButton = true,
+  isButtonDisabled = false,
 }) => {
   return (
 
@@ -49,8 +59,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
         >
           <div className="flex flex-col gap-4">
             {fields.map((field, index) => (
+              <div key={index}>
               <Input
-                key={index}
                 label={field.label}
                 type={field.type}
                 name={field.name}
@@ -60,6 +70,19 @@ const AuthForm: React.FC<AuthFormProps> = ({
                 required
                 error={error ? ' ' : undefined}
               />
+                {forgotPasswordLink && 
+                 forgotPasswordLink.fieldIndex === index && 
+                 field.type === 'password' && (
+                  <div className="flex justify-end mt-2">
+                    <Link
+                      to={forgotPasswordLink.path}
+                      className="text-[14px] font-normal text-[#1E9500] hover:underline transition-all"
+                    >
+                      {forgotPasswordLink.text}
+                    </Link>
+                  </div>
+                )}
+              </div>
             ))}
             {error && (
               <p className="text-center text-red-500 text-[14px] font-normal">
@@ -70,10 +93,11 @@ const AuthForm: React.FC<AuthFormProps> = ({
           </div>
 
           <div className="flex flex-col gap-3 pt-2">
-            <Button type="submit" fullWidth>
+            <Button type="submit" fullWidth disabled={isButtonDisabled}>
               {buttonText}
             </Button>
 
+            {showGoogleButton && (
             <button
               type="button"
               className="w-full flex items-center justify-center gap-3 text-[16px] font-medium border-2 border-button py-3 rounded-[10px] text-[#1C1C1C] hover:bg-button/5 transition-all duration-200"
@@ -81,6 +105,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
               <FcGoogle className="text-[24px]" />
               Continue with Google
             </button>
+            )}
 
             <Link
               to={linkPath}

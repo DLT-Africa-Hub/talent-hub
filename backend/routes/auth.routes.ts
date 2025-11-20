@@ -11,6 +11,7 @@ import {
   verifyEmail,
   requestPasswordReset,
   resetPassword,
+  changePassword,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validateRequest } from '../middleware/validation.middleware';
@@ -21,6 +22,7 @@ import {
   requestEmailVerificationSchema,
   requestPasswordResetSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 } from '../validation/auth.validation';
 
 const router = Router();
@@ -58,6 +60,12 @@ router.post(
   '/reset-password',
   validateRequest(resetPasswordSchema),
   resetPassword
+);
+router.post(
+  '/change-password',
+  authenticate,
+  validateRequest(changePasswordSchema),
+  changePassword
 );
 
 export default router;

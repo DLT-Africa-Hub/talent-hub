@@ -11,6 +11,7 @@ interface User {
   id: string;
   email: string;
   role: 'graduate' | 'company' | 'admin';
+  emailVerified?: boolean;
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, role: string) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
 
@@ -60,6 +62,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(response.user);
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // If email not verified, user will be redirected by EmailVerificationGuard
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -88,6 +92,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -96,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         register,
         logout,
+        updateUser,
         isAuthenticated: !!user && !!token,
       }}
     >

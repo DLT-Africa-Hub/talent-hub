@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
+import ChangePassword from '../../components/ChangePassword';
 
 const CompanyProfile = () => {
   const {
@@ -51,13 +52,16 @@ const CompanyProfile = () => {
         </p>
       </div>
 
-      <div className="grid gap-[16px] max-w-[600px]">
+      <div className="grid gap-[24px] max-w-[600px]">
+        <div className="grid gap-[16px]">
         <ProfileField label="Company Name" value={company.companyName} />
         <ProfileField label="Industry" value={company.industry} />
         <ProfileField label="Location" value={company.location} />
         <ProfileField label="Company Size" value={company.companySize} />
         <ProfileField label="Website" value={company.website} />
         <ProfileField label="About" value={company.description} />
+        </div>
+        <ChangePassword />
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
 import Application from '../models/Application.model';
-import Graduate from '../models/Graduate.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
 import { queueJobMatching } from '../services/aiMatching.service';
 import {
@@ -20,8 +19,12 @@ import {
   validateNumericRange,
   deleteUndefined,
 } from '../utils/validation.utils';
-// Import middleware to ensure global types are loaded
+
 import '../middleware/auth.middleware';
+import {
+  notifyCompanyJobCreated,
+  notifyCompanyProfileUpdated,
+} from '../services/notification.dispatcher';
 import { createNotification } from '../services/notification.service';
 
 /**
@@ -166,6 +169,16 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 
   await company.save();
 
+  // Emit notification for profile update
+  try {
+    await notifyCompanyProfileUpdated({
+      companyId: company.userId.toString(),
+      companyName: company.companyName,
+    });
+  } catch (error) {
+    console.error('Failed to send profile update notification:', error);
+  }
+
   res.json({
     message: 'Company profile updated successfully',
     company,
@@ -243,28 +256,24 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     Required Skills: ${validatedSkills.join(', ')}
   `;
 
-  // Try to generate embedding, but allow job creation without it as fallback
-  let embedding: number[] | undefined;
-  let embeddingWarning: string | undefined;
-  
+  // Generate embedding - required for AI matching
+  let embedding: number[];
   try {
     embedding = await generateJobEmbedding(jobText);
   } catch (error) {
     if (error instanceof AIServiceError) {
-      // For quota errors, allow job creation but warn about limited matching
-      if (error.statusCode === 402 || error.message.toLowerCase().includes('quota')) {
-        embeddingWarning = 'Job created without AI matching capabilities due to OpenAI quota limits. Please check your OpenAI account billing settings. The job will not be automatically matched with candidates until the issue is resolved.';
-        console.warn('Job created without embedding due to quota error:', error.message);
-      } else {
-        // For other AI service errors, still allow creation but with a warning
-        embeddingWarning = 'Job created without AI matching capabilities. The job will not be automatically matched with candidates.';
-        console.warn('Job created without embedding due to AI service error:', error.message);
-      }
-    } else {
-      // For unknown errors, allow creation with warning
-      embeddingWarning = 'Job created without AI matching capabilities. The job will not be automatically matched with candidates.';
-      console.error('Error generating embedding:', error);
+      res.status(error.statusCode ?? 503).json({
+        message: 'Failed to generate job embedding for AI matching',
+        error: error.message,
+      });
+      return;
     }
+
+    console.error('Error generating embedding:', error);
+    res.status(500).json({
+      message: 'Failed to generate job embedding. Please try again.',
+    });
+    return;
   }
 
   const job = new Job({
@@ -276,27 +285,38 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     requirements: {
       skills: validatedSkills,
     },
+    embedding,
     ...deleteUndefined({
       location: validatedLocation,
       salary: validatedSalary,
       status: validatedStatus,
-      embedding,
     }),
   });
 
   await job.save();
 
-  // Only queue matching if embedding was successfully generated
-  if (embedding) {
-    queueJobMatching(job._id as mongoose.Types.ObjectId);
+  // Queue matching since embedding was successfully generated
+  queueJobMatching(job._id as mongoose.Types.ObjectId);
+
+  // Emit notification for job creation
+  try {
+    const companyUserId = company.userId?.toString() || userId;
+    const jobId = job._id instanceof mongoose.Types.ObjectId
+      ? job._id.toString()
+      : String(job._id);
+    await notifyCompanyJobCreated({
+      jobId,
+      jobTitle: validatedTitle,
+      companyId: companyUserId,
+      companyName: company.companyName,
+    });
+  } catch (error) {
+    console.error('Failed to send job creation notification:', error);
   }
 
   res.status(201).json({
-    message: embeddingWarning 
-      ? 'Job created successfully, but without AI matching capabilities' 
-      : 'Job created successfully',
+    message: 'Job created successfully',
     job,
-    warning: embeddingWarning,
   });
 };
 
@@ -520,11 +540,13 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
 
   await job.save();
 
-  const updatedJob = await Job.findById(job._id).select('-embedding').lean();
+  // Convert to plain object and remove embedding for response
+  const jobResponse = job.toObject();
+  delete jobResponse.embedding;
 
   res.json({
     message: 'Job updated successfully',
-    job: updatedJob,
+    job: jobResponse,
   });
 
   if (needsEmbeddingUpdate) {
@@ -716,11 +738,18 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
 
   const matchId = match._id as mongoose.Types.ObjectId;
 
-  try {
-    const graduate = await Graduate.findById(match.graduateId)
-      .select('firstName lastName userId')
-      .lean();
+  // Populate match before sending notification
+  await match.populate({
+    path: 'graduateId',
+    select: 'firstName lastName skills education rank userId',
+    populate: {
+      path: 'userId',
+      select: 'email',
+    },
+  });
 
+  try {
+    const graduate = match.graduateId as any;
     if (graduate?.userId) {
       await createNotification({
         userId: graduate.userId,
@@ -744,16 +773,8 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
     console.error('Failed to notify graduate about match status change:', notificationError);
   }
 
-  const updatedMatch = await Match.findById(matchId)
-    .populate({
-      path: 'graduateId',
-      select: 'firstName lastName skills education rank',
-      populate: {
-        path: 'userId',
-        select: 'email',
-      },
-    })
-    .lean();
+  // Use the already populated match object
+  const updatedMatch = match.toObject();
 
   res.json({
     message: `Match ${validatedStatus} successfully`,

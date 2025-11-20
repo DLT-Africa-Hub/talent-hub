@@ -8,7 +8,10 @@ import Token, {
   TokenDocument,
   TokenType,
 } from '../models/Token.model';
-import { sendEmail } from '../services/email.service';
+import {
+  sendEmailVerification,
+  sendPasswordReset,
+} from '../services/email.service';
 import { generateAccessToken } from '../utils/jwt.utils';
 import {
   calculateExpiryDate,
@@ -250,21 +253,8 @@ const sendEmailVerificationMessage = async (
   token: string
 ): Promise<void> => {
   const verificationLink = buildUrlWithToken('/verify-email', token);
-  const text = [
-    'Welcome to Talent Hub!',
-    '',
-    'Please verify your email address to activate your account.',
-    `Verification link: ${verificationLink}`,
-    '',
-    'If you did not create this account, you can ignore this email.',
-  ].join('\n');
-
   try {
-    await sendEmail({
-      to: user.email,
-      subject: 'Verify your Talent Hub email',
-      text,
-    });
+    await sendEmailVerification(user.email, verificationLink);
   } catch (error) {
     console.error('Email verification send error:', error);
   }
@@ -275,21 +265,8 @@ const sendPasswordResetMessage = async (
   token: string
 ): Promise<void> => {
   const resetLink = buildUrlWithToken('/reset-password', token);
-  const text = [
-    'We received a request to reset your Talent Hub password.',
-    '',
-    'You can reset your password using the link below:',
-    resetLink,
-    '',
-    'If you did not request a password reset, you can ignore this email.',
-  ].join('\n');
-
   try {
-    await sendEmail({
-      to: user.email,
-      subject: 'Reset your Talent Hub password',
-      text,
-    });
+    await sendPasswordReset(user.email, resetLink);
   } catch (error) {
     console.error('Password reset email error:', error);
   }
@@ -775,6 +752,69 @@ export const resetPassword = async (
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Change password for authenticated user
+ * POST /api/auth/change-password
+ */
+export const changePassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const oldPassword = normalizePasswordInput(req.body?.oldPassword);
+    const newPassword = normalizePasswordInput(req.body?.newPassword);
+
+    if (!oldPassword || !newPassword) {
+      res.status(400).json({
+        message: 'Old password and new password are required',
+      });
+      return;
+    }
+
+    if (newPassword.trim().length < 8) {
+      res.status(400).json({
+        message: 'New password must be at least 8 characters long',
+      });
+      return;
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!isValidPassword) {
+      res.status(401).json({ message: 'Current password is incorrect' });
+      return;
+    }
+
+    // Check if new password is the same as old password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      res.status(400).json({
+        message: 'New password must be different from current password',
+      });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

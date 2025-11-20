@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Session from '../models/Session.model';
+import User from '../models/User.model';
 import { verifyAccessToken } from '../utils/jwt.utils';
 
 /**
@@ -35,16 +36,50 @@ export const authenticate = async (
       return;
     }
 
+    // Fetch user to check email verification status
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      res.status(401).json({ message: 'User not found' });
+      return;
+    }
+
     req.user = {
       userId: decoded.userId,
       role: decoded.role,
       sessionId: decoded.sessionId,
+      emailVerified: user.emailVerified,
     };
 
     next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid or expired token' });
   }
+};
+
+/**
+ * Email verification middleware
+ * Blocks access if user's email is not verified
+ */
+export const requireEmailVerification = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  if (req.user.emailVerified === false || !req.user.emailVerified) {
+    res.status(403).json({
+      message: 'Email verification required',
+      code: 'EMAIL_NOT_VERIFIED',
+      emailVerified: false,
+    });
+    return;
+  }
+
+  next();
 };
 
 /**

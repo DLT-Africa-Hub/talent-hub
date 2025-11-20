@@ -5,6 +5,7 @@ declare global {
         userId: string;
         role: string;
         sessionId: string;
+        emailVerified?: boolean;
       };
     }
     interface Response {

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Graduate from '../models/Graduate.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
+import Company from '../models/Company.model';
 import { aiConfig } from '../config/secrets';
 import { AsyncTaskQueue } from '../utils/asyncQueue';
 import {
@@ -12,6 +13,7 @@ import {
   MatchJobMetadata,
   MatchOptions,
 } from './aiService';
+import { notifyGraduateMatchedToJob } from './notification.dispatcher';
 
 const matchQueue = new AsyncTaskQueue('ai-matching');
 
@@ -299,14 +301,20 @@ export const queueGraduateMatching = (
         return;
       }
 
-      await Promise.all(
+      const matchResults = await Promise.all(
         matches.matches
           .filter((match) => mongoose.Types.ObjectId.isValid(match.id))
-          .map((match) =>
-            Match.findOneAndUpdate(
+          .map(async (match) => {
+            const jobId = new mongoose.Types.ObjectId(match.id);
+            const existingMatch = await Match.findOne({
+              graduateId: graduate._id,
+              jobId,
+            }).lean();
+
+            const updatedMatch = await Match.findOneAndUpdate(
               {
                 graduateId: graduate._id,
-                jobId: new mongoose.Types.ObjectId(match.id),
+                jobId,
               },
               {
                 $set: {
@@ -320,9 +328,40 @@ export const queueGraduateMatching = (
                 upsert: true,
                 new: true,
               }
-            )
-          )
+            );
+
+            return { match: updatedMatch, isNew: !existingMatch, score: match.score };
+          })
       );
+
+      // Notify graduates about new matches
+      for (const { match, isNew, score } of matchResults) {
+        if (isNew && match && graduate.userId) {
+          try {
+            const job = await Job.findById(match.jobId)
+              .select('title companyId')
+              .lean();
+            if (job) {
+              const company = await Company.findById(job.companyId)
+                .select('companyName')
+                .lean();
+              if (company) {
+                await notifyGraduateMatchedToJob({
+                  matchId: match._id.toString(),
+                  jobId: match.jobId.toString(),
+                  jobTitle: job.title,
+                  companyId: job.companyId.toString(),
+                  companyName: company.companyName,
+                  matchScore: score,
+                  graduateId: graduate.userId.toString(),
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Failed to send match notification:', error);
+          }
+        }
+      }
     } catch (error) {
       if (error instanceof AIServiceError) {
         console.error('AI matching error (graduate-driven):', error.message, {
@@ -389,7 +428,12 @@ export const queueJobMatching = (
           continue;
         }
 
-        await Match.findOneAndUpdate(
+        const existingMatch = await Match.findOne({
+          graduateId: graduate._id,
+          jobId: job._id,
+        }).lean();
+
+        const updatedMatch = await Match.findOneAndUpdate(
           {
             graduateId: graduate._id,
             jobId: job._id,
@@ -407,6 +451,28 @@ export const queueJobMatching = (
             new: true,
           }
         );
+
+        // Notify graduate about new match
+        if (!existingMatch && updatedMatch && graduate.userId) {
+          try {
+            const company = await Company.findById(job.companyId)
+              .select('companyName')
+              .lean();
+            if (company) {
+              await notifyGraduateMatchedToJob({
+                matchId: updatedMatch._id.toString(),
+                jobId: job._id.toString(),
+                jobTitle: job.title || 'Job',
+                companyId: job.companyId.toString(),
+                companyName: company.companyName,
+                matchScore: match.score,
+                graduateId: graduate.userId.toString(),
+              });
+            }
+          } catch (error) {
+            console.error('Failed to send match notification:', error);
+          }
+        }
       } catch (error) {
         if (error instanceof AIServiceError) {
           console.error('AI matching error (job-driven):', error.message, {

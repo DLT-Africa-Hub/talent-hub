@@ -232,3 +232,118 @@ export const aiConfig = {
     maxResults: parsedAiConfig.match.maxResults,
   },
 };
+
+// Email Configuration
+const emailConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  provider: z.enum(['smtp', 'console']).default('smtp'),
+  smtp: z.object({
+    host: z.string().default('smtp.gmail.com'),
+    port: z.number().int().positive().default(587),
+    secure: z.boolean().default(false), // true for 465, false for other ports
+    auth: z.object({
+      user: z.string().email('SMTP user must be a valid email'),
+      pass: z.string().min(1, 'SMTP password is required'),
+    }),
+  }),
+  from: z.object({
+    name: z.string().default('Talent Hub'),
+    email: z.string().email('From email must be valid'),
+  }),
+  retry: z.object({
+    maxAttempts: z.number().int().min(1).max(5).default(3),
+    delayMs: z.number().int().positive().default(1000),
+  }),
+  timeoutMs: z.number().int().positive().default(10000),
+});
+
+const parseEmailConfig = () => {
+  const provider = (process.env.EMAIL_PROVIDER || 'smtp') as 'smtp' | 'console';
+  const enabled = parseBoolean(process.env.EMAIL_ENABLED, true);
+
+  // If disabled or using console, return minimal config
+  if (!enabled || provider === 'console') {
+    return {
+      enabled: false,
+      provider: 'console' as const,
+      smtp: {
+        host: process.env.EMAIL_SMTP_HOST || 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: '',
+          pass: '',
+        },
+      },
+      from: {
+        name: 'Talent Hub',
+        email: process.env.EMAIL_FROM || 'noreply@talenthub.com',
+      },
+      retry: {
+        maxAttempts: 3,
+        delayMs: 1000,
+      },
+      timeoutMs: 10000,
+    };
+  }
+
+  // Validate SMTP configuration
+  const smtpUser = process.env.EMAIL_USER;
+  const smtpPass = process.env.EMAIL_PASS;
+
+  if (!smtpUser || !smtpPass) {
+    console.warn(
+      '[Email Config] SMTP credentials not found. Falling back to console mode.'
+    );
+    return {
+      enabled: false,
+      provider: 'console' as const,
+      smtp: {
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: '',
+          pass: '',
+        },
+      },
+      from: {
+        name: 'Talent Hub',
+        email: process.env.EMAIL_FROM || smtpUser || 'noreply@talenthub.com',
+      },
+      retry: {
+        maxAttempts: 3,
+        delayMs: 1000,
+      },
+      timeoutMs: 10000,
+    };
+  }
+
+  const parsed = emailConfigSchema.parse({
+    enabled: true,
+    provider: 'smtp',
+    smtp: {
+      host: process.env.EMAIL_SMTP_HOST || 'smtp.gmail.com',
+      port: parsePositiveIntOrUndefined(process.env.EMAIL_SMTP_PORT) ?? 587,
+      secure: parseBoolean(process.env.EMAIL_SMTP_SECURE, false),
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    },
+    from: {
+      name: process.env.EMAIL_FROM_NAME || 'Talent Hub',
+      email: process.env.EMAIL_FROM || smtpUser,
+    },
+    retry: {
+      maxAttempts:
+        parsePositiveIntOrUndefined(process.env.EMAIL_RETRY_MAX_ATTEMPTS) ?? 3,
+      delayMs: parseMsEnv(process.env.EMAIL_RETRY_DELAY_MS, 1000),
+    },
+    timeoutMs: parseMsEnv(process.env.EMAIL_TIMEOUT_MS, 10000),
+  });
+
+  return parsed;
+};
+
+export const emailConfig = parseEmailConfig();

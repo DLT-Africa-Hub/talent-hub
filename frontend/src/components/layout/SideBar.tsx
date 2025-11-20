@@ -10,8 +10,8 @@ import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiUsersThreeLight } from 'react-icons/pi';
 import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
-import { notificationApi } from '../../api/notification';
 import { messageApi } from '../../api/message';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface Page {
   page: string;
@@ -58,13 +58,7 @@ const SideBar: React.FC = () => {
     enabled: role === 'company',
   });
 
-  const notificationsQuery = useQuery({
-    queryKey: ['notificationUnreadCount'],
-    queryFn: async () => {
-      const response = await notificationApi.getUnreadCount();
-      return response.count || 0;
-    },
-  });
+  const { unreadCount: notificationCount } = useNotifications();
 
   const messagesQuery = useQuery({
     queryKey: ['messageUnreadCount'],
@@ -78,10 +72,6 @@ const SideBar: React.FC = () => {
     if (role !== 'company' || !jobsQuery.data) return null;
     return jobsQuery.data.pagination?.total || 0;
   }, [role, jobsQuery.data]);
-
-  const notificationCount = useMemo(() => {
-    return notificationsQuery.data || 0;
-  }, [notificationsQuery.data]);
 
   const messageCount = useMemo(() => {
     return messagesQuery.data || 0;

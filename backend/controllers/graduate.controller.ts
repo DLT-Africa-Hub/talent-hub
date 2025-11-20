@@ -12,6 +12,10 @@ import {
   generateProfileEmbedding,
 } from '../services/aiService';
 import { queueGraduateMatching } from '../services/aiMatching.service';
+import {
+  notifyGraduateAppliedToJob,
+  notifyCompanyJobApplicationReceived,
+} from '../services/notification.dispatcher';
 import { createNotification } from '../services/notification.service';
 
 const { ObjectId } = mongoose.Types;
@@ -1171,17 +1175,24 @@ export const submitAssessment = async (
       additionalContext
     );
 
-    // Make embedding optional - if it fails due to quota, continue without it
-    let embedding: number[] | undefined;
+    // Generate embedding - required for AI matching
+    let embedding: number[];
     try {
       embedding = await generateProfileEmbedding(profileText);
     } catch (embeddingError) {
       if (embeddingError instanceof AIServiceError) {
-        console.warn('Embedding generation failed (quota exceeded or service unavailable):', embeddingError.message);
-        // Continue without embedding - assessment can still be saved
-      } else {
-        console.error('Unexpected embedding generation error:', embeddingError);
+        res.status(embeddingError.statusCode ?? 503).json({
+          message: 'Failed to generate profile embedding for AI matching',
+          error: embeddingError.message,
+        });
+        return;
       }
+
+        console.error('Unexpected embedding generation error:', embeddingError);
+      res.status(500).json({
+        message: 'Failed to generate profile embedding. Please try again.',
+      });
+      return;
     }
 
     let feedback: string | undefined;
@@ -1259,7 +1270,7 @@ export const submitAssessment = async (
 
     graduate.assessmentData = {
       submittedAt: new Date(),
-      embedding: embedding || previousData?.embedding, // Keep previous embedding if new one failed
+      embedding, // Embedding is now required and always generated successfully
       feedback,
       attempts,
       needsRetake: score !== undefined && !passed, // Set needsRetake based on score
@@ -1510,31 +1521,35 @@ export const applyToJob = async (
       application: application.toObject({ versionKey: false }),
     });
 
-    if (company?.userId) {
-      try {
-        await createNotification({
-          userId: company.userId,
-          type: 'application',
-          title: 'New application received',
-          message: `${graduate.firstName} ${graduate.lastName} applied to ${job.title}`,
-          relatedId: persistedApplicationId,
-          relatedType: 'application',
-          email: {
-            subject: `New application for ${job.title}`,
-            text: [
-              `Hi ${company.companyName || 'there'},`,
-              '',
-              `${graduate.firstName} ${graduate.lastName} just applied to your job "${job.title}".`,
-              'Log in to Talent Hub to review the application details.',
-            ].join('\n'),
-          },
+    // Emit notifications for both graduate and company
+    try {
+      const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() || 'A graduate';
+
+      // Notify graduate
+      if (graduate.userId) {
+        await notifyGraduateAppliedToJob({
+          applicationId: persistedApplicationId.toString(),
+          jobId: jobId,
+          jobTitle: job.title,
+          companyId: company?.userId?.toString() || company?._id?.toString() || '',
+          companyName: company?.companyName || 'Company',
+          graduateId: graduate.userId.toString(),
         });
-      } catch (error) {
-        console.error(
-          'Failed to create company notification for application:',
-          error
-        );
       }
+
+      // Notify company
+      if (company?.userId) {
+        await notifyCompanyJobApplicationReceived({
+          applicationId: persistedApplicationId.toString(),
+          jobId: jobId,
+          jobTitle: job.title,
+          graduateId: graduate._id.toString(),
+          graduateName: graduateName,
+          companyId: company.userId.toString(),
+        });
+      }
+      } catch (error) {
+      console.error('Failed to send application notifications:', error);
     }
   } catch (error) {
     console.error('Apply to job error:', error);

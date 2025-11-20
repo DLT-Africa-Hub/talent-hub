@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { graduateApi } from '../../api/graduate';
 import { LoadingSpinner } from '../../index';
 import { DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
+import ChangePassword from '../../components/ChangePassword';
 
 const GraduateProfile = () => {
   const {
@@ -104,6 +105,7 @@ const GraduateProfile = () => {
           </div>
         </div>
 
+        <div className="flex flex-col gap-[32px]">
         <div className="rounded-[24px] border border-fade bg-white p-[24px] space-y-[16px]">
           <SectionHeading title="Details" />
           <DetailList
@@ -135,6 +137,8 @@ const GraduateProfile = () => {
               },
             ]}
           />
+          </div>
+          <ChangePassword />
         </div>
       </div>
     </div>

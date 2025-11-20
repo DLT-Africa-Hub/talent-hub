@@ -13,13 +13,18 @@ import {
   getHealthStatus,
   getDatabaseStats,
 } from '../controllers/admin.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import {
+  authenticate,
+  authorize,
+  requireEmailVerification,
+} from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All routes require authentication and admin role
+// All routes require authentication, email verification, and admin role
 router.use(authenticate);
 router.use(authorize('admin'));
+router.use(requireEmailVerification);
 
 router.get('/users', getAllUsers);
 router.get('/users/search', searchUsers);

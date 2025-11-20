@@ -17,6 +17,13 @@ Node.js + Express + TypeScript backend for Talent Hub.
 | `API_PREFIX`                   | API version prefix (default: `/api/v1`)                                |
 | `MONGODB_URI`                  | MongoDB connection string                                              |
 | `CORS_ORIGIN`                  | Allowed origin for cross-origin requests                               |
+| `JWT_SECRET` or `JWT_ACCESS_SECRET` | JWT secret key (min 32 characters)                                    |
+| `GMAIL_USER`                   | Gmail address for SMTP                                                 |
+| `GMAIL_PASSWORD`                | Gmail App Password (see EMAIL_SERVICE.md)                              |
+| `EMAIL_ENABLED`                | Enable email service (default: `true`)                                 |
+| `EMAIL_PROVIDER`               | Email provider: `smtp` or `console` (default: `smtp`)                 |
+
+See [EMAIL_SERVICE.md](./EMAIL_SERVICE.md) for complete email configuration.
 | `JWT_ACCESS_SECRET`            | **Required.** At least 32 characters secret for signing access tokens  |
 | `JWT_ACCESS_EXPIRE`            | Access token TTL (e.g. `15m`)                                          |
 | `REFRESH_TOKEN_DAYS`           | Refresh token lifetime (days)                                          |

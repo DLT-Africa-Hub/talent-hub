@@ -12,6 +12,8 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const isFormValid = email.trim().length > 0 && password.trim().length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -141,6 +143,12 @@ const Login = () => {
         },
       ]}
       error={error}
+      forgotPasswordLink={{
+        text: 'Forgot Password?',
+        path: '/forgot-password',
+        fieldIndex: 1,
+      }}
+      isButtonDisabled={!isFormValid}
     />
   );
 };

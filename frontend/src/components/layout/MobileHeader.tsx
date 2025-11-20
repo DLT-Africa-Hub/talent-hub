@@ -2,6 +2,7 @@ import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
 import {  Link, useLocation } from 'react-router-dom';
 import { useAuth } from "../../context/AuthContext";
 import { BiBell } from "react-icons/bi";
+import { useNotifications } from "../../hooks/useNotifications";
 
 
 interface Page  {
@@ -16,6 +17,7 @@ const MobileHeader = () => {
   const currentPath = location.pathname;
 
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const pages: Page[] = [
     {
@@ -84,8 +86,13 @@ const MobileHeader = () => {
         <p className='text-[24px] text-button'>
         <HiOutlineChatBubbleLeftRight />
         </p>
-        <Link to="/notifications" className=" text-button text-[24px] ">
+        <Link to="/notifications" className="relative text-button text-[24px] ">
             <BiBell/>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>

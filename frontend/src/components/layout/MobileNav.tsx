@@ -6,6 +6,7 @@ import { IconType } from 'react-icons';
 import { BiBell } from "react-icons/bi";
 import { useAuth } from "../../context/AuthContext";
 import { PiUsersThreeLight } from "react-icons/pi";
+import { useNotifications } from "../../hooks/useNotifications";
 
 
 
@@ -22,7 +23,8 @@ const MobileNav = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const {user} = useAuth()
+    const {user} = useAuth();
+    const { unreadCount } = useNotifications();
 
     const dashboardLink = user?.role === "company" ? "company" : "graduate";
 
@@ -55,17 +57,23 @@ const MobileNav = () => {
             <div className='flex items-center justify-between border-t border-t-[#2E5EAA33]'>
                 {pages.map((page) => {
                     const active = isActive(page.link);
+                    const showNotificationBadge = page.link === 'notifications' && unreadCount > 0;
                     return (
                         <Link
                             key={page.link}
                             to={`/${page.link}`}
-                            className={`flex flex-col items-center justify-center text-[24px] text-center p-2.5 cursor-pointer transition-all duration-300 ease-in-out ${
+                            className={`relative flex flex-col items-center justify-center text-[24px] text-center p-2.5 cursor-pointer transition-all duration-300 ease-in-out ${
                                 active
                                     ? 'text-button border-t border-button'
                                     : 'text-fade hover:text-button hover:border-t hover:border-button'
                             }`}
                         >
                             <page.icon />
+                            {showNotificationBadge && (
+                              <span className="absolute top-1 right-1/2 translate-x-1/2 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-semibold">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                              </span>
+                            )}
                             <p className='text-[14px] font-semibold'>{page.page}</p>
                         </Link>
                     );

@@ -26,3 +26,8 @@ export { default as SkillAssessment } from './pages/talent/SkillAssessment';
 export { default as LoadingSpinner } from './components/ui/LoadingSpinner';
 export { default as SearchBar } from './components/ui/SearchBar';
 export { default as JobPreviewModal } from './components/ui/JobPreviewModal';
+export { default as ForgotPassword } from './pages/ForgotPassword';
+export { default as ResetPassword } from './pages/ResetPassword';
+export { default as ChangePassword } from './components/ChangePassword';
+export { default as EmailVerification } from './pages/EmailVerification';
+export { default as EmailVerificationGuard } from './components/EmailVerificationGuard';

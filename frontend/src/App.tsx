@@ -25,6 +25,10 @@ import {
   Notifications,
   GraduateOnboarding,
   SkillAssessment,
+  ForgotPassword,
+  ResetPassword,
+  EmailVerification,
+  EmailVerificationGuard,
 } from './index';
 
 // Redirect component for old explore-preview route
@@ -41,15 +45,20 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<EmailVerification />} />
           <Route
             path="/graduate/*"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <GraduateDashboard />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -57,11 +66,13 @@ function App() {
             path="/graduate/profile"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <GraduateProfile />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -74,7 +85,9 @@ function App() {
             path="/company/*"
             element={
               <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
                 <CompanyDashboard />
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -82,9 +95,11 @@ function App() {
             path="/company/profile"
             element={
               <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
                 <Layout>
                   <CompanyProfile />
                 </Layout>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -92,7 +107,9 @@ function App() {
             path="/admin/*"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
+                <EmailVerificationGuard>
                 <AdminDashboard />
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -103,7 +120,9 @@ function App() {
             path="/assessment"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <SkillAssessment />
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -119,11 +138,13 @@ function App() {
             path="/explore"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <ExploreCompany />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -131,11 +152,13 @@ function App() {
             path="/applications"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <GraduateApplications />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />

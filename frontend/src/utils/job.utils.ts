@@ -140,11 +140,21 @@ export const DEFAULT_COMPANY_IMAGE =
   'https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069';
 
 // Format notification date
-export const formatNotificationDate = (dateString: string | Date): Date => {
-  if (typeof dateString === 'string') {
-    return new Date(dateString);
+export const formatNotificationDate = (dateInput: string | Date): string => {
+  const date =
+    typeof dateInput === 'string' ? new Date(dateInput) : new Date(dateInput);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
   }
-  return dateString;
+
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 // Get company name from notification (fallback logic)

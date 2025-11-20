@@ -2,7 +2,7 @@ import React from 'react';
 import { CiMail } from 'react-icons/ci';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { useNavigate } from 'react-router-dom';
-import { Company } from './CompanyCard';
+import { Company, getMatchBadgeConfig } from './CompanyCard';
 
 interface CompanyCardProps {
   company: Company;
@@ -15,19 +15,27 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
   company,
   buttonText = 'Preview',
   onPreviewClick,
+  onButtonClick,
 }) => {
   const navigate = useNavigate();
+  const badgeConfig = getMatchBadgeConfig(company.match);
 
-  const handleButtonClick = (companyId: number, buttonText: string) => {
-    if (buttonText === 'Preview') {
-      // Use modal callback if provided, otherwise navigate
+  const handleButtonClick = (companyId: number, label: string) => {
+    if (onButtonClick) {
+      onButtonClick();
+      return;
+    }
+
+    if (label === 'Preview') {
       if (onPreviewClick) {
         onPreviewClick(companyId);
       } else {
         navigate(`/explore-preview/${companyId}`);
       }
+      return;
     }
-    if (buttonText === 'Get in Touch') {
+
+    if (label === 'Get in Touch') {
       navigate(`/contactCompany/${companyId}`);
     }
   };
@@ -44,7 +52,7 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
         </div>
       </div>
 
-      <div className='flex flex-col flex-grow'>
+      <div className='flex flex-col grow'>
       <div className="flex   gap-[81.5px]">
         <div className="flex flex-col gap-[5px]">
           <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">
@@ -54,9 +62,20 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
             {company.role}
           </p>
         </div>
-        <div className="flex items-center h-[49px] bg-gradient-to-r from-button/10 to-button/5 border border-button/20 text-[#1C1C1C] text-[16px] font-semibold py-[15px] px-6 rounded-[70px] shadow-sm">
-          <span className="text-button mr-1">●</span>
-          {company.match}% match
+        <div
+          className={`flex items-center gap-3 px-4 py-2 rounded-[9999px] border border-transparent shadow-sm ${badgeConfig.container}`}
+        >
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${badgeConfig.dot}`}
+          />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[14px] font-semibold">
+              {company.match}% match
+            </span>
+            <span className="text-[12px] opacity-80">
+              {badgeConfig.label}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -70,9 +89,9 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
             {company.location}
           </p>
           <div className="h-[20px] bg-black w-0.5" />
-          <p className="text-center font-semibold w-full">
-            {company.wage} {company.wageType}
-          </p>
+        <p className="text-center font-semibold w-full">
+          {company.wage}
+        </p>
         </div>
         <button
           onClick={() =>

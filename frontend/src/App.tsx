@@ -1,5 +1,7 @@
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 import {
   Home,
   GraduateDashboard,
@@ -8,8 +10,6 @@ import {
   CompanyProfile,
   CompanyCandidates,
   CompanyJobs,
-  CompanyJobForm,
-  JobRankSelector,
   CompanyOnboarding,
   AdminDashboard,
   ProtectedRoute,
@@ -39,7 +39,8 @@ const ExplorePreviewRedirect = () => {
 
 function App() {
   return (
-    <AuthProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+       <AuthProvider>
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -171,6 +172,7 @@ function App() {
             }
           />
           <Route path="/company/onboarding" element={<CompanyOnboarding />} />
+        
 
           <Route
             path="/candidates"
@@ -215,28 +217,14 @@ function App() {
             }
           />
           <Route
-            path="/jobs/new"
-            element={
-              <Layout>
-                <CompanyJobForm />
-              </Layout>
-            }
-          />
-          <Route
-            path="/jobs/rank-selector"
-            element={
-              <Layout>
-                <JobRankSelector />
-              </Layout>
-            }
-          />
-          <Route
             path="/explore-preview/:id"
             element={<ExplorePreviewRedirect />}
           />
         </Routes>
       </div>
     </AuthProvider>
+    </GoogleOAuthProvider>
+   
   );
 }
 

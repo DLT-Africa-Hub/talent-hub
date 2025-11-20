@@ -12,8 +12,10 @@ interface AssessmentGuardProps {
 const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
 
-  const token = localStorage.getItem('token');
-  const storedUser = localStorage.getItem('user');
+  const token =
+    typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
+  const storedUser =
+    typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
   const isAuth = isAuthenticated || (token && storedUser);
   const currentUser = user || (storedUser ? JSON.parse(storedUser) : null);
 

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 export interface Company {
   id: number;
+  jobId?: string;
   name: string;
   role: string;
   match: number;
@@ -21,27 +22,69 @@ interface CompanyCardProps {
   onPreviewClick?: (companyId: number) => void;
 }
 
-const CompanyCard: React.FC<CompanyCardProps> = ({ 
-  company, 
-  buttonText = "Preview",
-  onPreviewClick,
-}) => {
+export const getMatchBadgeConfig = (score: number) => {
+  const normalized = Math.min(100, Math.max(0, score));
 
+  if (normalized >= 80) {
+    return {
+      label: 'Great fit',
+      container: 'bg-[#ECFDF3] text-[#0F6B38]',
+      dot: 'bg-[#22C55E]',
+    };
+  }
+
+  if (normalized >= 60) {
+    return {
+      label: 'Strong fit',
+      container: 'bg-[#E0F2FE] text-[#0C4A6E]',
+      dot: 'bg-[#38BDF8]',
+    };
+  }
+
+  if (normalized >= 40) {
+    return {
+      label: 'Good potential',
+      container: 'bg-[#FEF3C7] text-[#92400E]',
+      dot: 'bg-[#FBBF24]',
+    };
+  }
+
+  return {
+    label: 'Worth reviewing',
+    container: 'bg-[#F3F4F6] text-[#1F2937]',
+    dot: 'bg-[#9CA3AF]',
+  };
+};
+
+const CompanyCard: React.FC<CompanyCardProps> = ({
+  company,
+  buttonText = 'Preview',
+  onPreviewClick,
+  onButtonClick,
+}) => {
   const navigate = useNavigate();
 
-  const handleButtonClick = (companyId: number, buttonText: string) => {
-    if(buttonText === "Preview"){
-      // Use modal callback if provided, otherwise navigate
+  const handleButtonClick = (companyId: number, label: string) => {
+    if (onButtonClick) {
+      onButtonClick();
+      return;
+    }
+
+    if (label === 'Preview') {
       if (onPreviewClick) {
         onPreviewClick(companyId);
       } else {
         navigate(`/explore-preview/${companyId}`);
       }
+      return;
     }
-    if(buttonText === "Get in Touch"){
+
+    if (label === 'Get in Touch') {
       navigate(`/contactCompany/${companyId}`);
     }
   };
+
+  const badgeConfig = getMatchBadgeConfig(company.match);
 
   return (
     <div className="flex flex-col items-center justify-between gap-[16px] max-w-[400px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group">
@@ -64,9 +107,16 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             {company.role}
           </p>
         </div>
-        <div className="flex items-center h-[49px] bg-gradient-to-r from-button/10 to-button/5 border border-button/20 text-[#1C1C1C] text-[16px] font-semibold py-[15px] px-6 rounded-[70px] shadow-sm">
-          <span className="text-button mr-1">●</span>
-          {company.match}% match
+        <div
+          className={`flex items-center gap-3 px-4 py-2 rounded-[9999px] border border-transparent shadow-sm ${badgeConfig.container}`}
+        >
+          <span className={`w-2.5 h-2.5 rounded-full ${badgeConfig.dot}`} />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[14px] font-semibold">
+              {company.match}% match
+            </span>
+            <span className="text-[12px] opacity-80">{badgeConfig.label}</span>
+          </div>
         </div>
       </div>
       <div className="flex w-full items-center justify-between">
@@ -77,7 +127,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         <p className="text-center  font-semibold w-full">{company.location}</p>
         <div className="h-[20px] bg-black w-0.5" />
         <p className="text-center font-semibold w-full">
-          {company.wage} {company.wageType}
+          {company.wage}
         </p>
       </div>
       <button

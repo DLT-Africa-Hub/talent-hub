@@ -13,9 +13,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, user } = useAuth();
 
-  // Also check localStorage as fallback (in case context hasn't updated yet)
-  const token = localStorage.getItem('token');
-  const storedUser = localStorage.getItem('user');
+  const token =
+    typeof window !== 'undefined'
+      ? sessionStorage.getItem('token')
+      : null;
+  const storedUser =
+    typeof window !== 'undefined'
+      ? sessionStorage.getItem('user')
+      : null;
   const isAuth = isAuthenticated || (token && storedUser);
 
   if (!isAuth) {

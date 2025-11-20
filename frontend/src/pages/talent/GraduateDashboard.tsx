@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
+import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import { graduateApi } from '../../api/graduate';
 import { LoadingSpinner, JobPreviewModal } from '../../index';
 import {
@@ -29,6 +30,16 @@ interface Match {
   };
 }
 
+const normalizeMatchScore = (score: number | undefined): number => {
+  if (typeof score !== 'number' || Number.isNaN(score)) {
+    return 0;
+  }
+  if (score > 1) {
+    return Math.min(100, Math.round(score));
+  }
+  return Math.min(100, Math.round(score * 100));
+};
+
 const GraduateDashboard = () => {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedMatchScore, setSelectedMatchScore] = useState<number | undefined>(undefined);
@@ -49,7 +60,7 @@ const GraduateDashboard = () => {
   const transformMatchToCompany = useCallback(
     (match: Match, index: number): Company & { jobId: string } => {
       const job = match.job;
-      const matchScore = Math.round(match.score * 100);
+      const matchScore = normalizeMatchScore(match.score);
       const jobType = job.jobType || 'Full time';
       const salaryRange = formatSalaryRange(job.salary);
       const salaryType = getSalaryType(jobType);
@@ -78,7 +89,7 @@ const GraduateDashboard = () => {
         wage:
           salaryRange === 'Not specified'
             ? '—'
-            : salaryRange.replace(/[k$]/g, ''),
+            : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
         jobId: job.id,
       };
@@ -86,28 +97,27 @@ const GraduateDashboard = () => {
     []
   );
 
-  const { availableOpportunities, contractOffers } = useMemo(() => {
+  const { availableOpportunities, companyOffers }: {
+    availableOpportunities: (Company & { jobId: string })[];
+    companyOffers: (Company & { jobId: string })[];
+  } = useMemo(() => {
     if (!matchesData || matchesData.length === 0) {
-      return { availableOpportunities: [], contractOffers: [] };
+      return {
+        availableOpportunities: [],
+        companyOffers: [],
+      };
     }
 
-    const available: (Company & { jobId: string })[] = [];
-    const contracts: (Company & { jobId: string })[] = [];
-
+    const standardMatches: (Company & { jobId: string })[] = [];
     matchesData.forEach((match: Match, index: number) => {
-      const company = transformMatchToCompany(match, index);
-      const jobType = match.job.jobType || 'Full time';
-
-      if (jobType === 'Full time' || jobType === 'Part time') {
-        available.push(company);
-      } else {
-        contracts.push(company);
-      }
+      standardMatches.push(transformMatchToCompany(match, index));
     });
 
+    const sortedStandard = [...standardMatches].sort((a, b) => b.match - a.match);
+
     return {
-      availableOpportunities: available.slice(0, 4),
-      contractOffers: contracts.slice(0, 4),
+      availableOpportunities: sortedStandard.slice(0, 4),
+      companyOffers: [],
     };
   }, [matchesData, transformMatchToCompany]);
 
@@ -165,9 +175,9 @@ const GraduateDashboard = () => {
   };
 
   return (
-    <div className="py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
+    <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
       {error && (
-        <div className="w-full rounded-[12px] bg-red-50 border border-red-200 p-[16px]">
+        <div className="w-full  rounded-[12px] bg-red-50 border  border-red-200 p-[16px]">
           <p className="text-[14px] text-red-600">{error}</p>
         </div>
       )}
@@ -178,9 +188,10 @@ const GraduateDashboard = () => {
 
       {!loading && (
         <>
-          <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
+        
+          <div className="flex flex-col gap-[20px] w-full md:gap-[30px] mt-50">
             <p className="font-medium text-[22px] text-[#1C1C1C] mt-4">
-              Available Opportunities
+              AI Matched Opportunities
             </p>
 
             {availableOpportunities.length > 0 ? (
@@ -217,15 +228,15 @@ const GraduateDashboard = () => {
               Contract offers
             </p>
 
-            {contractOffers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8 w-full">
-                {contractOffers.map((company) => (
-                  <CompanyCard
+            {companyOffers.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {companyOffers.map((company) => (
+                  <CompanyFlatCard
                     key={company.id}
                     company={company}
-                    buttonText="Get in Touch"
+                    buttonText="Preview"
                     onButtonClick={() =>
-                      handleButtonClick(company, 'Get in Touch')
+                      handleButtonClick(company, 'Preview')
                     }
                   />
                 ))}

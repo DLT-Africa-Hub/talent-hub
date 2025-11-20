@@ -177,9 +177,12 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                   {job.title || 'Position'}
                 </p>
               </div>
-              {matchScore !== undefined && (
+              {typeof matchScore === 'number' && (
                 <div className="flex items-center h-[49px] bg-fade text-[#1C1C1CBF] text-[16px] py-[15px] px-6 rounded-[70px]">
-                  {Math.round(matchScore * 100)}% match
+                  {Math.round(
+                    matchScore > 1 ? Math.min(matchScore, 100) : matchScore * 100
+                  )}
+                  % match
                 </div>
               )}
             </div>

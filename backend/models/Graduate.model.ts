@@ -16,6 +16,13 @@ export interface IWorkExperience {
   description?: string;
 }
 
+export interface IAssessmentQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+  skill?: string;
+}
+
 export interface IGraduate {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
@@ -52,6 +59,7 @@ export interface IGraduate {
     needsRetake?: boolean;
     lastScore?: number;
     questionSetVersion?: number;
+    currentQuestions?: IAssessmentQuestion[];
   };
   rank?: string;
   createdAt: Date;
@@ -195,6 +203,36 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
       questionSetVersion: {
         type: Number,
         default: 1,
+      },
+      currentQuestions: {
+        type: [
+          {
+            question: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            options: {
+              type: [String],
+              required: true,
+              validate: {
+                validator: (value: unknown[]): boolean =>
+                  Array.isArray(value) && value.length > 0,
+                message: 'Each question must include at least one option',
+              },
+            },
+            answer: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            skill: {
+              type: String,
+              required: false,
+              trim: true,
+            },
+          },
+        ],
       },
     },
     rank: {

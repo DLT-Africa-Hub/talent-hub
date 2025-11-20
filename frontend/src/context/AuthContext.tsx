@@ -6,20 +6,19 @@ import React, {
   ReactNode,
 } from 'react';
 import { authApi } from '../api/auth';
-
-interface User {
-  id: string;
-  email: string;
-  role: 'graduate' | 'company' | 'admin';
-  emailVerified?: boolean;
-}
+import { AuthResponsePayload, AuthUser as User } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResponsePayload>;
+  register: (
+    email: string,
+    password: string,
+    role: string
+  ) => Promise<AuthResponsePayload>;
   logout: () => void;
+  ingestAuthPayload: (payload: AuthResponsePayload) => AuthResponsePayload;
   updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
@@ -44,8 +43,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const storedToken = sessionStorage.getItem('token');
+    const storedUser = sessionStorage.getItem('user');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
@@ -53,32 +56,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const persistAuthPayload = (payload: AuthResponsePayload) => {
+    setToken(payload.accessToken);
+    setUser(payload.user);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('token', payload.accessToken);
+      sessionStorage.setItem('user', JSON.stringify(payload.user));
+    }
+    return payload;
+  };
+
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<AuthResponsePayload> => {
     try {
       const response = await authApi.login(email, password);
-      // Backend returns 'accessToken', not 'token'
-      const token = response.accessToken || response.token;
-      setToken(token);
-      setUser(response.user);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // If email not verified, user will be redirected by EmailVerificationGuard
+      return persistAuthPayload(response);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
     }
   };
 
-  const register = async (email: string, password: string, role: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    role: string
+  ): Promise<AuthResponsePayload> => {
     try {
       const response = await authApi.register(email, password, role);
-      // Backend returns 'accessToken', not 'token'
-      const token = response.accessToken || response.token;
-      setToken(token);
-      setUser(response.user);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      return persistAuthPayload(response);
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -88,14 +96,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+    }
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('user', JSON.stringify(updatedUser));
+    }
   };
+
+  const ingestAuthPayload = (payload: AuthResponsePayload) =>
+    persistAuthPayload(payload);
 
   return (
     <AuthContext.Provider
@@ -105,6 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         register,
         logout,
+        ingestAuthPayload,
         updateUser,
         isAuthenticated: !!user && !!token,
       }}

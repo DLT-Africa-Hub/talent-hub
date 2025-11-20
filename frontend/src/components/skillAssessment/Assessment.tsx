@@ -86,7 +86,10 @@ const Assessment: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token =
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem('token')
+          : null;
       if (!token) {
         setError('Authentication required. Please log in again.');
         navigate('/login', { replace: true });
@@ -115,8 +118,10 @@ const Assessment: React.FC = () => {
       setError(errorMessage);
 
       if (err.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+        }
         setTimeout(() => {
           navigate('/login', { replace: true });
         }, 2000);

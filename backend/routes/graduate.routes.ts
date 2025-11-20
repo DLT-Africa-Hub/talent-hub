@@ -18,6 +18,7 @@ import {
   applyToJob,
   getApplications,
   updateApplicationStatus,
+  getAvailableJobs,
 } from '../controllers/graduate.controller';
 import {
   authenticate,
@@ -53,6 +54,7 @@ router.post('/assessment', submitAssessment);
 // Routes that require email verification (job matching and applications)
 router.use(requireEmailVerification);
 
+router.get('/jobs', getAvailableJobs);
 router.get('/matches', getMatches);
 router.get('/matches/:matchId', getMatchById);
 router.post('/apply/:jobId', applyToJob);

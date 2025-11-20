@@ -1038,7 +1038,7 @@ export const getAssessmentQuestions = async (
       };
     }
     // Store questions temporarily (we'll use them when calculating score)
-    (graduate.assessmentData as any).currentQuestions = questions;
+    graduate.assessmentData.currentQuestions = questions;
     await graduate.save();
 
     res.json({
@@ -1120,8 +1120,7 @@ export const submitAssessment = async (
         : 1;
 
     // Get stored questions from assessmentData for scoring
-    const storedQuestions = (graduate.assessmentData as any)?.currentQuestions as 
-      Array<{ question: string; options: string[]; answer: string; skill?: string }> | undefined;
+    const storedQuestions = graduate.assessmentData?.currentQuestions;
 
     // Calculate score using valid answers
     let correctAnswers = 0;
@@ -1278,7 +1277,9 @@ export const submitAssessment = async (
       questionSetVersion,
     };
     // Remove temporary questions storage
-    delete (graduate.assessmentData as any).currentQuestions;
+    if (graduate.assessmentData) {
+      delete graduate.assessmentData.currentQuestions;
+    }
 
     // Update rank if score is available
     if (rank) {
@@ -1300,6 +1301,138 @@ export const submitAssessment = async (
   } catch (error) {
     console.error('Assessment submission error:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getAvailableJobs = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const parsePositiveInt = (
+      value: unknown,
+      fallback: number,
+      options?: { min?: number; max?: number }
+    ): number => {
+      if (typeof value !== 'string') {
+        return fallback;
+      }
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isNaN(parsed)) {
+        return fallback;
+      }
+      const min = options?.min ?? 1;
+      const max = options?.max ?? 100;
+      return Math.min(max, Math.max(min, parsed));
+    };
+
+    const page = parsePositiveInt(req.query.page, 1, { min: 1 });
+    const limit = parsePositiveInt(req.query.limit, 20, { min: 1, max: 100 });
+    const skip = (page - 1) * limit;
+
+    const search =
+      typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
+    const jobFilter: Record<string, unknown> = { status: 'active' };
+    if (search.length > 0) {
+      jobFilter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const [jobs, total] = await Promise.all([
+      Job.find(jobFilter)
+        .select(
+          'title companyId location requirements salary jobType status preferedRank createdAt updatedAt'
+        )
+        .populate('companyId', 'companyName')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Job.countDocuments(jobFilter),
+    ]);
+
+    if (jobs.length === 0) {
+      res.json({
+        jobs: [],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+      return;
+    }
+
+    const jobIds = jobs.map((job) => job._id);
+    const matches = await Match.find({
+      graduateId: graduate._id,
+      jobId: { $in: jobIds },
+    })
+      .select('jobId score')
+      .lean();
+
+    const matchScores = new Map<string, number>();
+    matches.forEach((match) => {
+      if (match.jobId) {
+        matchScores.set(match.jobId.toString(), match.score);
+      }
+    });
+
+    const jobsPayload = jobs.map((job) => {
+      const companyName =
+        job.companyId &&
+        typeof job.companyId === 'object' &&
+        'companyName' in job.companyId
+          ? (job.companyId as { companyName: string }).companyName
+          : undefined;
+
+      return {
+        id: job._id.toString(),
+        title: job.title,
+        companyName,
+        companyId:
+          job.companyId instanceof mongoose.Types.ObjectId
+            ? job.companyId.toString()
+            : undefined,
+        location: job.location,
+        jobType: job.jobType,
+        salary: job.salary,
+        requirements: job.requirements,
+        matchScore: matchScores.get(job._id.toString()) ?? null,
+        preferedRank: job.preferedRank,
+        status: job.status,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+      };
+    });
+
+    res.json({
+      jobs: jobsPayload,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Available jobs fetch error:', error);
+    res.status(500).json({ message: 'Failed to load available jobs' });
   }
 };
 

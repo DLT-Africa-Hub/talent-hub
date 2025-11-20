@@ -9,8 +9,19 @@ const api = axios.create({
     },
 });
 
+const getSessionToken = (): string | null => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    try {
+        return sessionStorage.getItem('token');
+    } catch {
+        return null;
+    }
+};
+
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = getSessionToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,8 +39,8 @@ api.interceptors.response.use(
             // This prevents redirect loops during login flow
             const currentPath = window.location.pathname;
             if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                sessionStorage.removeItem('user');
                 window.location.href = '/login';
             }
         }

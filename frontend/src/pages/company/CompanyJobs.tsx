@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiPlus } from 'react-icons/fi';
 import JobCard from '../../components/company/JobCard';
 import { CompanyJob } from '../../data/jobs';
@@ -13,9 +13,12 @@ import {
   getSalaryType,
 } from '../../utils/job.utils';
 import { LoadingSpinner } from '../../index';
+import JobCreationModal from '../../components/company/JobCreationModal';
 
 const CompanyJobs = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isJobModalOpen, setJobModalOpen] = useState(false);
 
   // Transform API job to CompanyJob format using useCallback
   const transformJob = useCallback(
@@ -79,7 +82,11 @@ const CompanyJobs = () => {
   }, [queryError]);
 
   const handleNewJob = () => {
-    navigate('/jobs/new');
+    setJobModalOpen(true);
+  };
+
+  const handleJobCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ['companyJobs'] });
   };
 
   const handleViewMatches = (job: CompanyJob) => {
@@ -175,6 +182,11 @@ const CompanyJobs = () => {
           </>
         )}
       </div>
+      <JobCreationModal
+        isOpen={isJobModalOpen}
+        onClose={() => setJobModalOpen(false)}
+        onJobCreated={handleJobCreated}
+      />
     </div>
   );
 };

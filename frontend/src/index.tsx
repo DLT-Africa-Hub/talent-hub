@@ -5,8 +5,6 @@ export { default as CompanyDashboard } from './pages/company/CompanyDashboard';
 export { default as CompanyProfile } from './pages/company/CompanyProfile';
 export { default as CompanyCandidates } from './pages/company/CompanyCandidates';
 export { default as CompanyJobs } from './pages/company/CompanyJobs';
-export { default as CompanyJobForm } from './components/onboarding/companyOnboarding/job/CompanyJobForm';
-export { default as JobRankSelector } from './pages/company/JobRankSelector';
 export { default as CompanyOnboarding } from './pages/company/CompanyOnboarding';
 export { default as AdminDashboard } from './pages/AdminDashboard';
 export { default as ProtectedRoute } from './components/ProtectedRoute';

@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
+import { OAuth2Client } from 'google-auth-library';
 import mongoose from 'mongoose';
 import User, { UserDocument } from '../models/User.model';
 import Session, { SessionDocument } from '../models/Session.model';
@@ -18,6 +19,29 @@ import {
   generateSecureToken,
   hashToken,
 } from '../utils/security.utils';
+
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_REDIRECT_URI =
+  process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:5174'}/api/v1/auth/google/callback`;
+
+const googleClientForVerify = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleClientForServerFlow = new OAuth2Client({
+  clientId: GOOGLE_CLIENT_ID,
+  clientSecret: GOOGLE_CLIENT_SECRET,
+  redirectUri: GOOGLE_REDIRECT_URI,
+});
+
+type GoogleProfile = {
+  email: string;
+  emailVerified: boolean;
+  name?: string;
+  givenName?: string;
+  familyName?: string;
+  picture?: string;
+};
+
 
 const DEFAULT_REFRESH_TOKEN_DAYS = 7;
 const DEFAULT_EMAIL_VERIFICATION_DAYS = 2;
@@ -81,6 +105,10 @@ const PASSWORD_RESET_TTL_MS = resolveTtlMs(
 
 const CLIENT_BASE_URL =
   process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:5174';
+
+const REFRESH_TOKEN_COOKIE_NAME =
+  process.env.REFRESH_TOKEN_COOKIE_NAME || 'talent_hub_refresh';
+const isProduction = process.env.NODE_ENV === 'production';
 
 const buildUrlWithToken = (path: string, token: string): string => {
   const trimmedBase = CLIENT_BASE_URL.replace(/\/+$/, '');
@@ -271,6 +299,54 @@ const sendPasswordResetMessage = async (
     console.error('Password reset email error:', error);
   }
 };
+
+const findOrCreateUserFromGoogle = async (
+  profile: GoogleProfile,
+  role?: 'graduate' | 'company' | 'admin'
+): Promise<UserDocument> => {
+
+  const defaultRole = 'graduate';
+  const resolvedRole = role ?? defaultRole;
+
+  let user = await User.findOne({ email: profile.email });
+
+  if (!user) {
+    // generate random password (schema requires it)
+    const randomPassword = generateSecureToken(32);
+    const hashed = await bcrypt.hash(randomPassword, 10);
+
+    user = new User({
+      email: profile.email,
+      password: hashed,
+      role: resolvedRole,
+      emailVerified: !!profile.emailVerified,
+      emailVerifiedAt: profile.emailVerified ? new Date() : undefined,
+    });
+
+    await user.save();
+
+  } else {
+    let updated = false;
+
+    // update email verification if Google confirms it
+    if (!user.emailVerified && profile.emailVerified) {
+      user.emailVerified = true;
+      user.emailVerifiedAt = new Date();
+      updated = true;
+    }
+
+    // do NOT update existing role — safer
+    // if you want to allow role updates, you could add logic here
+
+    if (updated) {
+      await user.save();
+    }
+  }
+
+  return user;
+};
+
+
 
 /**
  * Register a new user (graduate, company, or admin)
@@ -815,6 +891,224 @@ export const changePassword = async (
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
     console.error('Change password error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const googleSignIn = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { idToken, role } = req.body;
+    if (typeof idToken !== 'string' || !idToken.trim()) {
+      res.status(400).json({ message: 'idToken is required' });
+      return;
+    }
+
+    // Verify idToken
+    const ticket = await googleClientForVerify.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID || undefined,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.status(400).json({ message: 'Invalid Google token payload' });
+      return;
+    }
+
+    const profile: GoogleProfile = {
+      email: payload.email,
+      emailVerified: !!payload.email_verified,
+      name: payload.name,
+      picture: payload.picture,
+      givenName: payload.given_name,
+      familyName: payload.family_name,
+    };
+
+    const user = await findOrCreateUserFromGoogle(profile, role);
+
+    // create a session
+    const { session, refreshToken } = await createSession({
+      userId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
+
+    // Optionally invalidate email verification tokens for this user since we trust Google
+    await invalidateExistingTokens(user._id, TOKEN_TYPES.EMAIL_VERIFICATION);
+
+    res.json(
+      buildAuthPayload(user, session, refreshToken, 'Signed in with Google')
+    );
+  } catch (error) {
+    console.error('Google sign-in error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const googleAuthCode = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { code, role } = req.body;
+
+    if (typeof code !== 'string' || !code.trim()) {
+      res.status(400).json({ message: 'Authorization code is required' });
+      return;
+    }
+
+    // For @react-oauth/google auth-code flow, we need to use a special client
+    // that doesn't require redirect_uri because it's handled client-side
+    const authCodeClient = new OAuth2Client({
+      clientId: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      // Don't set redirectUri - the code was already issued with 'postmessage' as redirect_uri
+    });
+
+    // Exchange code for tokens (specify redirect_uri as 'postmessage' for client-side flow)
+    const { tokens } = await authCodeClient.getToken({
+      code,
+      redirect_uri: 'postmessage', // This is the magic value for @react-oauth/google
+    });
+
+    if (!tokens.id_token) {
+      res.status(400).json({ message: 'Missing id_token from Google' });
+      return;
+    }
+
+    // Verify the ID token
+    const ticket = await googleClientForVerify.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: GOOGLE_CLIENT_ID || undefined,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.status(400).json({ message: 'Invalid Google token payload' });
+      return;
+    }
+
+    const profile: GoogleProfile = {
+      email: payload.email,
+      emailVerified: !!payload.email_verified,
+      name: payload.name,
+      picture: payload.picture,
+      givenName: payload.given_name,
+      familyName: payload.family_name,
+    };
+
+    // Find or create user
+    const user = await findOrCreateUserFromGoogle(profile, role);
+
+    // Create session
+    const { session, refreshToken } = await createSession({
+      userId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
+
+    await invalidateExistingTokens(user._id, TOKEN_TYPES.EMAIL_VERIFICATION);
+
+    res.json(
+      buildAuthPayload(user, session, refreshToken, 'Signed in with Google')
+    );
+  } catch (error) {
+    console.error('Google auth-code error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const getGoogleAuthUrl = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const url = googleClientForServerFlow.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: ['openid', 'email', 'profile'],
+    });
+
+    res.json({ url });
+  } catch (error) {
+    console.error('Get Google auth url error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const googleOAuthCallback = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const code = req.query.code as string | undefined;
+    if (!code) {
+      res.status(400).json({ message: 'Missing code parameter' });
+      return;
+    }
+
+    // Exchange code for tokens
+    const tokenResponse = await googleClientForServerFlow.getToken(code);
+    const tokens = tokenResponse.tokens;
+
+
+    const idToken = tokens.id_token;
+    if (!idToken) {
+      res.status(400).json({ message: 'Missing id_token from Google' });
+      return;
+    }
+
+    const ticket = await googleClientForVerify.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID || undefined,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.status(400).json({ message: 'Invalid Google token payload' });
+      return;
+    }
+
+    const profile: GoogleProfile = {
+      email: payload.email,
+      emailVerified: !!payload.email_verified,
+      name: payload.name,
+      picture: payload.picture,
+      givenName: payload.given_name,
+      familyName: payload.family_name,
+    };
+
+
+    const defaultRole = 'graduate';
+    const user = await findOrCreateUserFromGoogle(profile, defaultRole);
+
+
+    const { refreshToken } = await createSession({
+      userId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
+
+    const refreshCookieOptions: CookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: REFRESH_TOKEN_TTL_MS,
+      path: '/',
+    };
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, refreshCookieOptions);
+
+    const redirectTo = `${CLIENT_BASE_URL.replace(/\/+$/, '')}/auth/google/success`;
+
+    // Optionally: set cookie with refresh token here instead of query param.
+    res.redirect(redirectTo);
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

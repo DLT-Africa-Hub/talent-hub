@@ -82,6 +82,15 @@ export const graduateApi = {
     return response.data;
   },
 
+  getAvailableJobs: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) => {
+    const response = await api.get('/graduates/jobs', { params });
+    return response.data;
+  },
+
   getMatchById: async (matchId: string) => {
     const response = await api.get(`/graduates/matches/${matchId}`);
     return response.data;

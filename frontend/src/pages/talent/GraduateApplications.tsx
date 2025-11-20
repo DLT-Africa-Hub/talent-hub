@@ -120,7 +120,7 @@ const GraduateApplications = () => {
         wage:
           salaryRange === 'Not specified'
             ? '—'
-            : salaryRange.replace(/[k$]/g, ''),
+            : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
         status: application.status,
         applicationId: application.id,
@@ -133,7 +133,11 @@ const GraduateApplications = () => {
   const transformMatchToCompany = useCallback(
     (match: Match, index: number): Company => {
       const job = match.job;
-      const matchScore = Math.round(match.score * 100);
+      const rawScore = typeof match.score === 'number' ? match.score : 0;
+      const matchScore =
+        rawScore > 1
+          ? Math.min(100, Math.round(rawScore))
+          : Math.min(100, Math.round(rawScore * 100));
       const jobType = job.jobType || 'Full time';
       const salaryRange = formatSalaryRange(job.salary);
       const salaryType = getSalaryType(jobType);
@@ -161,7 +165,7 @@ const GraduateApplications = () => {
         wage:
           salaryRange === 'Not specified'
             ? '—'
-            : salaryRange.replace(/[k$]/g, ''),
+            : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
       };
     },

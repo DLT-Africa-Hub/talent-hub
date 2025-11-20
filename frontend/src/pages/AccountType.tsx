@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PiGraduationCap, PiBuildingApartmentLight } from 'react-icons/pi';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,7 +17,11 @@ const AccountType: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { register } = useAuth();
+  const credentials = (location.state as
+    | { email?: string; password?: string }
+    | undefined) ?? { email: undefined, password: undefined };
 
   const roles: Role[] = [
     {
@@ -42,8 +46,8 @@ const AccountType: React.FC = () => {
   const handleContinue = async () => {
     if (!selectedRole) return;
 
-    const email = sessionStorage.getItem('registerEmail');
-    const password = sessionStorage.getItem('registerPassword');
+    const email = credentials.email;
+    const password = credentials.password;
 
     if (!email || !password) {
       setError('Registration data not found. Please start over.');
@@ -62,10 +66,6 @@ const AccountType: React.FC = () => {
 
       // Register user with selected role
       await register(email, password, selectedRoleData.backendRole);
-
-      // Clear temporary storage
-      sessionStorage.removeItem('registerEmail');
-      sessionStorage.removeItem('registerPassword');
 
       // Navigate based on role
       if (selectedRoleData.backendRole === 'graduate') {

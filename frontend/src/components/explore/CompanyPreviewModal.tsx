@@ -116,7 +116,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
             className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
             alt={company.name}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent" />
           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-[18px] border border-white/50 p-[12px] rounded-full shadow-lg">
             <PiBuildingApartmentLight className="text-button" />
           </div>
@@ -135,7 +135,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
               {company.role}
             </p>
           </div>
-          <div className="flex items-center h-[49px] bg-gradient-to-r from-button/10 to-button/5 border border-button/20 text-[#1C1C1C] text-[16px] font-semibold py-[15px] px-6 rounded-[70px] whitespace-nowrap shadow-sm">
+          <div className="flex items-center h-[49px] bg-linear-to-r from-button/10 to-button/5 border border-button/20 text-[#1C1C1C] text-[16px] font-semibold py-[15px] px-6 rounded-[70px] whitespace-nowrap shadow-sm">
             <span className="text-button mr-1">●</span>
             {company.match}% match
           </div>
@@ -159,7 +159,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
           <div className="flex items-center gap-2 text-[#1C1C1C]">
             <HiOutlineCurrencyDollar className="text-[20px] text-button" />
             <span className="font-semibold text-[16px]">
-              {company.wage} {company.wageType}
+              {company.wage}
             </span>
           </div>
         </div>

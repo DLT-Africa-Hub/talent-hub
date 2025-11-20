@@ -15,23 +15,18 @@ import {
   getSalaryType,
 } from '../../utils/job.utils';
 
-interface Match {
+interface AvailableJob {
   id: string;
-  score: number;
-  status: string;
-  job: {
-    id: string;
-    title?: string;
-    companyId?: string;
-    companyName?: string;
-    location?: string;
-    jobType?: string;
-    salary?: {
-      min?: number;
-      max?: number;
-      currency?: string;
-    };
+  title?: string;
+  companyName?: string;
+  location?: string;
+  jobType?: string;
+  salary?: {
+    min?: number;
+    max?: number;
+    currency?: string;
   };
+  matchScore?: number | null;
 }
 
 const ExploreCompany = () => {
@@ -42,24 +37,25 @@ const ExploreCompany = () => {
   const [sortBy, setSortBy] = useState<'match' | 'name' | 'salary'>('match');
   const [filterContract, setFilterContract] = useState<string>('all');
 
-  // Fetch matches from API
+  // Fetch available jobs from API
   const {
-    data: matchesData,
+    data: jobsData,
     isLoading: loading,
     error: queryError,
   } = useQuery({
-    queryKey: ['exploreMatches'],
+    queryKey: ['exploreJobs'],
     queryFn: async () => {
-      const response = await graduateApi.getMatches({ page: 1, limit: 100 });
-      return response.matches || [];
+      const response = await graduateApi.getAvailableJobs({
+        page: 1,
+        limit: 100,
+      });
+      return response.jobs || [];
     },
   });
 
-  // Transform match data to Company format
-  const transformMatchToCompany = useCallback(
-    (match: Match, index: number): Company => {
-      const job = match.job;
-      const matchScore = Math.round(match.score * 100);
+  // Transform job data to Company format
+  const transformJobToCompany = useCallback(
+    (job: AvailableJob, index: number): Company => {
       const jobType = job.jobType || 'Full time';
       const salaryRange = formatSalaryRange(job.salary);
       const salaryType = getSalaryType(jobType);
@@ -75,10 +71,14 @@ const ExploreCompany = () => {
       const companyName = job.companyName || 'Company';
 
       const cardId =
-        parseInt(job.id?.slice(-8) || match.id.slice(-8), 16) || index + 1;
+        parseInt(job.id?.slice(-8) || '', 16) || index + 1;
+
+      const rawMatch = typeof job.matchScore === 'number' ? job.matchScore : 0;
+      const matchScore = Math.min(100, Math.max(0, Math.round(rawMatch)));
 
       return {
         id: cardId,
+        jobId: job.id,
         name: companyName,
         role: job.title || 'Position',
         match: matchScore,
@@ -88,22 +88,22 @@ const ExploreCompany = () => {
         wage:
           salaryRange === 'Not specified'
             ? '—'
-            : salaryRange.replace(/[k$]/g, ''),
+            : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
       };
     },
     []
   );
 
-  // Transform all matches to companies
+  // Transform all jobs to companies
   const companies = useMemo(() => {
-    if (!matchesData || matchesData.length === 0) {
+    if (!jobsData || jobsData.length === 0) {
       return [];
     }
-    return matchesData.map((match: Match, index: number) =>
-      transformMatchToCompany(match, index)
+    return jobsData.map((job: AvailableJob, index: number) =>
+      transformJobToCompany(job, index)
     );
-  }, [matchesData, transformMatchToCompany]);
+  }, [jobsData, transformJobToCompany]);
 
   const handlePreviewClick = (companyId: number) => {
     const company = companies.find((c: Company) => c.id === companyId);
@@ -172,7 +172,7 @@ const ExploreCompany = () => {
     });
 
     return filtered;
-  }, [searchQuery, sortBy, filterContract]);
+  }, [companies, searchQuery, sortBy, filterContract]);
 
   const contractTypes = ['all', 'full-time', 'contract'];
 

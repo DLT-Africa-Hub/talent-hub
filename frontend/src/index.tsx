@@ -9,6 +9,7 @@ export { default as CompanyOnboarding } from './pages/company/CompanyOnboarding'
 export { default as AdminDashboard } from './pages/AdminDashboard';
 export { default as ProtectedRoute } from './components/ProtectedRoute';
 export { default as AssessmentGuard } from './components/AssessmentGuard';
+export { default as CompanyRouteGuard } from './components/CompanyRouteGuard';
 export { default as AccountType } from './pages/AccountType';
 export { default as Layout } from './components/layout/Layout';
 export { default as ExploreCompany } from './pages/talent/ExploreCompany';

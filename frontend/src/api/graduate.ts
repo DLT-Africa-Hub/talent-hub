@@ -86,6 +86,8 @@ export const graduateApi = {
     page?: number;
     limit?: number;
     search?: string;
+    jobType?: string;
+    sortBy?: string;
   }) => {
     const response = await api.get('/graduates/jobs', { params });
     return response.data;

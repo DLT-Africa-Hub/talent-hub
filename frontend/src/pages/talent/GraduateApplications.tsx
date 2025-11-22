@@ -8,7 +8,12 @@ import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
 import { graduateApi } from '../../api/graduate';
-import { LoadingSpinner } from '../../index';
+import {
+  EmptyState,
+  SectionHeader,
+  InlineLoader,
+  ErrorState,
+} from '../../components/ui';
 import {
   DEFAULT_JOB_IMAGE,
   formatSalaryRange,
@@ -223,6 +228,10 @@ const GraduateApplications = () => {
     }
   };
 
+  const handleApplyClick = (companyId: number) => {
+    console.log('apply clicked', companyId);
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedCompany(null);
@@ -333,23 +342,22 @@ const GraduateApplications = () => {
 
           {/* Applications List */}
           {applicationsLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <LoadingSpinner message="Loading applications..." />
-            </div>
+            <InlineLoader message="Loading applications..." />
           ) : filteredApplications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-20 h-20 rounded-full bg-fade flex items-center justify-center mb-4">
-                <MdPending className="text-[32px] text-[#1C1C1C40]" />
-              </div>
-              <h3 className="text-[18px] font-semibold text-[#1C1C1C] mb-2">
-                No applications found
-              </h3>
-              <p className="text-[14px] text-[#1C1C1C80] text-center">
-                {applications.length === 0
+            <EmptyState
+              icon={
+                <div className="w-20 h-20 rounded-full bg-fade flex items-center justify-center mb-4">
+                  <MdPending className="text-[32px] text-[#1C1C1C40]" />
+                </div>
+              }
+              title="No applications found"
+              description={
+                applications.length === 0
                   ? "You haven't applied to any jobs yet."
-                  : 'Try adjusting your filters.'}
-              </p>
-            </div>
+                  : 'Try adjusting your filters.'
+              }
+              variant="minimal"
+            />
           ) : (
             <div className="grid grid-cols-1 gap-6">
               {filteredApplications.map(
@@ -373,13 +381,9 @@ const GraduateApplications = () => {
 
           {/* Quick Apply Section */}
           <div>
-            <p className="font-medium text-[22px] text-[#1C1C1C] mb-[20px]">
-              Quick Apply
-            </p>
+            <SectionHeader title="Quick Apply" />
             {matchesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <LoadingSpinner message="Loading..." />
-              </div>
+              <InlineLoader message="Loading..." />
             ) : quickApplyJobs.length === 0 ? (
               <p className="text-[14px] text-[#1C1C1C80] text-center py-8">
                 No quick apply opportunities available.
@@ -390,8 +394,8 @@ const GraduateApplications = () => {
                   <CompanyCard
                     key={company.id}
                     company={company}
-                    buttonText="Preview"
-                    onPreviewClick={handlePreviewClick}
+                    buttonText="Apply"
+                    onButtonClick={() => handleApplyClick(company.id)}
                   />
                 ))}
               </div>
@@ -476,32 +480,32 @@ const GraduateApplications = () => {
             {/* Applications List */}
             {applicationsLoading ? (
               <div className="flex items-center justify-center py-16">
-                <LoadingSpinner message="Loading applications..." />
+                <InlineLoader message="Loading applications..." />
               </div>
             ) : applicationsError ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <p className="text-red-500 text-[16px] font-medium mb-2">
-                  Failed to load applications
-                </p>
-                <p className="text-[14px] text-[#1C1C1C80]">
-                  {(applicationsError as any)?.response?.data?.message ||
-                    'Please try again later.'}
-                </p>
-              </div>
+              <ErrorState
+                title="Failed to load applications"
+                message={
+                  (applicationsError as any)?.response?.data?.message ||
+                  'Please try again later.'
+                }
+                variant="fullPage"
+              />
             ) : filteredApplications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="w-20 h-20 rounded-full bg-fade flex items-center justify-center mb-4">
-                  <MdPending className="text-[32px] text-[#1C1C1C40]" />
-                </div>
-                <h3 className="text-[18px] font-semibold text-[#1C1C1C] mb-2">
-                  No applications found
-                </h3>
-                <p className="text-[14px] text-[#1C1C1C80] text-center">
-                  {applications.length === 0
+              <EmptyState
+                icon={
+                  <div className="w-20 h-20 rounded-full bg-fade flex items-center justify-center mb-4">
+                    <MdPending className="text-[32px] text-[#1C1C1C40]" />
+                  </div>
+                }
+                title="No applications found"
+                description={
+                  applications.length === 0
                     ? "You haven't applied to any jobs yet."
-                    : 'Try adjusting your filters.'}
-                </p>
-              </div>
+                    : 'Try adjusting your filters.'
+                }
+                variant="minimal"
+              />
             ) : (
               <div className="flex flex-col gap-4">
                 {filteredApplications.map(
@@ -539,7 +543,7 @@ const GraduateApplications = () => {
             </div>
             {matchesLoading ? (
               <div className="flex items-center justify-center py-16">
-                <LoadingSpinner message="Loading..." />
+                <InlineLoader message="Loading..." />
               </div>
             ) : quickApplyJobs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
@@ -553,8 +557,8 @@ const GraduateApplications = () => {
                   <CompanyCard
                     key={company.id}
                     company={company}
-                    buttonText="Preview"
-                    onPreviewClick={handlePreviewClick}
+                    buttonText="Apply"
+                    onButtonClick={() => handleApplyClick(company.id)}
                   />
                 ))}
               </div>

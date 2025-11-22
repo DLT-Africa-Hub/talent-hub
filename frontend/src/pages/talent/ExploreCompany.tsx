@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BsSearch, BsFilter } from 'react-icons/bs';
 import { HiOutlineX } from 'react-icons/hi';
@@ -6,6 +6,7 @@ import { HiOutlineX } from 'react-icons/hi';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
+import { Pagination } from '../../components/ui';
 import { graduateApi } from '../../api/graduate';
 import { LoadingSpinner } from '../../index';
 import {
@@ -33,25 +34,72 @@ const ExploreCompany = () => {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<'match' | 'name' | 'salary'>('match');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'title' | 'salary'>('createdAt');
   const [filterContract, setFilterContract] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
-  // Fetch available jobs from API
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset to first page on search change
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterContract, sortBy]);
+
+  // Fetch available jobs from API with server-side pagination and filtering
   const {
-    data: jobsData,
+    data: jobsResponse,
     isLoading: loading,
     error: queryError,
-  } = useQuery({
-    queryKey: ['exploreJobs'],
+    isFetching,
+  } = useQuery<{
+    jobs: AvailableJob[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }>({
+    queryKey: [
+      'exploreJobs',
+      currentPage,
+      debouncedSearch,
+      filterContract,
+      sortBy,
+    ],
     queryFn: async () => {
       const response = await graduateApi.getAvailableJobs({
-        page: 1,
-        limit: 100,
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearch || undefined,
+        jobType: filterContract !== 'all' ? filterContract : undefined,
+        sortBy: sortBy,
       });
-      return response.jobs || [];
+      return response;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
   });
+
+  const jobsData = jobsResponse?.jobs || [];
+  const pagination = jobsResponse?.pagination || {
+    page: 1,
+    limit: pageSize,
+    total: 0,
+    totalPages: 0,
+  };
 
   // Transform job data to Company format
   const transformJobToCompany = useCallback(
@@ -126,53 +174,9 @@ const ExploreCompany = () => {
     // TODO: Handle application
   };
 
-  // Filter and sort companies
-  const filteredAndSortedCompanies = useMemo(() => {
-    let filtered = [...companies];
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (company) =>
-          company.name.toLowerCase().includes(query) ||
-          company.role.toLowerCase().includes(query) ||
-          company.location.toLowerCase().includes(query)
-      );
-    }
-
-    // Contract type filter
-    if (filterContract !== 'all') {
-      filtered = filtered.filter((company) => {
-        const contract = company.contract.toLowerCase();
-        if (filterContract === 'full-time') {
-          return contract.includes('full');
-        }
-        if (filterContract === 'contract') {
-          return contract.includes('contract') || contract.includes('month');
-        }
-        return true;
-      });
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      if (sortBy === 'match') {
-        return b.match - a.match;
-      }
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      }
-      if (sortBy === 'salary') {
-        const aSalary = parseInt(a.wage.replace(/[^0-9]/g, '')) || 0;
-        const bSalary = parseInt(b.wage.replace(/[^0-9]/g, '')) || 0;
-        return bSalary - aSalary;
-      }
-      return 0;
-    });
-
-    return filtered;
-  }, [companies, searchQuery, sortBy, filterContract]);
+  // Companies are already filtered and sorted on the server
+  // No need for client-side filtering/sorting
+  const filteredAndSortedCompanies = companies;
 
   const contractTypes = ['all', 'full-time', 'contract'];
 
@@ -187,7 +191,12 @@ const ExploreCompany = () => {
                 Available Opportunities
               </h1>
               <p className="text-[14px] md:text-[16px] text-[#1C1C1C80]">
-                {filteredAndSortedCompanies.length} {filteredAndSortedCompanies.length === 1 ? 'job' : 'jobs'} found
+                {pagination.total} {pagination.total === 1 ? 'job' : 'jobs'} found
+                {pagination.total > 0 && (
+                  <span className="ml-1">
+                    (Page {pagination.page} of {pagination.totalPages})
+                  </span>
+                )}
               </p>
             </div>
 
@@ -226,11 +235,11 @@ const ExploreCompany = () => {
                 </button>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'match' | 'name' | 'salary')}
+                  onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'title' | 'salary')}
                   className="px-4 py-3 border border-fade rounded-[10px] bg-white text-[#1C1C1C] outline-none focus:border-button focus:ring-2 focus:ring-button/20 transition-all cursor-pointer text-[14px] font-medium"
                 >
-                  <option value="match">Sort by Match</option>
-                  <option value="name">Sort by Name</option>
+                  <option value="createdAt">Sort by Newest</option>
+                  <option value="title">Sort by Title</option>
                   <option value="salary">Sort by Salary</option>
                 </select>
               </div>
@@ -290,7 +299,7 @@ const ExploreCompany = () => {
         </div>
 
         {/* Results Section */}
-        {loading ? (
+        {(loading || isFetching) ? (
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner message="Loading opportunities..." />
           </div>
@@ -314,16 +323,18 @@ const ExploreCompany = () => {
             </div>
             <h3 className="text-[20px] font-semibold text-[#1C1C1C] mb-2">No jobs found</h3>
             <p className="text-[16px] text-[#1C1C1C80] text-center max-w-md">
-              {companies.length === 0
+              {pagination.total === 0
                 ? 'No job opportunities available at the moment. Check back later!'
                 : 'Try adjusting your search or filters to find more opportunities.'}
             </p>
-            {companies.length > 0 && (
+            {(debouncedSearch || filterContract !== 'all') && (
               <button
                 onClick={() => {
                   setSearchQuery('');
+                  setDebouncedSearch('');
                   setFilterContract('all');
                   setShowFilters(false);
+                  setCurrentPage(1);
                 }}
                 className="mt-4 px-6 py-2 bg-button text-white rounded-[10px] font-medium hover:bg-[#176300] transition-colors"
               >
@@ -335,7 +346,7 @@ const ExploreCompany = () => {
           <>
             {/* Desktop: Flat Cards */}
             <div className="hidden lg:flex flex-col gap-4 w-full">
-              {filteredAndSortedCompanies.map((company) => (
+              {filteredAndSortedCompanies.map((company: Company) => (
                 <CompanyFlatCard
                   key={company.id}
                   company={company}
@@ -347,7 +358,7 @@ const ExploreCompany = () => {
 
             {/* Mobile/Tablet: Grid Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:hidden w-full">
-              {filteredAndSortedCompanies.map((company) => (
+              {filteredAndSortedCompanies.map((company: Company) => (
                 <CompanyCard
                   key={company.id}
                   company={company}
@@ -357,6 +368,18 @@ const ExploreCompany = () => {
               ))}
             </div>
           </>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex justify-center">
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              onPageChange={setCurrentPage}
+              maxVisiblePages={5}
+            />
+          </div>
         )}
       </div>
 

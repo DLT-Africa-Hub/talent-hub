@@ -29,18 +29,19 @@ export interface IGraduate {
   firstName: string;
   lastName: string;
   phoneNumber: number;
-  expLevel: 'entry' | 'mid' | 'senior';
+  expLevel: 'entry level' | 'mid level' | 'senior level';
   expYears: number;
   position:
-    | 'frontend'
-    | 'backend'
-    | 'fullstack'
-    | 'mobile'
-    | 'devops'
-    | 'data'
-    | 'security'
-    | 'other';
+  | 'frontend developer'
+  | 'backend developer'
+  | 'fullstack developer'
+  | 'mobile developer'
+  | 'devops engineer'
+  | 'data engineer'
+  | 'security engineer'
+  | 'other';
   profilePictureUrl?: string;
+  location?: string;
   skills: string[];
   education: IEducationDetails;
   interests: string[];
@@ -50,6 +51,8 @@ export interface IGraduate {
     linkedin?: string;
   };
   portfolio?: string;
+  summary?: string;
+  cv?: string; // URL to CV/resume file
   workExperiences: IWorkExperience[];
   assessmentData?: {
     submittedAt: Date;
@@ -93,7 +96,7 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
     },
     expLevel: {
       type: String,
-      enum: ['entry', 'mid', 'senior'],
+      enum: ['entry level', 'mid level', 'senior level'],
       required: true,
     },
     expYears: {
@@ -103,20 +106,23 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
     position: {
       type: String,
       enum: [
-        'frontend',
-        'backend',
-        'fullstack',
-        'mobile',
-        'devops',
-        'data',
-        'security',
+        'frontend developer',
+        'backend developer',
+        'fullstack developer',
+        'mobile developer',
+        'devops engineer',
+        'data engineer',
+        'security engineer',
         'other',
       ],
-      enum: ['frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data', 'security', 'other'],
       required: true,
     },
     profilePictureUrl: {
       type: String,
+    },
+    location: {
+      type: String,
+      required: false,
     },
     skills: {
       type: [String],
@@ -161,6 +167,14 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
     portfolio: {
       type: String,
       required: false, // Manual URL input
+    },
+    summary: {
+      type: String,
+      required: false,
+    },
+    cv: {
+      type: String,
+      required: false, // URL to CV/resume file
     },
     workExperiences: {
       type: [

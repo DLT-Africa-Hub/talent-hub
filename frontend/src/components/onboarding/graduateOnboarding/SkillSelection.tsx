@@ -28,15 +28,15 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
 
   // Convert years of experience string to number
   const parseYearsOfExperience = (yearsStr: string): number => {
-    if (!yearsStr) return 0;
-    // Handle formats like "0-1 year", "1-3 years", "3-5 years", "5+ years"
-    if (yearsStr.includes('0&minus;1') || yearsStr.includes('0-1')) return 0.5;
-    if (yearsStr.includes('1&minus;3') || yearsStr.includes('1-3')) return 2;
+    if (!yearsStr) return 3; // Minimum is 3 years
+    // Handle formats like "3-5 years", "5-7 years", "7-10 years", "10+ years"
     if (yearsStr.includes('3&minus;5') || yearsStr.includes('3-5')) return 4;
-    if (yearsStr.includes('5+')) return 6;
-    // Try to parse as number
+    if (yearsStr.includes('5&minus;7') || yearsStr.includes('5-7')) return 6;
+    if (yearsStr.includes('7&minus;10') || yearsStr.includes('7-10')) return 8.5;
+    if (yearsStr.includes('10+')) return 10;
+    // Try to parse as number, ensure minimum of 3
     const num = parseFloat(yearsStr);
-    return isNaN(num) ? 0 : num;
+    return isNaN(num) ? 3 : Math.max(3, num);
   };
 
   const handleCreateProfile = async () => {
@@ -46,7 +46,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
     try {
       // Transform form data to backend format
       const position = rolesToPosition(form.roles || []) || 'other';
-      const expYears = parseYearsOfExperience(form.yearsOfExperience || '0');
+      const expYears = parseYearsOfExperience(form.yearsOfExperience || '3&minus;5 years');
       // Backend will parse the phone number string (it accepts both string and number)
       const phoneNumber = form.phoneNo || '';
 
@@ -54,7 +54,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         phoneNumber: phoneNumber, // Backend will parse this (accepts string or number)
-        expLevel: form.rank || 'entry',
+        expLevel: form.rank || 'entry level',
         expYears: expYears,
         position: position,
         skills: selectedSkills,

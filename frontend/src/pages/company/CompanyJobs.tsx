@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiPlus } from 'react-icons/fi';
 import JobCard from '../../components/company/JobCard';
+import JobMatchesModal from '../../components/company/JobMatchesModal';
 import { CompanyJob } from '../../data/jobs';
 import { companyApi } from '../../api/company';
 import {
@@ -14,11 +14,14 @@ import {
 } from '../../utils/job.utils';
 import { LoadingSpinner } from '../../index';
 import JobCreationModal from '../../components/company/JobCreationModal';
+import { EmptyState } from '../../components/ui';
 
 const CompanyJobs = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isJobModalOpen, setJobModalOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobTitle, setSelectedJobTitle] = useState<string | undefined>(undefined);
+  const [isMatchesModalOpen, setIsMatchesModalOpen] = useState(false);
 
   // Transform API job to CompanyJob format using useCallback
   const transformJob = useCallback(
@@ -29,7 +32,7 @@ const CompanyJobs = () => {
       preferedRank?: string;
       createdAt?: string | Date;
     } => {
-      const matchedCount = job.matches?.length || 0;
+      const matchedCount = job.matchCount || job.matches?.length || 0;
       const salaryRange = formatSalaryRange(job.salary);
       const duration = formatJobType(job.jobType || 'Full time');
       const salaryType = getSalaryType(job.jobType || 'Full time');
@@ -90,8 +93,15 @@ const CompanyJobs = () => {
   };
 
   const handleViewMatches = (job: CompanyJob) => {
-    // TODO: Navigate to matched candidates for this job
-    navigate(`/candidates?jobId=${job.id}`);
+    setSelectedJobId(job.id as string);
+    setSelectedJobTitle(job.title);
+    setIsMatchesModalOpen(true);
+  };
+
+  const handleCloseMatchesModal = () => {
+    setIsMatchesModalOpen(false);
+    setSelectedJobId(null);
+    setSelectedJobTitle(undefined);
   };
 
   return (
@@ -124,7 +134,7 @@ const CompanyJobs = () => {
           <button
             type="button"
             onClick={handleNewJob}
-            className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-[#1B770033] bg-[#EAF4E2] px-[22px] py-[14px] text-[16px] font-medium text-button transition hover:border-button hover:bg-[#DBFFC0] lg:w-auto"
+            className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-fade bg-[#EAF4E2] px-[22px] py-[14px] text-[16px] font-medium text-button transition hover:border-button hover:bg-[#DBFFC0] lg:w-auto"
           >
             <FiPlus className="text-[20px]" />
             New Job
@@ -155,29 +165,19 @@ const CompanyJobs = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-[80px] bg-white rounded-[16px] border border-[#1B770033]">
-                <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
-                  <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
-                    <span className="text-[32px] text-[#1B7700] font-bold">
-                      ×
-                    </span>
-                  </div>
-                </div>
-                <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
-                  No jobs yet
-                </p>
-                <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px] mb-[24px]">
-                  Create your first job posting to start matching with talented
-                  candidates.
-                </p>
-                <button
-                  onClick={handleNewJob}
-                  className="flex items-center gap-[8px] px-[20px] py-[12px] rounded-[10px] bg-button text-white text-[14px] font-semibold hover:bg-[#176300] transition-colors shadow-sm"
-                >
-                  <FiPlus className="text-[18px]" />
-                  <span>Create a job</span>
-                </button>
-              </div>
+              <EmptyState
+                title="No jobs yet"
+                description="Create your first job posting to start matching with talented candidates."
+                action={
+                  <button
+                    onClick={handleNewJob}
+                    className="flex items-center gap-[8px] px-[20px] py-[12px] rounded-[10px] bg-button text-white text-[14px] font-semibold hover:bg-[#176300] transition-colors shadow-sm"
+                  >
+                    <FiPlus className="text-[18px]" />
+                    <span>Create a job</span>
+                  </button>
+                }
+              />
             )}
           </>
         )}
@@ -186,6 +186,13 @@ const CompanyJobs = () => {
         isOpen={isJobModalOpen}
         onClose={() => setJobModalOpen(false)}
         onJobCreated={handleJobCreated}
+      />
+
+      <JobMatchesModal
+        isOpen={isMatchesModalOpen}
+        jobId={selectedJobId}
+        jobTitle={selectedJobTitle}
+        onClose={handleCloseMatchesModal}
       />
     </div>
   );

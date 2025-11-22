@@ -13,6 +13,7 @@ export enum NotificationEventType {
     // Graduate events
     GRADUATE_APPLIED_TO_JOB = 'GRADUATE_APPLIED_TO_JOB',
     GRADUATE_MATCHED_TO_JOB = 'GRADUATE_MATCHED_TO_JOB',
+    GRADUATE_PROFILE_UPDATED = 'GRADUATE_PROFILE_UPDATED',
 
     // Future events (examples)
     // INTERVIEW_SCHEDULED = 'INTERVIEW_SCHEDULED',
@@ -63,12 +64,18 @@ export interface GraduateMatchedToJobPayload {
     graduateId: string;
 }
 
+export interface GraduateProfileUpdatedPayload {
+    graduateId: string;
+    graduateName: string;
+}
+
 type NotificationPayload =
     | CompanyJobCreatedPayload
     | CompanyJobApplicationReceivedPayload
     | CompanyProfileUpdatedPayload
     | GraduateAppliedToJobPayload
-    | GraduateMatchedToJobPayload;
+    | GraduateMatchedToJobPayload
+    | GraduateProfileUpdatedPayload;
 
 /**
  * Event Handler Interface
@@ -224,6 +231,22 @@ registerEventHandler(
     }
 );
 
+// GRADUATE_PROFILE_UPDATED handler
+registerEventHandler(
+    NotificationEventType.GRADUATE_PROFILE_UPDATED,
+    async (payload) => {
+        const p = payload as GraduateProfileUpdatedPayload;
+        await createNotification({
+            userId: p.graduateId,
+            type: 'system',
+            title: 'Profile Updated',
+            message: 'Your profile has been successfully updated.',
+            relatedId: p.graduateId,
+            relatedType: 'graduate',
+        });
+    }
+);
+
 /**
  * Public API
  */
@@ -270,6 +293,15 @@ export const notifyGraduateMatchedToJob = async (
 ): Promise<void> => {
     await dispatcher.dispatch(
         NotificationEventType.GRADUATE_MATCHED_TO_JOB,
+        payload
+    );
+};
+
+export const notifyGraduateProfileUpdated = async (
+    payload: GraduateProfileUpdatedPayload
+): Promise<void> => {
+    await dispatcher.dispatch(
+        NotificationEventType.GRADUATE_PROFILE_UPDATED,
         payload
     );
 };

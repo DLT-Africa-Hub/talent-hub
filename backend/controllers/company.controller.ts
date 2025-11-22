@@ -366,8 +366,46 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
     Job.countDocuments(query),
   ]);
 
+  // Get match counts for each job
+  const jobIds = jobs.map((job) => job._id);
+  const matchCounts = await Match.aggregate([
+    {
+      $match: {
+        jobId: { $in: jobIds },
+      },
+    },
+    {
+      $group: {
+        _id: '$jobId',
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // Create a map with normalized IDs (always as strings)
+  const matchCountMap = new Map<string, number>();
+  matchCounts.forEach((item) => {
+    const jobIdStr =
+      item._id instanceof mongoose.Types.ObjectId
+        ? item._id.toString()
+        : String(item._id);
+    matchCountMap.set(jobIdStr, item.count);
+  });
+
+  // Add match count to each job
+  const jobsWithMatches = jobs.map((job) => {
+    const jobIdStr =
+      job._id instanceof mongoose.Types.ObjectId
+        ? job._id.toString()
+        : String(job._id);
+    return {
+      ...job,
+      matchCount: matchCountMap.get(jobIdStr) || 0,
+    };
+  });
+
   res.json({
-    jobs,
+    jobs: jobsWithMatches,
     pagination: {
       page: pagination.page,
       limit: pagination.limit,
@@ -656,7 +694,7 @@ export const getJobMatches = async (req: Request, res: Response): Promise<void> 
     Match.find(query)
       .populate({
         path: 'graduateId',
-        select: 'firstName lastName skills education rank',
+        select: 'firstName lastName skills education rank expYears profilePictureUrl summary cv position location',
         populate: {
           path: 'userId',
           select: 'email',
@@ -741,7 +779,7 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
   // Populate match before sending notification
   await match.populate({
     path: 'graduateId',
-    select: 'firstName lastName skills education rank userId',
+    select: 'firstName lastName skills education rank userId location',
     populate: {
       path: 'userId',
       select: 'email',
@@ -779,6 +817,103 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
   res.json({
     message: `Match ${validatedStatus} successfully`,
     match: updatedMatch,
+  });
+};
+
+/**
+ * Get all matches for company's jobs
+ * GET /api/companies/matches
+ */
+export const getAllMatches = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const company = await Company.findOne({ userId }).lean();
+
+  if (!company) {
+    res.status(404).json({ message: 'Company profile not found' });
+    return;
+  }
+
+  const { status, minScore, page = '1', limit = '10' } = req.query;
+
+  const pagination = validatePagination(page as string, limit as string, res);
+  if (!pagination) return;
+
+  const validatedStatus = status
+    ? validateOptionalEnum(status as string, ['pending', 'accepted', 'rejected'] as const, 'Status', res)
+    : null;
+  if (status && validatedStatus === null) return;
+
+  const validatedMinScore = minScore
+    ? validateNumericRange(minScore as string, 0, 100, 'Min score', res)
+    : null;
+  if (minScore !== undefined && validatedMinScore === null) return;
+
+  // Get all company jobs
+  const companyJobs = await Job.find({ companyId: company._id }).select('_id').lean();
+  const companyJobIds = companyJobs.map((job) => job._id);
+
+  if (companyJobIds.length === 0) {
+    res.json({
+      matches: [],
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: 0,
+        pages: 0,
+      },
+    });
+    return;
+  }
+
+  const query: any = { jobId: { $in: companyJobIds } };
+  if (validatedStatus) {
+    query.status = validatedStatus;
+  }
+  if (validatedMinScore !== null) {
+    query.score = { $gte: validatedMinScore };
+  }
+
+  const skip = (pagination.page - 1) * pagination.limit;
+
+  const [matches, total] = await Promise.all([
+    Match.find(query)
+      .populate({
+        path: 'graduateId',
+        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position',
+        populate: {
+          path: 'userId',
+          select: 'email',
+        },
+      })
+      .populate({
+        path: 'jobId',
+        select: 'title companyId location jobType salary',
+        populate: {
+          path: 'companyId',
+          select: 'companyName',
+        },
+      })
+      .sort({ score: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(pagination.limit)
+      .lean(),
+    Match.countDocuments(query),
+  ]);
+
+  res.json({
+    matches,
+    pagination: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      pages: Math.ceil(total / pagination.limit),
+    },
   });
 };
 
@@ -850,7 +985,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
     Application.find(query)
       .populate({
         path: 'graduateId',
-        select: 'firstName lastName skills education rank',
+        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position',
         populate: {
           path: 'userId',
           select: 'email',

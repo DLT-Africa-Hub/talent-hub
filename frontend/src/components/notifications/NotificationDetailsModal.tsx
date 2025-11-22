@@ -1,4 +1,4 @@
-import Modal from '../auth/Modal';
+import BaseModal from '../ui/BaseModal';
 import { Button } from '../ui';
 import { NotificationItem } from '../../types/notification';
 
@@ -59,7 +59,7 @@ const NotificationDetailsModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md" className="p-0">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" className="p-0">
       <div className="flex flex-col text-[#1C1C1C]">
         <div
           className={`rounded-t-2xl bg-gradient-to-br ${gradient} px-6 py-5 border-b border-[#0000000d]`}
@@ -146,7 +146,7 @@ const NotificationDetailsModal = ({
           </div>
         </div>
       </div>
-    </Modal>
+    </BaseModal>
   );
 };
 

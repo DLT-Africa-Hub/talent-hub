@@ -1,8 +1,8 @@
 import React from 'react';
 import { CiMail } from 'react-icons/ci';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
-import { useNavigate } from 'react-router-dom';
 import { Company, getMatchBadgeConfig } from './CompanyCard';
+import { ImageWithFallback } from '../ui';
 
 interface CompanyCardProps {
   company: Company;
@@ -17,32 +17,34 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
   onPreviewClick,
   onButtonClick,
 }) => {
-  const navigate = useNavigate();
   const badgeConfig = getMatchBadgeConfig(company.match);
 
   const handleButtonClick = (companyId: number, label: string) => {
+    // Custom handler takes priority
     if (onButtonClick) {
       onButtonClick();
       return;
     }
 
+    // For Preview, use onPreviewClick callback (modal)
     if (label === 'Preview') {
       if (onPreviewClick) {
         onPreviewClick(companyId);
       } else {
-        navigate(`/explore-preview/${companyId}`);
+        console.warn('Preview clicked but no onPreviewClick handler provided');
       }
       return;
     }
 
-    if (label === 'Get in Touch') {
-      navigate(`/contactCompany/${companyId}`);
+    // For other actions, ensure a handler is provided
+    if (label === 'Get in Touch' || label === 'Apply') {
+      console.warn(`"${label}" action requires onButtonClick handler`);
     }
   };
   return (
     <div className="flex items-center gap-[26px] max-w-[878px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white hover:border-button/30 hover:shadow-md transition-all duration-200 group">
       <div className="w-[126px] aspect-square relative overflow-hidden rounded-[10px] ">
-        <img
+        <ImageWithFallback
           src={company.image}
           alt={company.name}
           className="object-cover w-full h-full"
@@ -63,7 +65,7 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
           </p>
         </div>
         <div
-          className={`flex items-center gap-3 px-4 py-2 rounded-[9999px] border border-transparent shadow-sm ${badgeConfig.container}`}
+          className={`flex items-center gap-3 px-4 h-[50px] leading-none rounded-[9999px] border border-transparent shadow-sm ${badgeConfig.container}`}
         >
           <span
             className={`w-2.5 h-2.5 rounded-full ${badgeConfig.dot}`}

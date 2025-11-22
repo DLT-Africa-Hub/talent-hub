@@ -1,7 +1,7 @@
 export type CandidateStatus = 'applied' | 'matched' | 'hired' | 'pending';
 
 export interface CandidateProfile {
-  id: number;
+  id: number | string;
   name: string;
   role: string;
   status: CandidateStatus;
@@ -11,6 +11,15 @@ export interface CandidateProfile {
   location: string;
   skills: string[];
   image: string;
+  summary?: string;
+  cv?: string;
+  matchPercentage?: number;
+  jobType?: string;
+  salary?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+  };
 }
 
 export const companyCandidates: CandidateProfile[] = [

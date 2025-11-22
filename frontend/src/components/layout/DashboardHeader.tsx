@@ -11,14 +11,13 @@ interface HeaderMetrics {
 }
 
 const getExperienceRange = (expYears?: number): string | undefined => {
-  if (expYears === undefined || expYears < 0) return undefined;
+  if (expYears === undefined || expYears < 3) return undefined;
 
-  if (expYears <= 1) return '0-1 years';
-  if (expYears <= 2) return '1-2 years';
-  if (expYears <= 4) return '2-4 years';
-  if (expYears <= 6) return '4-6 years';
-  if (expYears <= 8) return '6-8 years';
-  return '8+ years';
+  if (expYears <= 4) return '3-4 years';
+  if (expYears <= 6) return '5-6 years';
+  if (expYears <= 8) return '7-8 years';
+  if (expYears <= 10) return '9-10 years';
+  return '10+ years';
 };
 
 const DashboardHeader = () => {
@@ -120,10 +119,13 @@ const DashboardHeader = () => {
     // Extract rank - handle formats like "A", "A and B", "B and C", etc.
     let rank: string | undefined;
     const rankValue = graduate.rank;
-    
+
     if (rankValue) {
       // Handle string rank values
-      const trimmedRank = typeof rankValue === 'string' ? rankValue.trim() : String(rankValue).trim();
+      const trimmedRank =
+        typeof rankValue === 'string'
+          ? rankValue.trim()
+          : String(rankValue).trim();
       if (trimmedRank && trimmedRank.length > 0) {
         // Take the first character if it's a single letter, or the first letter if it's "A and B" format
         const firstChar = trimmedRank.charAt(0).toUpperCase();

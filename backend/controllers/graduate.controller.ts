@@ -15,6 +15,7 @@ import { queueGraduateMatching } from '../services/aiMatching.service';
 import {
   notifyGraduateAppliedToJob,
   notifyCompanyJobApplicationReceived,
+  notifyGraduateProfileUpdated,
 } from '../services/notification.dispatcher';
 import { createNotification } from '../services/notification.service';
 
@@ -64,15 +65,15 @@ const sanitizeStringArray = (value: unknown): string[] => {
   return Array.from(new Set(trimmed));
 };
 
-const EXPERIENCE_LEVELS = new Set(['entry', 'mid', 'senior'] as const);
+const EXPERIENCE_LEVELS = new Set(['entry level', 'mid level', 'senior level'] as const);
 const POSITION_OPTIONS = new Set([
-  'frontend',
-  'backend',
-  'fullstack',
-  'mobile',
-  'devops',
-  'data',
-  'security',
+  'frontend developer',
+  'backend developer',
+  'fullstack developer',
+  'mobile developer',
+  'devops engineer',
+  'data engineer',
+  'security engineer',
   'other',
 ] as const);
 
@@ -109,6 +110,7 @@ type PopulatedJobLean = {
   companyId?: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId; companyName: string };
   location?: string;
   jobType?: string;
+  description?: string;
   requirements?: {
     skills?: string[];
     education?: string;
@@ -241,6 +243,7 @@ export const createProfile = async (
       socials,
       portfolio,
       profilePictureUrl,
+      location,
       workExperiences = [],
     } = req.body;
 
@@ -262,7 +265,7 @@ export const createProfile = async (
     }
 
     if (!validateExperienceLevel(expLevel)) {
-      res.status(400).json({ message: 'expLevel must be one of entry, mid, or senior' });
+      res.status(400).json({ message: 'expLevel must be one of entry level, mid level, or senior level' });
       return;
     }
 
@@ -272,15 +275,15 @@ export const createProfile = async (
         : typeof expYears === 'string'
           ? Number.parseFloat(expYears)
           : NaN;
-    if (!Number.isFinite(yearsValue) || yearsValue < 0) {
-      res.status(400).json({ message: 'expYears must be a positive number' });
+    if (!Number.isFinite(yearsValue) || yearsValue < 3) {
+      res.status(400).json({ message: 'expYears must be at least 3 years' });
       return;
     }
 
     if (!validatePosition(position)) {
       res.status(400).json({
         message:
-          'position must be one of frontend, backend, fullstack, mobile, devops, data, security, other',
+          'position must be one of frontend developer, backend developer, fullstack developer, mobile developer, devops engineer, data engineer, security engineer, other',
       });
       return;
     }
@@ -338,6 +341,10 @@ export const createProfile = async (
       profilePictureUrl:
         typeof profilePictureUrl === 'string'
           ? profilePictureUrl.trim()
+          : undefined,
+      location:
+        typeof location === 'string'
+          ? location.trim()
           : undefined,
       skills: sanitizeStringArray(skills),
       education: educationData || {
@@ -439,6 +446,8 @@ export const updateProfile = async (
       skills,
       education,
       profilePictureUrl,
+      location,
+      summary,
       phoneNumber,
       expLevel,
       expYears,
@@ -488,8 +497,20 @@ export const updateProfile = async (
       graduate.portfolio = portfolio.trim();
     }
 
+    if (summary !== undefined) {
+      graduate.summary = typeof summary === 'string' && summary.trim().length > 0
+        ? summary.trim()
+        : undefined;
+    }
+
     if (typeof profilePictureUrl === 'string') {
       graduate.profilePictureUrl = profilePictureUrl.trim();
+    }
+
+    if (location !== undefined) {
+      graduate.location = typeof location === 'string' && location.trim().length > 0
+        ? location.trim()
+        : undefined;
     }
 
     if (phoneNumber !== undefined) {
@@ -538,8 +559,8 @@ export const updateProfile = async (
           : typeof expYears === 'string'
             ? Number.parseFloat(expYears)
             : NaN;
-      if (!Number.isFinite(yearsValue) || yearsValue < 0) {
-        res.status(400).json({ message: 'expYears must be a positive number' });
+      if (!Number.isFinite(yearsValue) || yearsValue < 3) {
+        res.status(400).json({ message: 'expYears must be at least 3 years' });
         return;
       }
       graduate.expYears = yearsValue;
@@ -549,7 +570,7 @@ export const updateProfile = async (
       if (!validatePosition(position)) {
         res.status(400).json({
           message:
-            'position must be one of frontend, backend, fullstack, mobile, devops, data, security, other',
+            'position must be one of frontend developer, backend developer, fullstack developer, mobile developer, devops engineer, data engineer, security engineer, other',
         });
         return;
       }
@@ -574,6 +595,20 @@ export const updateProfile = async (
     }
 
     await graduate.save();
+
+    // Emit notification for profile update
+    try {
+      const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
+        ? graduate.userId.toString()
+        : String(graduate.userId);
+      
+      await notifyGraduateProfileUpdated({
+        graduateId: graduateUserId,
+        graduateName: `${graduate.firstName} ${graduate.lastName}`.trim(),
+      });
+    } catch (error) {
+      console.error('Failed to send profile update notification:', error);
+    }
 
     res.json({
       message: 'Profile updated successfully',
@@ -1342,8 +1377,14 @@ export const getAvailableJobs = async (
 
     const search =
       typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const jobType =
+      typeof req.query.jobType === 'string' ? req.query.jobType.trim() : '';
+    const sortBy =
+      typeof req.query.sortBy === 'string' ? req.query.sortBy.trim() : 'createdAt';
 
     const jobFilter: Record<string, unknown> = { status: 'active' };
+    
+    // Search filter
     if (search.length > 0) {
       jobFilter.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -1352,13 +1393,33 @@ export const getAvailableJobs = async (
       ];
     }
 
+    // Job type filter
+    if (jobType && jobType !== 'all') {
+      const jobTypeMap: Record<string, string> = {
+        'full-time': 'Full time',
+        'contract': 'Contract',
+        'internship': 'Internship',
+        'part-time': 'Part time',
+      };
+      const mappedJobType = jobTypeMap[jobType.toLowerCase()] || jobType;
+      jobFilter.jobType = mappedJobType;
+    }
+
+    // Sort options
+    const sortOptions: Record<string, Record<string, 1 | -1>> = {
+      createdAt: { createdAt: -1 },
+      title: { title: 1 },
+      salary: { 'salary.min': -1, 'salary.max': -1 },
+    };
+    const sort = sortOptions[sortBy] || sortOptions.createdAt;
+
     const [jobs, total] = await Promise.all([
       Job.find(jobFilter)
         .select(
-          'title companyId location requirements salary jobType status preferedRank createdAt updatedAt'
+          'title companyId location requirements salary jobType status preferedRank createdAt updatedAt description'
         )
         .populate('companyId', 'companyName')
-        .sort({ createdAt: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -1462,7 +1523,7 @@ export const getMatches = async (
         jobId: mongoose.Types.ObjectId | PopulatedJobLean;
       }>({
         path: 'jobId',
-        select: 'title companyId location requirements salary status jobType createdAt updatedAt',
+        select: 'title companyId location requirements salary status jobType description createdAt updatedAt',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -1500,6 +1561,7 @@ export const getMatches = async (
             companyName,
             location: jobSource.location,
             jobType: jobSource.jobType,
+            description: jobSource.description,
             requirements: jobSource.requirements,
             salary: jobSource.salary,
             status: jobSource.status,

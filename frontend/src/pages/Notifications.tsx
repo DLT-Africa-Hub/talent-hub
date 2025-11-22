@@ -10,7 +10,7 @@ import {
   mapNotificationType,
 } from '../utils/job.utils';
 import { LoadingSpinner } from '../index';
-import { SearchBar } from '../components/ui';
+import { SearchBar, EmptyState } from '../components/ui';
 import NotificationDetailsModal from '../components/notifications/NotificationDetailsModal';
 import { NotificationItem } from '../types/notification';
 
@@ -268,23 +268,15 @@ const Notifications: React.FC = () => {
           )}
 
           {filtered.length === 0 && !loading && (
-            <div className="flex flex-col items-center justify-center py-[80px]">
-              <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
-                <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
-                  <span className="text-[32px] text-button font-bold">
-                    ×
-                  </span>
-                </div>
-              </div>
-              <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
-                {query ? 'No notifications found' : 'No notifications yet'}
-              </p>
-              <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
-                {query
+            <EmptyState
+              title={query ? 'No notifications found' : 'No notifications yet'}
+              description={
+                query
                   ? 'Try adjusting your search to find notifications.'
-                  : 'You will receive notifications about matches, applications, and messages here.'}
-              </p>
-            </div>
+                  : 'You will receive notifications about matches, applications, and messages here.'
+              }
+              variant="minimal"
+            />
           )}
         </>
       )}

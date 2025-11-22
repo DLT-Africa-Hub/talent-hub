@@ -6,7 +6,7 @@ import { messageApi } from '../api/message';
 import ChatModal from '../components/message/ChatModal';
 import { DEFAULT_COMPANY_IMAGE, DEFAULT_PROFILE_IMAGE } from '../utils/job.utils';
 import { LoadingSpinner } from '../index';
-import { SearchBar } from '../components/ui';
+import { SearchBar, EmptyState } from '../components/ui';
 
 interface Conversation {
   id: string;
@@ -223,21 +223,14 @@ const Messages: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-[80px] w-full bg-white rounded-[16px] border border-fade">
-              <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
-                <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
-                  <span className="text-[32px] text-button font-bold">×</span>
-                </div>
-              </div>
-              <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
-                {searchQuery ? 'No messages found' : 'No messages yet'}
-              </p>
-              <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
-                {searchQuery
+            <EmptyState
+              title={searchQuery ? 'No messages found' : 'No messages yet'}
+              description={
+                searchQuery
                   ? 'Try adjusting your search to find conversations.'
-                  : 'Your conversations will appear here once you start messaging.'}
-              </p>
-            </div>
+                  : 'Your conversations will appear here once you start messaging.'
+              }
+            />
           )}
         </>
       )}

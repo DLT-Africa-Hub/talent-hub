@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { FaGithub, FaLinkedin, FaLink } from 'react-icons/fa';
 import { graduateApi } from '../../api/graduate';
-import { LoadingSpinner } from '../../index';
+import { PageLoader, ErrorState } from '../../components/ui';
 import { DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
 import ChangePassword from '../../components/ChangePassword';
+import GraduateProfileEditModal from '../../components/profile/GraduateProfileEditModal';
 
 const GraduateProfile = () => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const {
     data: profileData,
     isLoading,
@@ -32,16 +36,45 @@ const GraduateProfile = () => {
     graduate?.bio ||
     'Your profile summary goes here. Highlight your achievements, experience, and what makes you unique as a professional.';
 
+  // Extract username from GitHub URL
+  const getGitHubUsername = (url?: string): string | null => {
+    if (!url) return null;
+    try {
+      const match = url.match(/github\.com\/([^\/\?]+)/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Extract username from LinkedIn URL
+  const getLinkedInUsername = (url?: string): string | null => {
+    if (!url) return null;
+    try {
+      const match = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const githubUrl = graduate?.socials?.github;
+  const linkedinUrl = graduate?.socials?.linkedin;
+  const portfolioUrl = graduate?.portfolio;
+  const githubUsername = getGitHubUsername(githubUrl);
+  const linkedinUsername = getLinkedInUsername(linkedinUrl);
+
   if (isLoading) {
-    return <LoadingSpinner message="Loading profile..." fullPage />;
+    return <PageLoader message="Loading profile..." />;
   }
 
   if (error) {
     return (
       <div className="p-[24px]">
-        <p className="text-red-600 text-sm">
-          Failed to load profile. Please try again later.
-        </p>
+        <ErrorState
+          message="Failed to load profile. Please try again later."
+          variant="fullPage"
+        />
       </div>
     );
   }
@@ -65,8 +98,8 @@ const GraduateProfile = () => {
         </div>
         <button
           type="button"
-          disabled
-          className="px-[20px] py-[12px] rounded-[12px] border border-[#1C1C1C1A] text-[#1C1C1C80] bg-[#F5F5F5] cursor-not-allowed flex items-center gap-[8px]"
+          onClick={() => setIsEditModalOpen(true)}
+          className="px-[20px] py-[12px] rounded-[12px] border border-button bg-button text-white hover:bg-[#176300] transition-colors flex items-center gap-[8px]"
         >
           Edit Profile
         </button>
@@ -102,45 +135,130 @@ const GraduateProfile = () => {
                 {summary}
               </p>
             </div>
+
+            {/* Social Links Section */}
+            <div className="w-full mt-[24px] pt-[24px] border-t border-fade">
+              <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[16px]">
+                Links
+              </p>
+              <div className="flex flex-wrap gap-[12px]">
+                {githubUrl ? (
+                  <a
+                    href={githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                  >
+                    <FaGithub className="text-[18px] text-[#1C1C1C]" />
+                    <span className="text-[14px] font-medium text-[#1C1C1C]">
+                      {githubUsername || 'GitHub'}
+                    </span>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                  >
+                    <FaGithub className="text-[18px] text-[#1C1C1C80]" />
+                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                      Connect
+                    </span>
+                  </button>
+                )}
+
+                {linkedinUrl ? (
+                  <a
+                    href={linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                  >
+                    <FaLinkedin className="text-[18px] text-[#0077B5]" />
+                    <span className="text-[14px] font-medium text-[#1C1C1C]">
+                      {linkedinUsername || 'LinkedIn'}
+                    </span>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                  >
+                    <FaLinkedin className="text-[18px] text-[#1C1C1C80]" />
+                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                      Connect
+                    </span>
+                  </button>
+                )}
+
+                {portfolioUrl ? (
+                  <a
+                    href={portfolioUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                  >
+                    <FaLink className="text-[18px] text-[#1C1C1C]" />
+                    <span className="text-[14px] font-medium text-[#1C1C1C]">
+                      Personal Portfolio
+                    </span>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                  >
+                    <FaLink className="text-[18px] text-[#1C1C1C80]" />
+                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                      Connect
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex flex-col gap-[32px]">
-        <div className="rounded-[24px] border border-fade bg-white p-[24px] space-y-[16px]">
-          <SectionHeading title="Details" />
-          <DetailList
-            items={[
-              {
-                label: 'Availability',
-                value: graduate.availability || 'Not specified',
-              },
-              {
-                label: 'Years of experience',
-                value:
-                  typeof graduate.expYears === 'number'
-                    ? `${graduate.expYears} ${
-                        graduate.expYears === 1 ? 'year' : 'years'
-                      }`
-                    : 'Not specified',
-              },
-              {
-                label: 'Location',
-                value: graduate.location || 'Not specified',
-              },
-              
-              {
-                label: 'Skills',
-                value:
-                  graduate.skills?.length > 0
-                    ? graduate.skills.join(', ')
-                    : 'Add your key skills',
-              },
-            ]}
-          />
+          <div className="rounded-[24px] border border-fade bg-white p-[24px] space-y-[16px]">
+            <SectionHeading title="Details" />
+            <DetailList
+              items={[
+                {
+                  label: 'Years of experience',
+                  value:
+                    typeof graduate.expYears === 'number'
+                      ? `${graduate.expYears} ${
+                          graduate.expYears === 1 ? 'year' : 'years'
+                        }`
+                      : 'Not specified',
+                },
+                {
+                  label: 'Location',
+                  value: graduate.location || 'Not specified',
+                },
+
+                {
+                  label: 'Skills',
+                  value:
+                    graduate.skills?.length > 0
+                      ? graduate.skills.join(', ')
+                      : 'Add your key skills',
+                },
+              ]}
+            />
           </div>
           <ChangePassword />
         </div>
       </div>
+
+      <GraduateProfileEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        graduate={graduate}
+      />
     </div>
   );
 };
@@ -169,10 +287,5 @@ const DetailList = ({ items }: { items: DetailItem[] }) => (
 const SectionHeading = ({ title }: { title: string }) => (
   <p className="text-[16px] font-semibold text-[#1C1C1C]">{title}</p>
 );
-
-const formatLabel = (value?: string) => {
-  if (!value) return 'Not specified';
-  return value.charAt(0).toUpperCase() + value.slice(1);
-};
 
 export default GraduateProfile;

@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BsSearch } from 'react-icons/bs';
 import CandidateCard from '../../components/company/CandidateCard';
+import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
 import { CandidateProfile, CandidateStatus } from '../../data/candidates';
 import { companyApi } from '../../api/company';
 import {
@@ -12,16 +12,21 @@ import {
   formatLocation,
   getCandidateRank,
   DEFAULT_PROFILE_IMAGE,
+  formatJobType,
+  formatSalaryRange,
+  getSalaryType,
 } from '../../utils/job.utils';
 import { LoadingSpinner } from '../../index';
+import { EmptyState } from '../../components/ui';
 import { MdFilterList } from 'react-icons/md';
 
 const CompanyCandidates = () => {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStatus, setActiveStatus] = useState<CandidateStatus | 'all'>(
-    'applied'
+    'all'
   );
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Transform API application to CandidateProfile using useCallback
   const transformApplication = useCallback(
@@ -48,23 +53,83 @@ const CompanyCandidates = () => {
         statusLabel:
           candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
         experience: formatExperience(graduate.expYears || 0),
-        location: formatLocation(job.location),
+        location: formatLocation(job.location || graduate.location),
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+        summary: graduate.summary,
+        cv: graduate.cv,
+        matchPercentage: app.matchId?.score
+          ? app.matchId.score > 1
+            ? Math.min(100, Math.round(app.matchId.score))
+            : Math.min(100, Math.round(app.matchId.score * 100))
+          : undefined,
+        jobType: job.jobType,
+        salary: job.salary,
       };
     },
     []
   );
 
-  // Fetch candidates using React Query
+  // Transform API match to CandidateProfile using useCallback
+  const transformMatch = useCallback(
+    (match: any, index: number): CandidateProfile => {
+      const graduate = match.graduateId || {};
+      const job = match.jobId || {};
+
+      const fullName = `${graduate.firstName || ''} ${
+        graduate.lastName || ''
+      }`.trim();
+
+      const matchScore = match.score > 1
+        ? Math.min(100, Math.round(match.score))
+        : Math.min(100, Math.round(match.score * 100));
+
+      return {
+        id: match._id || `match-${index}`,
+        name: fullName || 'Unknown Candidate',
+        role: job.title || graduate.position || 'Developer',
+        status: 'matched',
+        rank: getCandidateRank(graduate.rank),
+        statusLabel: 'Matched',
+        experience: formatExperience(graduate.expYears || 0),
+        location: formatLocation(job.location || graduate.location),
+        skills: (graduate.skills || []).slice(0, 3),
+        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+        summary: graduate.summary,
+        cv: graduate.cv,
+        matchPercentage: matchScore,
+        jobType: job.jobType,
+        salary: job.salary,
+      };
+    },
+    []
+  );
+
+  // Fetch applications using React Query
   const {
     data: applicationsResponse,
-    isLoading: loading,
-    error: queryError,
+    isLoading: loadingApplications,
+    error: applicationsError,
   } = useQuery({
     queryKey: ['companyApplications'],
     queryFn: async () => {
       const response = await companyApi.getApplications({
+        page: 1,
+        limit: 100,
+      });
+      return response;
+    },
+  });
+
+  // Fetch matches using React Query
+  const {
+    data: matchesResponse,
+    isLoading: loadingMatches,
+    error: matchesError,
+  } = useQuery({
+    queryKey: ['companyMatches'],
+    queryFn: async () => {
+      const response = await companyApi.getAllMatches({
         page: 1,
         limit: 100,
       });
@@ -88,23 +153,72 @@ const CompanyCandidates = () => {
     return [];
   }, [applicationsResponse]);
 
+  // Extract matches array from response
+  const matchesData = useMemo(() => {
+    if (!matchesResponse) return [];
+    if (Array.isArray(matchesResponse)) {
+      return matchesResponse;
+    }
+    if (
+      matchesResponse?.matches &&
+      Array.isArray(matchesResponse.matches)
+    ) {
+      return matchesResponse.matches;
+    }
+    return [];
+  }, [matchesResponse]);
+
   // Transform applications to candidates using useMemo
-  const candidates = useMemo(() => {
+  const applicationCandidates = useMemo(() => {
     if (!applicationsData || !Array.isArray(applicationsData)) return [];
     return applicationsData.map((app: any, index: number) =>
       transformApplication(app, index)
     );
   }, [applicationsData, transformApplication]);
 
+  // Transform matches to candidates using useMemo
+  const matchCandidates = useMemo(() => {
+    if (!matchesData || !Array.isArray(matchesData)) return [];
+    return matchesData.map((match: any, index: number) =>
+      transformMatch(match, index)
+    );
+  }, [matchesData, transformMatch]);
+
+  // Combine candidates, avoiding duplicates (prefer applications over matches)
+  const candidates = useMemo(() => {
+    const candidateMap = new Map<string | number, CandidateProfile>();
+    
+    // Add matches first
+    matchCandidates.forEach((candidate) => {
+      const key = typeof candidate.id === 'string' && candidate.id.startsWith('match-')
+        ? `match-${candidate.name}-${candidate.role}`
+        : candidate.id;
+      if (!candidateMap.has(key)) {
+        candidateMap.set(key, candidate);
+      }
+    });
+
+    // Add applications (they take precedence)
+    applicationCandidates.forEach((candidate) => {
+      candidateMap.set(candidate.id, candidate);
+    });
+
+    return Array.from(candidateMap.values());
+  }, [applicationCandidates, matchCandidates]);
+
   // Extract error message
   const error = useMemo(() => {
-    if (!queryError) return null;
-    const err = queryError as any;
-    return (
-      err.response?.data?.message ||
-      'Failed to load candidates. Please try again.'
-    );
-  }, [queryError]);
+    if (applicationsError || matchesError) {
+      const err = (applicationsError || matchesError) as any;
+      return (
+        err.response?.data?.message ||
+        'Failed to load candidates. Please try again.'
+      );
+    }
+    return null;
+  }, [applicationsError, matchesError]);
+
+  const loading = loadingApplications || loadingMatches;
 
   const filteredCandidates = useMemo(() => {
     let filtered = candidates;
@@ -134,7 +248,23 @@ const CompanyCandidates = () => {
   }, [candidates, activeStatus, searchQuery]);
 
   const handlePreview = (candidate: CandidateProfile) => {
-    navigate(`/candidate-preview/${candidate.id}`);
+    setSelectedCandidate(candidate);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedCandidate(null);
+  };
+
+  const handleChat = (candidate: CandidateProfile) => {
+    // TODO: Navigate to chat
+    console.log('Chat clicked for candidate:', candidate.id);
+  };
+
+  const handleViewCV = (candidate: CandidateProfile) => {
+    // Already handled in CandidatePreviewModal
+    console.log('View CV clicked for candidate:', candidate.id);
   };
 
   return (
@@ -229,27 +359,31 @@ const CompanyCandidates = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-[80px] bg-white rounded-[16px] border border-fade">
-                <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
-                  <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
-                    <span className="text-[32px] text-button font-bold">×</span>
-                  </div>
-                </div>
-                <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
-                  {searchQuery || activeStatus !== 'all'
+              <EmptyState
+                title={
+                  searchQuery || activeStatus !== 'all'
                     ? 'No candidates found'
-                    : 'No candidates yet'}
-                </p>
-                <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
-                  {searchQuery || activeStatus !== 'all'
+                    : 'No candidates yet'
+                }
+                description={
+                  searchQuery || activeStatus !== 'all'
                     ? 'Try adjusting your search or filters to discover more candidates.'
-                    : 'Candidates will appear here once they apply to your job postings.'}
-                </p>
-              </div>
+                    : 'Candidates will appear here once they apply to your job postings.'
+                }
+              />
             )}
           </>
         )}
       </div>
+
+      {/* Candidate Preview Modal */}
+      <CandidatePreviewModal
+        isOpen={isModalOpen}
+        candidate={selectedCandidate}
+        onClose={handleCloseModal}
+        onChat={handleChat}
+        onViewCV={handleViewCV}
+      />
     </div>
   );
 };

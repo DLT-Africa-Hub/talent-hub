@@ -14,6 +14,7 @@ import {
   AdminDashboard,
   ProtectedRoute,
   AssessmentGuard,
+  CompanyRouteGuard,
   AccountType,
   Layout,
   ExploreCompany,
@@ -30,6 +31,7 @@ import {
   EmailVerification,
   EmailVerificationGuard,
 } from './index';
+import GuestRoute from './components/GuestRoute';
 
 // Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {
@@ -44,10 +46,38 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<AuthPage mode="login" />} />
-          <Route path="/register" element={<AuthPage mode="register" />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/login"
+            element={
+              <GuestRoute>
+                <AuthPage mode="login" />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <GuestRoute>
+                <AuthPage mode="register" />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <GuestRoute>
+                <ForgotPassword />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <GuestRoute>
+                <ResetPassword />
+              </GuestRoute>
+            }
+          />
           <Route path="/verify-email" element={<EmailVerification />} />
           <Route
             path="/graduate/*"
@@ -87,7 +117,9 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['company']}>
                 <EmailVerificationGuard>
-                <CompanyDashboard />
+                  <CompanyRouteGuard>
+                    <CompanyDashboard />
+                  </CompanyRouteGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }
@@ -97,9 +129,11 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['company']}>
                 <EmailVerificationGuard>
-                <Layout>
-                  <CompanyProfile />
-                </Layout>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CompanyProfile />
+                    </Layout>
+                  </CompanyRouteGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }
@@ -122,7 +156,9 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
                 <EmailVerificationGuard>
-                <SkillAssessment />
+                  <AssessmentGuard>
+                    <SkillAssessment />
+                  </AssessmentGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }
@@ -171,49 +207,86 @@ function App() {
               </Layout>
             }
           />
-          <Route path="/company/onboarding" element={<CompanyOnboarding />} />
+          <Route
+            path="/company/onboarding"
+            element={
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <CompanyOnboarding />
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
         
 
           <Route
             path="/candidates"
             element={
-              <Layout>
-                <CompanyCandidates />
-              </Layout>
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CompanyCandidates />
+                    </Layout>
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/messages"
             element={
-              <Layout>
-                <Messages />
-              </Layout>
+              <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                <EmailVerificationGuard>
+                  <Layout>
+                    <Messages />
+                  </Layout>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/candidate-preview/:id"
             element={
-              <Layout>
-                <CandidatePreview />
-              </Layout>
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CandidatePreview />
+                    </Layout>
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/notifications"
             element={
-              <Layout>
-                <Notifications />
-              </Layout>
+              <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                <EmailVerificationGuard>
+                  <Layout>
+                    <Notifications />
+                  </Layout>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/jobs"
             element={
-              <Layout>
-                <CompanyJobs />
-              </Layout>
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CompanyJobs />
+                    </Layout>
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
             }
           />
           <Route

@@ -2,7 +2,9 @@ import React from 'react';
 import { CiMail } from 'react-icons/ci';
 import { HiOutlineBriefcase, HiOutlineLocationMarker } from 'react-icons/hi';
 import { CompanyJob } from '../../data/jobs';
-import { jobStatusStyles, jobStatusLabels } from '../../utils/job.utils';
+import { jobStatusLabels } from '../../utils/job.utils';
+import { Badge, ImageWithFallback } from '../ui';
+import type { BadgeVariant } from '../ui/Badge';
 
 interface JobCardProps {
   job: CompanyJob & {
@@ -12,6 +14,14 @@ interface JobCardProps {
   };
   onViewMatches?: (job: CompanyJob) => void;
 }
+
+// Map job status to badge variant
+const getJobStatusVariant = (status: string): BadgeVariant => {
+  if (status === 'active') return 'success';
+  if (status === 'paused') return 'warning';
+  if (status === 'closed') return 'error';
+  return 'default';
+};
 
 const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
   const handleClick = () => {
@@ -28,14 +38,11 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
     <article className="group flex max-w-[560px] flex-col gap-[18px] rounded-[20px] border border-fade bg-white p-[18px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)] transition-all hover:shadow-[0_24px_48px_-24px_rgba(47,81,43,0.18)] hover:border-button/20">
       {/* Image Section */}
       <div className="relative h-[200px] w-full overflow-hidden rounded-[16px] bg-gradient-to-br from-button/10 to-button/5">
-        <img
+        <ImageWithFallback
           src={job.image}
           alt={job.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-          }}
+          defaultImage="job"
         />
         <div className="absolute left-[14px] top-[14px] flex h-[44px] w-[44px] items-center justify-center rounded-full border border-white/40 bg-white/30 backdrop-blur-sm text-white text-[22px] shadow-lg">
           <HiOutlineBriefcase />
@@ -61,11 +68,13 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
           </p>
         </div>
 
-        <div
-          className={`shrink-0 rounded-full px-[14px] py-[6px] text-[12px] font-semibold capitalize ${jobStatusStyles[job.status]}`}
+        <Badge
+          variant={getJobStatusVariant(job.status)}
+          size="sm"
+          className="shrink-0 capitalize"
         >
           {jobStatusLabels[job.status]}
-        </div>
+        </Badge>
       </div>
 
       {job.skills && job.skills.length > 0 && (

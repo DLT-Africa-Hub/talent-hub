@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
 import ChangePassword from '../../components/ChangePassword';
+import CompanyProfileEditModal from '../../components/profile/CompanyProfileEditModal';
 
 const CompanyProfile = () => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
   const {
     data: profileData,
     isLoading,
@@ -43,13 +46,22 @@ const CompanyProfile = () => {
 
   return (
     <div className="p-[24px] flex flex-col gap-[24px]">
-      <div>
-        <p className="text-[22px] font-semibold text-[#1C1C1C]">
-          Company Profile
-        </p>
-        <p className="text-[14px] text-[#1C1C1C80]">
-          Manage your organization&apos;s details and preferences
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-[16px]">
+        <div>
+          <p className="text-[22px] font-semibold text-[#1C1C1C]">
+            Company Profile
+          </p>
+          <p className="text-[14px] text-[#1C1C1C80]">
+            Manage your organization&apos;s details and preferences
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsEditModalOpen(true)}
+          className="px-[20px] py-[12px] rounded-[12px] border border-button bg-button text-white hover:bg-[#176300] transition-colors flex items-center gap-[8px]"
+        >
+          Edit Profile
+        </button>
       </div>
 
       <div className="grid gap-[24px] max-w-[600px]">
@@ -63,6 +75,12 @@ const CompanyProfile = () => {
         </div>
         <ChangePassword />
       </div>
+
+      <CompanyProfileEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        company={company}
+      />
     </div>
   );
 };

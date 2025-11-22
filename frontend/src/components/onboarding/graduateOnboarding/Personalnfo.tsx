@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { GraduateForm } from '../../../constants/type';
 import { experienceLevels } from '../../../utils/material.utils';
@@ -7,7 +6,6 @@ import Select from '../../ui/Select';
 import PhoneInput from '../../ui/PhoneInput';
 import Button from '../../ui/Button';
 
-
 interface Props {
   form: GraduateForm;
   onChange: (patch: Partial<GraduateForm>) => void;
@@ -15,10 +13,10 @@ interface Props {
 }
 
 const experienceYears = [
-  { value: '0&minus;1 year', label: '0–1 year' },
-  { value: '1&minus;3 years', label: '1–3 years' },
   { value: '3&minus;5 years', label: '3–5 years' },
-  { value: '5+ years', label: '5+ years' },
+  { value: '5&minus;7 years', label: '5–7 years' },
+  { value: '7&minus;10 years', label: '7–10 years' },
+  { value: '10+ years', label: '10+ years' },
 ];
 
 const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
@@ -32,16 +30,13 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
     onChange({ phoneNo });
   };
 
-
   const isFormComplete = useMemo(() => {
     return (
       form.firstName.trim() !== '' &&
       form.lastName.trim() !== '' &&
-
       (form.rank?.trim() ?? '') !== '' &&
       (form.yearsOfExperience?.trim() ?? '') !== '' &&
       (form.phoneNo?.trim() ?? '') !== ''
-
     );
   }, [
     form.firstName,
@@ -91,7 +86,6 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           onChange={(e) => handleInputChange('lastName', e.target.value)}
         />
 
-
         <PhoneInput
           label="Phone Number"
           required
@@ -100,8 +94,6 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           countryCode={countryCode}
           onCountryCodeChange={setCountryCode}
         />
-
-  
 
         <Select
           label="Experience Level"
@@ -115,7 +107,6 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           }))}
           placeholder="Select level"
         />
-
 
         <Select
           label="Years of Experience"
@@ -136,7 +127,6 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           </Button>
         </div>
       </form>
-
     </div>
   );
 };

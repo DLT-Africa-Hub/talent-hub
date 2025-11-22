@@ -44,6 +44,11 @@ export const companyApi = {
   },
 
   // Matches
+  getAllMatches: async (params?: { page?: number; limit?: number; status?: string; minScore?: number }) => {
+    const response = await api.get('/companies/matches', { params });
+    return response.data;
+  },
+
   getJobMatches: async (jobId: string, params?: { page?: number; limit?: number; status?: string }) => {
     const response = await api.get(`/companies/jobs/${jobId}/matches`, { params });
     return response.data;

@@ -9,6 +9,7 @@ import {
   updateJob,
   deleteJob,
   getJobMatches,
+  getAllMatches,
   updateMatchStatus,
   getApplications,
 } from '../controllers/company.controller';
@@ -41,6 +42,7 @@ router.use(requireEmailVerification);
 router.get('/jobs', strictLimiter, getJobs);
 router.get('/jobs/:jobId', strictLimiter, getJob);
 router.get('/jobs/:jobId/matches', strictLimiter, getJobMatches);
+router.get('/matches', strictLimiter, getAllMatches);
 router.get('/applications', strictLimiter, getApplications);
 
 // Write operations (POST/PUT/DELETE) - very strict limiter

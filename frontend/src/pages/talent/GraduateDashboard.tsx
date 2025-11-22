@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import { graduateApi } from '../../api/graduate';
-import { LoadingSpinner, JobPreviewModal } from '../../index';
+import { JobPreviewModal } from '../../index';
+import { PageLoader, ErrorState, SectionHeader } from '../../components/ui';
+import { EmptyState } from '../../components/ui';
 import {
   DEFAULT_JOB_IMAGE,
   formatSalaryRange,
@@ -22,6 +24,7 @@ interface Match {
     companyName?: string;
     location?: string;
     jobType?: string;
+    description?: string;
     salary?: {
       min?: number;
       max?: number;
@@ -177,22 +180,21 @@ const GraduateDashboard = () => {
   return (
     <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
       {error && (
-        <div className="w-full  rounded-[12px] bg-red-50 border  border-red-200 p-[16px]">
-          <p className="text-[14px] text-red-600">{error}</p>
-        </div>
+        <ErrorState
+          message={error}
+          variant="inline"
+        />
       )}
 
       {loading && (
-        <LoadingSpinner message="Loading opportunities..." fullPage />
+        <PageLoader message="Loading opportunities..." />
       )}
 
       {!loading && (
         <>
         
           <div className="flex flex-col gap-[20px] w-full md:gap-[30px] mt-50">
-            <p className="font-medium text-[22px] text-[#1C1C1C] mt-4">
-              AI Matched Opportunities
-            </p>
+            <SectionHeader title="AI Matched Opportunities" />
 
             {availableOpportunities.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8 w-full">
@@ -206,27 +208,15 @@ const GraduateDashboard = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-[60px] bg-white rounded-[16px] border border-fade">
-                <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
-                  <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
-                    <span className="text-[32px] text-button font-bold">×</span>
-                  </div>
-                </div>
-                <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
-                  No opportunities yet
-                </p>
-                <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
-                  Full-time and part-time opportunities will appear here once
-                  you're matched with jobs.
-                </p>
-              </div>
+              <EmptyState
+                title="No opportunities yet"
+                description="Full-time and part-time opportunities will appear here once you're matched with jobs."
+              />
             )}
           </div>
 
           <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
-            <p className="font-medium text-[22px] text-[#1C1C1C]">
-              Contract offers
-            </p>
+            <SectionHeader title="Contract offers" />
 
             {companyOffers.length > 0 ? (
               <div className="flex flex-col gap-4">
@@ -242,20 +232,10 @@ const GraduateDashboard = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-[60px] bg-white rounded-[16px] border border-fade">
-                <div className="w-[100px] h-[100px] rounded-[16px] bg-[#E8F5E3] flex items-center justify-center mb-[20px]">
-                  <div className="w-[64px] h-[64px] rounded-[10px] bg-[#DBFFC0] flex items-center justify-center">
-                    <span className="text-[32px] text-button font-bold">×</span>
-                  </div>
-                </div>
-                <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[8px]">
-                  No contract offers yet
-                </p>
-                <p className="text-[14px] text-[#1C1C1C80] text-center max-w-[400px]">
-                  Contract and internship opportunities will appear here once
-                  you're matched with jobs.
-                </p>
-              </div>
+              <EmptyState
+                title="No contract offers yet"
+                description="Contract and internship opportunities will appear here once you're matched with jobs."
+              />
             )}
           </div>
         </>

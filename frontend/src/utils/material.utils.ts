@@ -6,15 +6,15 @@ export const countryCodes = [
   { code: "+27", flag: "🇿🇦", country: "South Africa" },
 ];
 
-// Position options that match backend enum: 'frontend' | 'backend' | 'fullstack' | 'mobile' | 'devops' | 'data' | 'security' | 'other'
+// Position options that match backend enum: 'frontend developer' | 'backend developer' | 'fullstack developer' | 'mobile developer' | 'devops engineer' | 'data engineer' | 'security engineer' | 'other'
 export const positions = [
-  { value: 'frontend', label: 'Frontend Developer' },
-  { value: 'backend', label: 'Backend Developer' },
-  { value: 'fullstack', label: 'Full Stack Developer' },
-  { value: 'mobile', label: 'Mobile Developer' },
-  { value: 'devops', label: 'DevOps Engineer' },
-  { value: 'data', label: 'Data Engineer' },
-  { value: 'security', label: 'Security Engineer' },
+  { value: 'frontend developer', label: 'Frontend Developer' },
+  { value: 'backend developer', label: 'Backend Developer' },
+  { value: 'fullstack developer', label: 'Full Stack Developer' },
+  { value: 'mobile developer', label: 'Mobile Developer' },
+  { value: 'devops engineer', label: 'DevOps Engineer' },
+  { value: 'data engineer', label: 'Data Engineer' },
+  { value: 'security engineer', label: 'Security Engineer' },
   { value: 'other', label: 'Other' },
 ] as const;
 
@@ -69,7 +69,7 @@ const allSkills: string[] = [
 
 // Position to skills mapping
 const positionSkillsMap: Record<string, string[]> = {
-  frontend: [
+  'frontend developer': [
     'React',
     'JavaScript',
     'TypeScript',
@@ -82,7 +82,7 @@ const positionSkillsMap: Record<string, string[]> = {
     'Next.js',
     'Git',
   ],
-  backend: [
+  'backend developer': [
     'Node.js',
     'Nodejs',
     'Python',
@@ -99,7 +99,7 @@ const positionSkillsMap: Record<string, string[]> = {
     'REST API',
     'Git',
   ],
-  fullstack: [
+  'fullstack developer': [
     'React',
     'Node.js',
     'Nodejs',
@@ -123,7 +123,7 @@ const positionSkillsMap: Record<string, string[]> = {
     'Tailwind CSS',
     'Git',
   ],
-  mobile: [
+  'mobile developer': [
     'React Native',
     'Flutter',
     'Swift',
@@ -132,7 +132,7 @@ const positionSkillsMap: Record<string, string[]> = {
     'TypeScript',
     'Git',
   ],
-  devops: [
+  'devops engineer': [
     'Docker',
     'Kubernetes',
     'AWS',
@@ -143,7 +143,7 @@ const positionSkillsMap: Record<string, string[]> = {
     'Node.js',
     'SQL',
   ],
-  data: [
+  'data engineer': [
     'Python',
     'SQL',
     'MongoDB',
@@ -156,7 +156,7 @@ const positionSkillsMap: Record<string, string[]> = {
     'PyTorch',
     'Git',
   ],
-  security: [
+  'security engineer': [
     'Python',
     'JavaScript',
     'SQL',
@@ -206,11 +206,11 @@ export const isValidPosition = (value: string): boolean => {
   return positions.some(p => p.value === value);
 };
 
-// Experience levels that match backend enum: 'entry' | 'mid' | 'senior'
+// Experience levels that match backend enum: 'entry level' | 'mid level' | 'senior level'
 export const experienceLevels = [
-  { value: 'entry', label: 'Entry Level' },
-  { value: 'mid', label: 'Mid Level' },
-  { value: 'senior', label: 'Senior Level' },
+  { value: 'entry level', label: 'Entry Level' },
+  { value: 'mid level', label: 'Mid Level' },
+  { value: 'senior level', label: 'Senior Level' },
 ] as const;
 
 // Helper function to get experience level label from value

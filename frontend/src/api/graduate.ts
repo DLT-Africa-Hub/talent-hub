@@ -99,10 +99,23 @@ export const graduateApi = {
   },
 
   // Applications
-  applyToJob: async (jobId: string) => {
-    const response = await api.post(`/graduates/apply/${jobId}`);
+  applyToJob: async (
+    jobId: any,
+    data: {
+      coverLetter?: string;
+      resume?: {
+        fileName: string;
+        fileUrl: string;
+        size: number;
+        publicId: any;
+        onDisplay: boolean;
+      };
+    }
+  ) => {
+    const response = await api.post(`/graduates/apply/${jobId}`, data);
     return response.data;
   },
+  
 
   getApplications: async (params?: { page?: number; limit?: number; status?: string }) => {
     const response = await api.get('/graduates/applications', { params });

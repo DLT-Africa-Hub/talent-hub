@@ -156,6 +156,7 @@ const ExploreCompany = () => {
   const handlePreviewClick = (companyId: number) => {
     const company = companies.find((c: Company) => c.id === companyId);
     if (company) {
+      console.log(company)
       setSelectedCompany(company);
       setIsModalOpen(true);
     }

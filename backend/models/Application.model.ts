@@ -1,4 +1,6 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
+
+
 
 export interface IApplication extends Document {
   graduateId: mongoose.Types.ObjectId;
@@ -13,7 +15,14 @@ export interface IApplication extends Document {
     | 'rejected'
     | 'withdrawn';
   coverLetter?: string;
-  resume?: string;
+  resume?: {
+    _id?: Types.ObjectId;
+    fileName: string;
+    fileUrl: string;
+    size:number;
+    publicId:any;
+    onDisplay:boolean;
+  };
   appliedAt: Date;
   reviewedAt?: Date;
   notes?: string;
@@ -57,8 +66,30 @@ const ApplicationSchema: Schema = new Schema(
       required: false,
     },
     resume: {
-      type: String,
-      required: false,
+      _id: {
+        type: Schema.Types.ObjectId,
+        required: false,
+      },
+      fileName: {
+        type: String,
+        required: false,
+      },
+      fileUrl: {
+        type: String,
+        required: false,
+      },
+      size: {
+        type: Number,
+        required: false,
+      },
+      publicId: {
+        type: Schema.Types.Mixed, 
+        required: false,
+      },
+      onDisplay: {
+        type: Boolean,
+        default: true,
+      },
     },
     appliedAt: {
       type: Date,

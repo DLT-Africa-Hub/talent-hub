@@ -10,7 +10,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
@@ -54,7 +54,7 @@ const Register = () => {
     }
 
     setError('');
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const backendRole = role === 'graduate' ? 'graduate' : 'company';
 
@@ -72,7 +72,7 @@ const Register = () => {
       console.error(err);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -88,7 +88,7 @@ const Register = () => {
             ? 'Join our talent marketplace as a graduate'
             : 'Register your company to hire top talents'
         }
-        buttonText={isLoading ? 'Processing...' : 'Continue'}
+        buttonText="Continue"
         linkText="Already have an account? Login"
         linkPath="/login"
         onGoogleClick={google}
@@ -113,7 +113,9 @@ const Register = () => {
           },
         ]}
         error={error}
-        isButtonDisabled={!isFormValid || isLoading}
+        isButtonDisabled={!isFormValid || isSubmitting}
+        isLoading={isSubmitting}
+        loadingText="Registering..."
       />
 
     </>

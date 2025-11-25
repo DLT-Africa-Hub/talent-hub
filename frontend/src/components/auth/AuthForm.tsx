@@ -26,6 +26,8 @@ interface AuthFormProps {
   };
   showGoogleButton?: boolean; // Option to show/hide Google button
   isButtonDisabled?: boolean; // Disable submit button
+  isLoading?: boolean;
+  loadingText?: string;
   onGoogleClick: any;
   onGoogleSuccess?: (data: any) => void;
   onGoogleError?: (error: any) => void;
@@ -48,6 +50,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
   forgotPasswordLink,
   showGoogleButton = true,
   isButtonDisabled = false,
+  isLoading = false,
+  loadingText,
   onGoogleClick,
   onGoogleSuccess,
   onGoogleError,
@@ -137,8 +141,12 @@ const AuthForm: React.FC<AuthFormProps> = ({
           )}
 
           <div className="flex flex-col gap-3 pt-2">
-            <Button type="submit" fullWidth disabled={isButtonDisabled}>
-              {buttonText}
+            <Button
+              type="submit"
+              fullWidth
+              disabled={isButtonDisabled || isLoading}
+            >
+              {isLoading ? loadingText || buttonText : buttonText}
             </Button>
 
             {showGoogleButton && (

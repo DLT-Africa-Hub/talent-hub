@@ -15,6 +15,7 @@ const Login = () => {
   const [role, setRole] = useState<'graduate' | 'company'>('graduate');
   const { login, ingestAuthPayload } = useAuth();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
@@ -120,11 +121,16 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     try {
       await handlePasswordLogin();
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(
+        err.response?.data?.message || 'Login failed. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -135,7 +141,7 @@ const Login = () => {
         role={role}
         setRole={setRole}
         title="Login"
-        subtitle={`Welcome Back ${role === 'graduate' ? 'Graduate' : 'Company'}`}
+        subtitle="Welcome Back"
         buttonText="Continue"
         linkText="Don't have an account? Please register here"
         linkPath="/register"
@@ -172,7 +178,9 @@ const Login = () => {
           path: '/forgot-password',
           fieldIndex: 1,
         }}
-        isButtonDisabled={!isFormValid}
+        isButtonDisabled={!isFormValid || isSubmitting}
+        isLoading={isSubmitting}
+        loadingText="Logging in..."
       />
     </>
   );

@@ -167,7 +167,7 @@ const GraduateProfile = () => {
         <div className='flex flex-col gap-[32px]'>
           <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
-              <div className='w-full flex flex-col-reverse lg:flex-row items-start justify-between'>
+              <div className='w-full flex flex-col-reverse gap-[20px] lg:flex-row items-start justify-between'>
                 <div className="flex md:flex-row gap-[12px]">
                   <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4]">
                     <ProfilePictureEditor

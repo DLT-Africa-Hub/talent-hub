@@ -1714,9 +1714,16 @@ export const applyToJob = async (
 
     const { coverLetter, resume } = req.body as {
       coverLetter?: string;
-      resume?: string;
+      resume?: {
+        fileName: string;
+        fileUrl: string;
+        size: number;
+        publicId: any;
+        onDisplay: boolean;
+      } | null;
     };
 
+    // ✅ FIX: Handle resume as object, NOT string
     const application = await Application.create({
       graduateId: graduate._id,
       jobId,
@@ -1724,7 +1731,9 @@ export const applyToJob = async (
       status: 'pending',
       coverLetter:
         typeof coverLetter === 'string' ? coverLetter.trim() : undefined,
-      resume: typeof resume === 'string' ? resume.trim() : undefined,
+
+      // 🔥 KEY FIX HERE — REMOVE .trim(), STORE OBJECT DIRECTLY
+      resume: typeof resume === 'object' && resume !== null ? resume : undefined,
     });
 
     const persistedApplicationId = application._id as mongoose.Types.ObjectId;
@@ -1736,7 +1745,9 @@ export const applyToJob = async (
 
     // Emit notifications for both graduate and company
     try {
-      const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() || 'A graduate';
+      const graduateName =
+        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() ||
+        'A graduate';
 
       // Notify graduate
       if (graduate.userId) {
@@ -1744,7 +1755,10 @@ export const applyToJob = async (
           applicationId: persistedApplicationId.toString(),
           jobId: jobId,
           jobTitle: job.title,
-          companyId: company?.userId?.toString() || company?._id?.toString() || '',
+          companyId:
+            company?.userId?.toString() ||
+            company?._id?.toString() ||
+            '',
           companyName: company?.companyName || 'Company',
           graduateId: graduate.userId.toString(),
         });
@@ -1761,7 +1775,7 @@ export const applyToJob = async (
           companyId: company.userId.toString(),
         });
       }
-      } catch (error) {
+    } catch (error) {
       console.error('Failed to send application notifications:', error);
     }
   } catch (error) {
@@ -1769,6 +1783,7 @@ export const applyToJob = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 export const getApplications = async (
   req: Request,

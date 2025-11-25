@@ -98,11 +98,11 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
                 <EmailVerificationGuard>
-               
+                <AssessmentGuard>
                   <Layout>
                     <GraduateProfile />
                   </Layout>
-              
+                  </AssessmentGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }

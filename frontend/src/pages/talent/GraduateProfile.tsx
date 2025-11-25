@@ -9,11 +9,11 @@ import GraduateProfileEditModal from '../../components/profile/GraduateProfileEd
 import ProfilePictureEditor from '../../components/profile/ProfilePictureEditor';
 import { useQueryClient } from '@tanstack/react-query';
 import WorkingExperience from '../../components/profile/WorkingExperience';
-
-
+import ResumeModal from '../../components/profile/ResumeModal';
 
 const GraduateProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
 
@@ -107,17 +107,14 @@ const GraduateProfile = () => {
         );
       }
 
-      // Cloudinary unsigned upload endpoint
       const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
-      // Cloudinary works with File objects too. Convert Blob -> File if needed
       const fileToUpload =
         file instanceof File ? file : new File([file], 'profile.jpg', { type: (file as Blob).type || 'image/jpeg' });
 
       const form = new FormData();
       form.append('file', fileToUpload);
       form.append('upload_preset', UPLOAD_PRESET);
-      // optional: form.append('folder', 'graduates/profile_pictures');
 
       const res = await fetch(url, {
         method: 'POST',
@@ -136,19 +133,12 @@ const GraduateProfile = () => {
         throw new Error('Cloudinary response did not include secure_url');
       }
 
-      // Send url to your backend to update the graduate profile picture
       await graduateApi.updateProfilePicture(secureUrl);
-
-      // Invalidate or update the profile query so the UI refreshes
       queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'profilePage'] });
 
-      // optional: show success feedback
-      // e.g. toast.success('Profile picture updated');
       console.log('Profile picture updated:', secureUrl);
     } catch (err: any) {
       console.error('Failed to upload profile picture', err);
-      // optional: show user-facing error
-      // e.g. toast.error(err.message || 'Upload failed');
       alert(err?.message || 'Failed to upload profile picture');
     } finally {
       setIsUploading(false);
@@ -175,124 +165,130 @@ const GraduateProfile = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[32px]">
         <div className='flex flex-col gap-[32px]'>
-        <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
-          <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
-            <div className="flex md:flex-row gap-[12px]">
-              <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4]">
-              
-                <ProfilePictureEditor
-  imageUrl={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
-  size={150} // keeps same size as your current design
-  onUpload={handleProfilePictureUpload}
-/>
+          <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
+            <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
+              <div className='w-full flex flex-col-reverse lg:flex-row items-start justify-between'>
+                <div className="flex md:flex-row gap-[12px]">
+                  <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4]">
+                    <ProfilePictureEditor
+                      imageUrl={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
+                      size={150}
+                      onUpload={handleProfilePictureUpload}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-[20px] font-semibold text-[#1C1C1C]">
+                      {fullName || 'Profile Name'}
+                    </p>
+                    <p className="text-[14px] text-[#1C1C1C80] capitalize">
+                      {headline}
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsResumeModalOpen(true)}
+                  className='px-[20px] py-[12px] rounded-[12px] border border-button bg-button text-white hover:bg-[#176300] transition-colors flex items-center gap-[8px]'
+                >
+                  Resume
+                </button>
               </div>
 
-              <div>
-                <p className="text-[20px] font-semibold text-[#1C1C1C]">
-                  {fullName || 'Profile Name'}
+              <div className="w-full">
+                <p className="text-[16px] font-semibold text-[#1C1C1C]">
+                  Summary
                 </p>
-                <p className="text-[14px] text-[#1C1C1C80] capitalize">
-                  {headline}
+                <p className="text-[14px] text-[#1C1C1C80] leading-relaxed mt-[8px]">
+                  {summary}
                 </p>
               </div>
-            </div>
 
-            <div className="w-full">
-              <p className="text-[16px] font-semibold text-[#1C1C1C]">
-                Summary
-              </p>
-              <p className="text-[14px] text-[#1C1C1C80] leading-relaxed mt-[8px]">
-                {summary}
-              </p>
-            </div>
+              {/* Social Links Section */}
+              <div className="w-full mt-[24px] pt-[24px] border-t border-fade">
+                <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[16px]">
+                  Links
+                </p>
+                <div className="flex flex-wrap gap-[12px]">
+                  {githubUrl ? (
+                    <a
+                      href={githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaGithub className="text-[18px] text-[#1C1C1C]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C]">
+                        {githubUsername || 'GitHub'}
+                      </span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaGithub className="text-[18px] text-[#1C1C1C80]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                        Connect
+                      </span>
+                    </button>
+                  )}
 
-            {/* Social Links Section */}
-            <div className="w-full mt-[24px] pt-[24px] border-t border-fade">
-              <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[16px]">
-                Links
-              </p>
-              <div className="flex flex-wrap gap-[12px]">
-                {githubUrl ? (
-                  <a
-                    href={githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaGithub className="text-[18px] text-[#1C1C1C]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C]">
-                      {githubUsername || 'GitHub'}
-                    </span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaGithub className="text-[18px] text-[#1C1C1C80]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                      Connect
-                    </span>
-                  </button>
-                )}
+                  {linkedinUrl ? (
+                    <a
+                      href={linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLinkedin className="text-[18px] text-[#0077B5]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C]">
+                        {linkedinUsername || 'LinkedIn'}
+                      </span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLinkedin className="text-[18px] text-[#1C1C1C80]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                        Connect
+                      </span>
+                    </button>
+                  )}
 
-                {linkedinUrl ? (
-                  <a
-                    href={linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLinkedin className="text-[18px] text-[#0077B5]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C]">
-                      {linkedinUsername || 'LinkedIn'}
-                    </span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLinkedin className="text-[18px] text-[#1C1C1C80]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                      Connect
-                    </span>
-                  </button>
-                )}
-
-                {portfolioUrl ? (
-                  <a
-                    href={portfolioUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLink className="text-[18px] text-[#1C1C1C]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C]">
-                      Personal Portfolio
-                    </span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLink className="text-[18px] text-[#1C1C1C80]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                      Connect
-                    </span>
-                  </button>
-                )}
+                  {portfolioUrl ? (
+                    <a
+                      href={portfolioUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLink className="text-[18px] text-[#1C1C1C]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C]">
+                        Personal Portfolio
+                      </span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLink className="text-[18px] text-[#1C1C1C80]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                        Connect
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <WorkingExperience workExperiences={graduate.workExperiences}/>
-
-        
+          <WorkingExperience workExperiences={graduate.workExperiences}/>
         </div>
 
         <div className="flex flex-col gap-[32px]">
@@ -313,7 +309,6 @@ const GraduateProfile = () => {
                   label: 'Location',
                   value: graduate.location || 'Not specified',
                 },
-
                 {
                   label: 'Skills',
                   value:
@@ -332,6 +327,11 @@ const GraduateProfile = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         graduate={graduate}
+      />
+
+      <ResumeModal
+        isOpen={isResumeModalOpen}
+        onClose={() => setIsResumeModalOpen(false)}
       />
     </div>
   );

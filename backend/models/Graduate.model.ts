@@ -1,5 +1,6 @@
 import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
+
 export interface IEducationDetails {
   degree: string;
   field: string;
@@ -22,6 +23,15 @@ export interface IAssessmentQuestion {
   options: string[];
   answer: string;
   skill?: string;
+}
+
+export interface ICv{
+  _id?: Types.ObjectId;
+  fileName: string;
+  fileUrl: string;
+  size:number;
+  publicId:any;
+  onDisplay:boolean;
 }
 
 export interface IGraduate {
@@ -53,7 +63,7 @@ export interface IGraduate {
   };
   portfolio?: string;
   summary?: string;
-  cv?: string; // URL to CV/resume file
+  cv?: ICv[]; // URL to CV/resume file
   workExperiences: IWorkExperience[];
   assessmentData?: {
     submittedAt: Date;
@@ -191,6 +201,9 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
           publicId:{
             type: String,
             required: false,
+          },
+          onDisplay:{
+            type: Boolean
           }
         }
       ],

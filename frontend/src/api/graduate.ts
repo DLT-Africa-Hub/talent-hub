@@ -114,7 +114,36 @@ export const graduateApi = {
 
   return response.data;
   },
+
+
+getCVs: async () => {
+  const response = await api.get('/graduates/profile/cv');
+  return response.data;
+},
+
+addCV: async (cvData: {
+  fileName: string;
+  fileUrl: string;
+  size: number;
+  publicId?: string;
+  onDisplay?: boolean;
+}) => {
+  const response = await api.post('/graduates/profile/cv', cvData);
+  return response.data;
+},
+
+deleteCV: async (cvId: string) => {
+  const response = await api.delete(`/graduates/profile/cv/${cvId}`);
+  return response.data;
+},
+
+updateCVDisplay: async (cvId: string) => {
+  const response = await api.patch(`/graduates/profile/cv/${cvId}/display`);
+  return response.data;
+},
 };
+
+
 
 
 export default graduateApi;

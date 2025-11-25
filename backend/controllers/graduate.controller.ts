@@ -1908,3 +1908,219 @@ export const updateApplicationStatus = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
+export const addCV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const { fileName, fileUrl, size, publicId, onDisplay } = req.body;
+
+    if (
+      typeof fileName !== 'string' ||
+      fileName.trim() === '' ||
+      typeof fileUrl !== 'string' ||
+      fileUrl.trim() === '' ||
+      typeof size !== 'number' ||
+      size <= 0
+    ) {
+      res.status(400).json({
+        message: 'fileName, fileUrl, and size (positive number) are required',
+      });
+      return;
+    }
+
+    
+    const existingCV = graduate.cv?.find((cv) => cv.fileUrl === fileUrl.trim());
+    if (existingCV) {
+      res.status(409).json({
+        message: 'CV with this URL already exists',
+      });
+      return;
+    }
+
+ 
+    if (onDisplay === true && graduate.cv) {
+      graduate.cv.forEach((cv) => {
+        cv.onDisplay = false;
+      });
+    }
+
+   
+    const newCV = {
+      fileName: fileName.trim(),
+      fileUrl: fileUrl.trim(),
+      size,
+      publicId: typeof publicId === 'string' ? publicId.trim() : undefined,
+      onDisplay: typeof onDisplay === 'boolean' ? onDisplay : false,
+    };
+
+  
+    if (!graduate.cv) {
+      graduate.cv = [];
+    }
+    graduate.cv.push(newCV);
+
+    graduate.markModified('cv');
+    await graduate.save();
+
+    const addedCV = graduate.cv[graduate.cv.length - 1];
+
+    res.status(201).json({
+      message: 'CV added successfully',
+      cv: addedCV,
+    });
+  } catch (error) {
+    console.error('Add CV error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const deleteCV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const { cvId } = req.params;
+    if (!cvId || !ObjectId.isValid(cvId)) {
+      res.status(400).json({ message: 'Invalid cvId' });
+      return;
+    }
+
+    if (!graduate.cv || graduate.cv.length === 0) {
+      res.status(404).json({ message: 'No CVs found' });
+      return;
+    }
+
+    const cvObjectId = new ObjectId(cvId);
+    const cvIndex = graduate.cv.findIndex(
+      (cv) => cv._id && cv._id.equals(cvObjectId)
+    );
+
+    if (cvIndex === -1) {
+      res.status(404).json({ message: 'CV not found' });
+      return;
+    }
+
+
+    const deletedCV = graduate.cv[cvIndex];
+    const publicId = deletedCV.publicId;
+
+   
+    graduate.cv.splice(cvIndex, 1);
+    graduate.markModified('cv');
+    await graduate.save();
+
+    res.json({
+      message: 'CV deleted successfully',
+      publicId,
+    });
+  } catch (error) {
+    console.error('Delete CV error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const updateCVDisplay = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const { cvId } = req.params;
+    if (!cvId || !ObjectId.isValid(cvId)) {
+      res.status(400).json({ message: 'Invalid cvId' });
+      return;
+    }
+
+    if (!graduate.cv || graduate.cv.length === 0) {
+      res.status(404).json({ message: 'No CVs found' });
+      return;
+    }
+
+    const cvObjectId = new ObjectId(cvId);
+    const cvIndex = graduate.cv.findIndex(
+      (cv) => cv._id && cv._id.equals(cvObjectId)
+    );
+
+    if (cvIndex === -1) {
+      res.status(404).json({ message: 'CV not found' });
+      return;
+    }
+
+   
+    graduate.cv.forEach((cv) => {
+      cv.onDisplay = false;
+    });
+
+  
+    graduate.cv[cvIndex].onDisplay = true;
+
+    graduate.markModified('cv');
+    await graduate.save();
+
+    res.json({
+      message: 'CV display status updated',
+      cv: graduate.cv[cvIndex],
+    });
+  } catch (error) {
+    console.error('Update CV display error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getCVs = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    res.json({
+      cvs: graduate.cv || [],
+    });
+  } catch (error) {
+    console.error('Get CVs error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};

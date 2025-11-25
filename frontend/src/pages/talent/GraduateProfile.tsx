@@ -6,9 +6,16 @@ import { PageLoader, ErrorState } from '../../components/ui';
 import { DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
 import ChangePassword from '../../components/ChangePassword';
 import GraduateProfileEditModal from '../../components/profile/GraduateProfileEditModal';
+import ProfilePictureEditor from '../../components/profile/ProfilePictureEditor';
+import { useQueryClient } from '@tanstack/react-query';
+import WorkingExperience from '../../components/profile/WorkingExperience';
+
+
 
 const GraduateProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     data: profileData,
@@ -87,6 +94,67 @@ const GraduateProfile = () => {
     );
   }
 
+  const handleProfilePictureUpload = async (file: Blob) => {
+    try {
+      setIsUploading(true);
+
+      const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+      if (!CLOUD_NAME || !UPLOAD_PRESET) {
+        throw new Error(
+          'Missing Cloudinary configuration. Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.'
+        );
+      }
+
+      // Cloudinary unsigned upload endpoint
+      const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+
+      // Cloudinary works with File objects too. Convert Blob -> File if needed
+      const fileToUpload =
+        file instanceof File ? file : new File([file], 'profile.jpg', { type: (file as Blob).type || 'image/jpeg' });
+
+      const form = new FormData();
+      form.append('file', fileToUpload);
+      form.append('upload_preset', UPLOAD_PRESET);
+      // optional: form.append('folder', 'graduates/profile_pictures');
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: form,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Cloudinary upload failed: ${res.status} ${errText}`);
+      }
+
+      const data = await res.json();
+      const secureUrl: string | undefined = data.secure_url || data.secureUrl || data.url;
+
+      if (!secureUrl) {
+        throw new Error('Cloudinary response did not include secure_url');
+      }
+
+      // Send url to your backend to update the graduate profile picture
+      await graduateApi.updateProfilePicture(secureUrl);
+
+      // Invalidate or update the profile query so the UI refreshes
+      queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'profilePage'] });
+
+      // optional: show success feedback
+      // e.g. toast.success('Profile picture updated');
+      console.log('Profile picture updated:', secureUrl);
+    } catch (err: any) {
+      console.error('Failed to upload profile picture', err);
+      // optional: show user-facing error
+      // e.g. toast.error(err.message || 'Upload failed');
+      alert(err?.message || 'Failed to upload profile picture');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="p-[20px] lg:p-[32px] flex flex-col gap-[32px]">
       <div className="flex flex-wrap items-start justify-between gap-[16px]">
@@ -106,15 +174,17 @@ const GraduateProfile = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[32px]">
+        <div className='flex flex-col gap-[32px]'>
         <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
             <div className="flex md:flex-row gap-[12px]">
               <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4]">
-                <img
-                  src={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
-                  alt={fullName || 'Profile'}
-                  className="w-full h-full object-cover"
-                />
+              
+                <ProfilePictureEditor
+  imageUrl={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
+  size={150} // keeps same size as your current design
+  onUpload={handleProfilePictureUpload}
+/>
               </div>
 
               <div>
@@ -219,6 +289,10 @@ const GraduateProfile = () => {
               </div>
             </div>
           </div>
+        </div>
+        <WorkingExperience workExperiences={graduate.workExperiences}/>
+
+        
         </div>
 
         <div className="flex flex-col gap-[32px]">

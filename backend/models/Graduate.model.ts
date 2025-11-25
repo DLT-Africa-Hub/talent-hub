@@ -14,6 +14,7 @@ export interface IWorkExperience {
   startDate: Date;
   endDate?: Date;
   description?: string;
+  current?: boolean
 }
 
 export interface IAssessmentQuestion {
@@ -173,8 +174,27 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
       required: false,
     },
     cv: {
-      type: String,
-      required: false, // URL to CV/resume file
+      type:[
+        {
+          fileName: {
+            type: String,
+            required: true,
+          },
+          fileUrl: {
+            type: String,
+            required: true,
+          },
+          size: {
+            type: Number,
+            required: true,
+          },
+          publicId:{
+            type: String,
+            required: false,
+          }
+        }
+      ],
+      default:[],
     },
     workExperiences: {
       type: [
@@ -197,6 +217,9 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
           description: {
             type: String,
           },
+          current:{
+            type: Boolean,
+          }
         },
       ],
       default: [],

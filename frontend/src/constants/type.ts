@@ -1,3 +1,9 @@
+import { UploadedFile } from "../components/ui/ResumeInput";
+
+
+
+
+
 export interface GraduateForm {
     firstName: string;
     lastName: string;
@@ -13,6 +19,8 @@ export interface GraduateForm {
     portfolio?: string;
     yearsOfExperience?: string;
     rank?: string;
+    cv: UploadedFile[]; 
+    summary?:string;
     createdAt: Date;
     updatedAt: Date;
   }

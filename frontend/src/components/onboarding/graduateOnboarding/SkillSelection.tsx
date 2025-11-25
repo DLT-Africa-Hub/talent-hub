@@ -58,10 +58,14 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         expYears: expYears,
         position: position,
         skills: selectedSkills,
+        cv:form.cv,
+        summary:form.summary,
         interests: form.interests || [],
         socials: form.socials || {},
         portfolio: form.portfolio?.trim() || undefined,
       };
+
+    
 
       await graduateApi.createProfile(profileData);
       // Profile created successfully, navigate to assessment

@@ -22,8 +22,8 @@ export const graduateApi = {
   },
 
   // Update profile picture
-  updateProfilePicture: async (pictureUrl: string) => {
-    const response = await api.patch('/graduates/profile/picture', { pictureUrl });
+  updateProfilePicture: async (profilePictureUrl: string) => {
+    const response = await api.patch('/graduates/profile/picture', { profilePictureUrl });
     return response.data;
   },
 

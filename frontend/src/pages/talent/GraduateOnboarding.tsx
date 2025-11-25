@@ -5,6 +5,8 @@ import { GraduateForm } from '../../constants/type';
 import Personalnfo from '../../components/onboarding/graduateOnboarding/Personalnfo';
 import RoleSelection from '../../components/onboarding/graduateOnboarding/RoleSelection';
 import SkillSelection from '../../components/onboarding/graduateOnboarding/SkillSelection';
+import { UploadedFile } from '../../components/ui/ResumeInput';
+import Experience from '../../components/onboarding/graduateOnboarding/Experience';
 
 const GraduateOnboarding: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -18,10 +20,14 @@ const GraduateOnboarding: React.FC = () => {
     portfolio: '',
     rank: '',
     phoneNo: '',
+    cv: [] as UploadedFile[],
+    summary:'',
     yearsOfExperience: '',
     createdAt: new Date(),
     updatedAt: new Date(),
   });
+
+  console.log(form)
 
   const handleChange = (patch: Partial<GraduateForm>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -47,13 +53,13 @@ const GraduateOnboarding: React.FC = () => {
           {/* ✅ Progress Bar */}
           <div className="flex flex-col md:items-center  gap-2.5 w-full">
             <p className="text-left text-[#1C1C1CBF] text-[18px] font-normal">
-              Step {step + 1} of 3
+              Step {step + 1} of 4
             </p>
 
             <div className="h-[10px] w-full md:w-[542px] bg-[#D9D9D9] rounded-full overflow-hidden">
               <div
                 className="h-full bg-button transition-all duration-500 ease-in-out"
-                style={{ width: `${((step + 1) / 3) * 100}%` }}
+                style={{ width: `${((step + 1) / 4) * 100}%` }}
               />
             </div>
           </div>
@@ -64,6 +70,9 @@ const GraduateOnboarding: React.FC = () => {
           <Personalnfo form={form} onChange={handleChange} onNext={nextStep} />
         )}
         {step === 1 && (
+          <Experience form={form} onChange={handleChange} onNext={nextStep} />
+        )}
+        {step === 2 && (
           <RoleSelection
             form={form}
             onChange={handleChange}
@@ -71,7 +80,7 @@ const GraduateOnboarding: React.FC = () => {
             onBack={prevStep}
           />
         )}
-        {step === 2 && (
+        {step === 3 && (
           <SkillSelection
             form={form}
             onChange={handleChange}

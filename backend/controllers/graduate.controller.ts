@@ -245,7 +245,11 @@ export const createProfile = async (
       profilePictureUrl,
       location,
       workExperiences = [],
+      cv,
+      summary
     } = req.body;
+
+    console.log(req.body)
 
     if (
       typeof firstName !== 'string' ||
@@ -338,6 +342,8 @@ export const createProfile = async (
       expLevel,
       expYears: yearsValue,
       position,
+      cv: cv,
+      summary,
       profilePictureUrl:
         typeof profilePictureUrl === 'string'
           ? profilePictureUrl.trim()
@@ -411,6 +417,8 @@ export const createProfile = async (
             .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
         : [],
     });
+
+    console.log(graduate)
 
     res.status(201).json({
       message: 'Profile created successfully',
@@ -824,16 +832,13 @@ export const addWorkExperience = async (
 ): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
     const graduate = await findGraduateOrRespond(userId, res);
-    if (!graduate) {
-      return;
-    }
+    if (!graduate) return;
 
-    const { company, title, startDate, endDate, description } = req.body;
+    const { company, title, startDate, endDate, description, current } = req.body;
+
     if (
       typeof company !== 'string' ||
       typeof title !== 'string' ||
@@ -845,14 +850,16 @@ export const addWorkExperience = async (
       return;
     }
 
+    // Parse startDate
     const parsedStart = new Date(startDate);
     if (Number.isNaN(parsedStart.getTime())) {
       res.status(400).json({ message: 'startDate must be a valid date' });
       return;
     }
 
+    // Parse endDate if provided and current is false
     let parsedEnd: Date | undefined;
-    if (endDate) {
+    if (!current && endDate) {
       const end = new Date(endDate);
       if (Number.isNaN(end.getTime())) {
         res.status(400).json({ message: 'endDate must be a valid date' });
@@ -861,13 +868,14 @@ export const addWorkExperience = async (
       parsedEnd = end;
     }
 
+    // Add work experience
     graduate.workExperiences.push({
       company: company.trim(),
       title: title.trim(),
       startDate: parsedStart,
-      endDate: parsedEnd,
-      description:
-        typeof description === 'string' ? description.trim() : undefined,
+      endDate: current ? undefined : parsedEnd, // Remove endDate if currently working
+      description: typeof description === 'string' ? description.trim() : undefined,
+      current: typeof current === 'boolean' ? current : false,
     });
 
     await graduate.save();
@@ -885,20 +893,17 @@ export const addWorkExperience = async (
   }
 };
 
+
 export const updateWorkExperience = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
     const graduate = await findGraduateOrRespond(userId, res);
-    if (!graduate) {
-      return;
-    }
+    if (!graduate) return;
 
     const { experienceId } = req.params;
     if (!experienceId || !ObjectId.isValid(experienceId)) {
@@ -917,15 +922,14 @@ export const updateWorkExperience = async (
     }
 
     const experience = graduate.workExperiences[experienceIndex];
+    const { company, title, startDate, endDate, description, current } = req.body;
 
-    const { company, title, startDate, endDate, description } = req.body;
+  
 
-    if (typeof company === 'string' && company.trim().length > 0) {
-      experience.company = company.trim();
-    }
-    if (typeof title === 'string' && title.trim().length > 0) {
-      experience.title = title.trim();
-    }
+    // Validate and update fields
+    if (typeof company === 'string' && company.trim()) experience.company = company.trim();
+    if (typeof title === 'string' && title.trim()) experience.title = title.trim();
+
     if (startDate) {
       const parsedStart = new Date(startDate);
       if (Number.isNaN(parsedStart.getTime())) {
@@ -934,22 +938,36 @@ export const updateWorkExperience = async (
       }
       experience.startDate = parsedStart;
     }
-    if (endDate === null || endDate === '') {
-      experience.endDate = undefined;
-    } else if (endDate !== undefined) {
-      const parsedEnd = new Date(endDate);
-      if (Number.isNaN(parsedEnd.getTime())) {
-        res.status(400).json({ message: 'endDate must be a valid date' });
-        return;
+
+  
+    if (typeof current === 'boolean') {
+      experience.current = current;
+      if (current) {
+        experience.endDate = undefined; // clear endDate if currently working
+      } else if (endDate) {
+        const parsedEnd = new Date(endDate);
+        if (Number.isNaN(parsedEnd.getTime())) {
+          res.status(400).json({ message: 'endDate must be a valid date' });
+          return;
+        }
+        experience.endDate = parsedEnd;
       }
-      experience.endDate = parsedEnd;
+    } else if (endDate !== undefined) {
+      if (endDate === null || endDate === '') {
+        experience.endDate = undefined;
+      } else {
+        const parsedEnd = new Date(endDate);
+        if (Number.isNaN(parsedEnd.getTime())) {
+          res.status(400).json({ message: 'endDate must be a valid date' });
+          return;
+        }
+        experience.endDate = parsedEnd;
+      }
     }
-    if (typeof description === 'string') {
-      experience.description = description.trim();
-    }
+
+    if (typeof description === 'string') experience.description = description.trim();
 
     graduate.workExperiences[experienceIndex] = experience;
-
     graduate.markModified('workExperiences');
     await graduate.save();
 
@@ -962,6 +980,7 @@ export const updateWorkExperience = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 export const deleteWorkExperience = async (
   req: Request,

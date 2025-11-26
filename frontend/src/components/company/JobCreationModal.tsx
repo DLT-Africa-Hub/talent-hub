@@ -7,6 +7,7 @@ import {
   Select,
   Textarea,
 } from '../ui';
+import RichTextEditor from '../ui/RichTextEditor';
 import RankSelector, {
   RankOption,
 } from '../onboarding/companyOnboarding/job/RankSelector';
@@ -23,6 +24,7 @@ interface JobFormData {
   salaryMax: string;
   description: string;
   skills: string[];
+  directContact: boolean;
 }
 
 type JobPayload = {
@@ -30,9 +32,11 @@ type JobPayload = {
   jobType: 'Full time' | 'Part time' | 'Contract' | 'Internship';
   location: string;
   description: string;
+  descriptionHtml?: string;
   requirements: {
     skills: string[];
   };
+  directContact: boolean;
   salary?: {
     min?: number;
     max?: number;
@@ -55,6 +59,7 @@ const defaultFormData: JobFormData = {
   salaryMax: '',
   description: '',
   skills: [],
+  directContact: true, // Default to direct contact
 };
 
 const JobCreationModal = ({
@@ -138,9 +143,11 @@ const JobCreationModal = ({
       jobType: formData.jobType as JobPayload['jobType'],
       location: formData.location,
       description: formData.description,
+      descriptionHtml: formData.description, // Use same content for HTML
       requirements: {
         skills: formData.skills,
       },
+      directContact: formData.directContact,
       salary:
         salaryMin || salaryMax
           ? {
@@ -407,15 +414,62 @@ const JobCreationModal = ({
         )}
       </div>
 
-      <Textarea
-        label="Job description"
-        name="description"
-        rows={4}
-        placeholder="Describe the role, responsibilities, and requirements"
+      <RichTextEditor
+        label="Job Description"
         value={formData.description}
-        onChange={handleFormChange}
+        onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
+        placeholder="Describe the role, responsibilities, and requirements"
         required
+        rows={6}
       />
+
+      {/* Contact Preference Section */}
+      <div className="flex flex-col gap-3 p-4 border border-fade rounded-xl bg-[#F8F8F8]">
+        <div>
+          <label className="text-[#1C1C1C] text-[16px] font-medium">
+            Application Handling
+          </label>
+          <p className="text-[#1C1C1C80] text-[14px] font-normal mt-1">
+            Choose how you want to handle applications for this job
+          </p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-fade bg-white hover:bg-[#F8F8F8] transition">
+            <input
+              type="radio"
+              name="directContact"
+              checked={formData.directContact === true}
+              onChange={() => setFormData((prev) => ({ ...prev, directContact: true }))}
+              className="mt-1 w-4 h-4 text-button focus:ring-button"
+            />
+            <div className="flex-1">
+              <span className="text-[14px] font-medium text-[#1C1C1C] block">
+                Discuss directly with applicants
+              </span>
+              <span className="text-[12px] text-[#1C1C1C80] block mt-1">
+                You'll be able to chat and schedule interviews directly with candidates
+              </span>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-fade bg-white hover:bg-[#F8F8F8] transition">
+            <input
+              type="radio"
+              name="directContact"
+              checked={formData.directContact === false}
+              onChange={() => setFormData((prev) => ({ ...prev, directContact: false }))}
+              className="mt-1 w-4 h-4 text-button focus:ring-button"
+            />
+            <div className="flex-1">
+              <span className="text-[14px] font-medium text-[#1C1C1C] block">
+                Let DLT Africa handle applications
+              </span>
+              <span className="text-[12px] text-[#1C1C1C80] block mt-1">
+                DLT Africa admin team will review and manage applications on your behalf
+              </span>
+            </div>
+          </label>
+        </div>
+      </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <Button

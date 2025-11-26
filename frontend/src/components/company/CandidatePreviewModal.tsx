@@ -40,7 +40,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   const salaryRange = formatSalaryRange(candidate.salary);
   const salaryType = candidate.jobType ? getSalaryType(candidate.jobType) : 'Annual';
   const locationParts = candidate.location ? candidate.location.split(' • ') : [];
-  const locationCity = locationParts.length > 1 ? locationParts[1] : candidate.location || 'Not specified';
+  const locationCity = locationParts.length > 1 ? locationParts[1] : candidate.location;
   const locationType = locationParts.length > 0 ? locationParts[0] : '';
 
   const handleChat = () => {

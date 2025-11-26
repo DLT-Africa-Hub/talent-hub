@@ -724,7 +724,15 @@ export const verifyEmail = async (
     await consumeToken(tokenDoc);
     await invalidateExistingTokens(user._id, TOKEN_TYPES.EMAIL_VERIFICATION);
 
-    res.json({ message: 'Email verified successfully' });
+    res.json({ 
+      message: 'Email verified successfully',
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        emailVerified: user.emailVerified,
+      }
+    });
   } catch (error) {
     console.error('Verify email error:', error);
     res.status(500).json({ message: 'Internal server error' });

@@ -1,34 +1,74 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
-import { companies } from '../data/companies';
+import { graduateApi } from '../api/graduate';
+import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../utils/job.utils';
+import { PageLoader, ErrorState } from '../components/ui';
 
 const ExplorePreview = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const company = companies.find((c) => c.id === Number(id));
+  // Fetch match data from API
+  const {
+    data: matchData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['match', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Match ID is required');
+      const response = await graduateApi.getMatchById(id);
+      return response.match;
+    },
+    enabled: !!id,
+  });
 
-  if (!company) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full font-inter">
-        <div className="text-center">
-          <p className="text-[24px] font-semibold text-[#1C1C1C]">
-            Company not found
-          </p>
-          <p className="text-[16px] text-[#1C1C1CBF] mt-2">
-            The company you're looking for doesn't exist.
-          </p>
-        </div>
+        <PageLoader message="Loading job details..." />
       </div>
     );
   }
 
-  const jobDesc =
-    'We are seeking a talented Frontend Developer to join our dynamic team. You will be responsible for building and maintaining user-facing features using React and modern JavaScript. You will work closely with our design team to implement responsive, accessible, and performant web applications. The ideal candidate has experience with React, JavaScript, CSS, and HTML, and is passionate about creating exceptional user experiences. You will collaborate with backend developers to integrate APIs and ensure seamless data flow.';
+  if (error || !matchData) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full font-inter">
+        <ErrorState
+          message={
+            (error as any)?.response?.data?.message ||
+            'Failed to load job details. Please try again.'
+          }
+          variant="inline"
+        />
+      </div>
+    );
+  }
 
-  const skills = ['React', 'TypeScript', 'JavaScript'];
+  // Transform API data to component format
+  const job = matchData.job;
+  const matchScore = matchData.score > 1
+    ? Math.min(100, Math.round(matchData.score))
+    : Math.min(100, Math.round(matchData.score * 100));
+
+  const jobType = job.jobType || 'Full time';
+  const salaryRange = formatSalaryRange(job.salary);
+  const salaryType = getSalaryType(jobType);
+  const formattedJobType = formatJobType(jobType);
+
+  // Extract company name from populated companyId
+  const companyName = 
+    (typeof job.companyId === 'object' && job.companyId !== null && 'companyName' in job.companyId)
+      ? (job.companyId as any).companyName
+      : job.companyName || 'Company';
+  
+  const jobTitle = job.title || 'Position';
+  const location = job.location || 'Location not specified';
+  const skills = job.requirements?.skills || [];
+  const description = job.description || job.descriptionHtml || 'No description available.';
 
   const handleBack = () => {
     navigate('/explore');
@@ -39,7 +79,9 @@ const ExplorePreview = () => {
   };
 
   const handleApply = () => {
-    // TODO: Handle application
+    if (job.id) {
+      navigate(`/graduate?apply=${job.id}`);
+    }
   };
 
   return (
@@ -57,9 +99,9 @@ const ExplorePreview = () => {
         {/* Company Image */}
         <div className="w-full h-[232px] relative">
           <img
-            src={company.image}
+            src={DEFAULT_JOB_IMAGE}
             className="object-cover w-full h-full rounded-[10px]"
-            alt={company.name}
+            alt={companyName}
           />
           <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-xs text-[18px] border border-white/30 p-[12px] rounded-full shadow-lg">
             <PiBuildingApartmentLight className="text-[#F8F8F8]" />
@@ -69,15 +111,15 @@ const ExplorePreview = () => {
         {/* Company and Job Details */}
         <div className="flex justify-between w-full">
           <div className="flex flex-col gap-[5px]">
-            <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">
-              {company.name}
+            <p className="font-semibold text-[24px] text-[#1C1C1C] truncate">
+              {companyName}
             </p>
-            <p className="font-sf font-normal text-[16px] max-w-[114px] text-[#1C1C1CBF]">
-              {company.role}
+            <p className="font-sf font-normal text-[16px] text-[#1C1C1CBF] truncate">
+              {jobTitle}
             </p>
           </div>
-          <div className="flex items-center h-[49px] bg-fade text-[#1C1C1CBF] text-[16px] py-[15px] px-6 rounded-[70px]">
-            {company.match}% match
+          <div className="flex items-center h-[49px] bg-fade text-[#1C1C1CBF] text-[16px] py-[15px] px-6 rounded-[70px] shrink-0">
+            {matchScore}% match
           </div>
         </div>
 
@@ -86,34 +128,43 @@ const ExplorePreview = () => {
           <p className="font-semibold text-[20px] text-[#1C1C1C]">
             Job Description
           </p>
-          <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed">
-            {jobDesc}
-          </p>
+          {job.descriptionHtml ? (
+            <div
+              className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: job.descriptionHtml }}
+            />
+          ) : (
+            <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed">
+              {description}
+            </p>
+          )}
         </div>
 
         {/* Skills */}
         <div className="flex flex-col gap-[27px]">
-          <div className="flex items-center gap-[6px] flex-wrap">
-            {skills.map((skill) => (
-              <button
-                key={skill}
-                className="border border-button text-button rounded-[50px] py-[5px] px-2.5 text-[14px]"
-              >
-                {skill}
-              </button>
-            ))}
-          </div>
+          {skills.length > 0 && (
+            <div className="flex items-center gap-[6px] flex-wrap">
+              {skills.map((skill: string) => (
+                <button
+                  key={skill}
+                  className="border border-button text-button rounded-[50px] py-[5px] px-2.5 text-[14px]"
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Employment Information */}
           <div className="flex w-full items-center justify-between">
             <p className="text-center w-full font-semibold text-[16px]">
-              {company.contract}
+              {formattedJobType}
             </p>
             <div className="h-[20px] bg-black w-0.5" />
-            <p className="text-center w-full font-semibold">{company.location}</p>
+            <p className="text-center w-full font-semibold">{location}</p>
             <div className="h-[20px] bg-black w-0.5" />
             <p className="text-center w-full font-semibold">
-              {company.wage} {company.wageType}
+              {salaryRange === 'Not specified' ? '—' : `${salaryRange} ${salaryType}`}
             </p>
           </div>
 

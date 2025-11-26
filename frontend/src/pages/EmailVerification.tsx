@@ -50,7 +50,7 @@ const EmailVerification = () => {
     setSuccess('');
 
     try {
-      await authApi.verifyEmail(verificationToken);
+      const response = await authApi.verifyEmail(verificationToken);
       setSuccess('Email verified successfully! Redirecting...');
 
       // Update user in context
@@ -59,21 +59,22 @@ const EmailVerification = () => {
         updateUser(updatedUser);
       }
 
+      // Get user role from response or context
+      const userRole = response?.user?.role || user?.role;
+
       // Redirect after a short delay
       setTimeout(() => {
-        if (isAuthenticated) {
-          const role = user?.role;
-          if (role === 'graduate') {
-            navigate('/graduate');
-          } else if (role === 'company') {
-            navigate('/company');
-          } else if (role === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/');
-          }
+        // Navigate to dashboard based on role (from response or context)
+        const role = userRole || user?.role;
+        if (role === 'graduate') {
+          navigate('/graduate');
+        } else if (role === 'company') {
+          navigate('/company');
+        } else if (role === 'admin') {
+          navigate('/admin');
         } else {
-          navigate('/login');
+          // Default to graduate dashboard if role unknown
+          navigate('/graduate');
         }
       }, 2000);
     } catch (err: any) {

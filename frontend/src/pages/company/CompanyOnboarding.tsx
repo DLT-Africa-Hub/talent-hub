@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { FiArrowLeft } from 'react-icons/fi';
 import CompanyInfo, {
   CompanyInfoData,
@@ -11,6 +12,7 @@ import { companyApi } from '../../api/company';
 
 const CompanyOnboarding = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -101,6 +103,12 @@ const CompanyOnboarding = () => {
         location: formData.location,
         description: `Company profile for ${formData.companyName}`,
       });
+
+      // Invalidate company profile queries to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: ['companyProfile'] });
+      
+      // Small delay to ensure query invalidation completes
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Navigate to company dashboard
       navigate('/company', { replace: true });

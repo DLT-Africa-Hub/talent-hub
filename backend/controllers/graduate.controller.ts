@@ -1630,10 +1630,14 @@ export const getMatchById = async (
       _id: matchId,
       graduateId: graduate._id,
     })
-      .populate<{ jobId: mongoose.Types.ObjectId | PopulatedJobLean }>(
-        'jobId',
-        'title description companyId location requirements salary status createdAt updatedAt'
-      )
+      .populate<{ jobId: mongoose.Types.ObjectId | PopulatedJobLean }>({
+        path: 'jobId',
+        select: 'title description descriptionHtml companyId location requirements salary status jobType directContact createdAt updatedAt',
+        populate: {
+          path: 'companyId',
+          select: 'companyName',
+        },
+      })
       .lean();
 
     const match = matchRaw as unknown as MatchLean | null;

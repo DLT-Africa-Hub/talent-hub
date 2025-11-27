@@ -23,6 +23,7 @@ import {
   addCV,
   deleteCV,
   updateCVDisplay,
+  alreadyApplied,
 } from '../controllers/graduate.controller';
 import {
   authenticate,
@@ -67,7 +68,9 @@ router.use(requireEmailVerification);
 router.get('/jobs', getAvailableJobs);
 router.get('/matches', getMatches);
 router.get('/matches/:matchId', getMatchById);
+router.get('/apply/:jobId/already-applied', alreadyApplied);
 router.post('/apply/:jobId', applyToJob);
+
 router.get('/applications', getApplications);
 router.put('/applications/:applicationId', updateApplicationStatus);
 

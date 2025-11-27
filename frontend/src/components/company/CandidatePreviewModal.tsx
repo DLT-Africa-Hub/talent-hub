@@ -16,6 +16,7 @@ interface CandidatePreviewModalProps {
   onScheduleInterview?: (candidate: CandidateProfile, scheduledAt: string, interviewLink?: string) => void;
 }
 
+
 const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   isOpen,
   candidate,
@@ -31,6 +32,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   const [interviewLink, setInterviewLink] = useState('');
 
   if (!candidate) return null;
+  console.log(candidate)
 
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
@@ -43,18 +45,16 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   const locationCity = locationParts.length > 1 ? locationParts[1] : candidate.location;
   const locationType = locationParts.length > 0 ? locationParts[0] : '';
 
+
   const handleChat = () => {
     onChat?.(candidate);
     onClose();
   };
 
   const handleViewCV = () => {
-    if (candidate.cv) {
-      // Open CV in new tab if URL is provided
-      window.open(candidate.cv, '_blank');
-    }
     onViewCV?.(candidate);
   };
+  
 
   const handleAccept = () => {
     onAccept?.(candidate);

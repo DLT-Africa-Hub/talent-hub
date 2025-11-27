@@ -33,6 +33,7 @@ const CompanyCandidates = () => {
     (app: any, index: number): CandidateProfile => {
       const graduate = app.graduateId || {};
       const job = app.jobId || {};
+    
 
       const hasMatch = !!app.matchId;
       const candidateStatus = mapApplicationStatusToCandidateStatus(
@@ -57,7 +58,7 @@ const CompanyCandidates = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: graduate.cv,
+        cv: app.resume,
         matchPercentage: app.matchId?.score
           ? app.matchId.score > 1
             ? Math.min(100, Math.round(app.matchId.score))
@@ -70,6 +71,8 @@ const CompanyCandidates = () => {
     },
     []
   );
+
+  
 
   // Transform API match to CandidateProfile using useCallback
   const transformMatch = useCallback(
@@ -173,6 +176,7 @@ const CompanyCandidates = () => {
   // Transform applications to candidates using useMemo
   const applicationCandidates = useMemo(() => {
     if (!applicationsData || !Array.isArray(applicationsData)) return [];
+    console.log(applicationsData)
     return applicationsData.map((app: any, index: number) =>
       transformApplication(app, index)
     );
@@ -265,9 +269,24 @@ const CompanyCandidates = () => {
   };
 
   const handleViewCV = (candidate: CandidateProfile) => {
-    // Already handled in CandidatePreviewModal
-    console.log('View CV clicked for candidate:', candidate.id);
+    const resume = candidate.cv; // this is an object
+    if (!resume) {
+      console.warn('No resume available for candidate', candidate.id);
+      return;
+    }
+  
+    // Extract fileUrl from the object
+    const url = resume.fileUrl; // <-- this is the actual URL string
+    if (!url) {
+      console.warn('Resume object missing fileUrl', resume);
+      return;
+    }
+  
+    // Open the resume URL in a new tab
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
+  
+  
 
   return (
     <div className="relative py-[24px] px-[24px]">

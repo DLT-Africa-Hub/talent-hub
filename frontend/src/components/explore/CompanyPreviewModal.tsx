@@ -5,7 +5,7 @@ import {
   HiOutlineCurrencyDollar,
   HiOutlineClock,
 } from 'react-icons/hi2';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Company } from './CompanyCard';
 import BaseModal from '../ui/BaseModal';
 import { ActionButtonGroup } from '../ui';
@@ -44,11 +44,31 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   const [applicationData, setApplicationData] = useState<ApplicationData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hasApplied, setHasApplied] = useState(false);
+const [checkingApplied, setCheckingApplied] = useState(true);
+
+useEffect(() => {
+  if (!company?.jobId || !isOpen) return;
+
+  const checkApplied = async () => {
+    try {
+      setCheckingApplied(true);
+      const res = await graduateApi.alreadyApplied(company.jobId);
+      setHasApplied(res.applied); // backend returns { applied: true/false }
+    } catch (err) {
+      console.error("Failed to check application status", err);
+    } finally {
+      setCheckingApplied(false);
+    }
+  };
+
+  checkApplied();
+}, [company?.jobId, isOpen]);
+
 
   if (!company) return null;
 
-  const jobDesc =
-    'We are seeking a talented Frontend Developer to join our dynamic team. You will be responsible for building and maintaining user-facing features using React and modern JavaScript. You will work closely with our design team to implement responsive, accessible, and performant web applications. The ideal candidate has experience with React, JavaScript, CSS, and HTML, and is passionate about creating exceptional user experiences. You will collaborate with backend developers to integrate APIs and ensure seamless data flow.';
+
 
   const skills = ['React', 'TypeScript', 'JavaScript'];
 
@@ -147,6 +167,9 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
     onClose();
   };
 
+
+  console.log(company)
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 'cv-selection':
@@ -194,7 +217,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
       case 'preview':
       default:
         return (
-          <>
+          <div className='flex flex-col gap-[15px]'>
             {/* Company Image */}
             <div className="w-full h-[232px] relative overflow-hidden rounded-[10px] group">
               <img
@@ -209,7 +232,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
             </div>
 
             {/* Company and Job Details */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 w-full">
               <div className="flex flex-col gap-[8px] flex-1">
                 <p
                   id="company-preview-title"
@@ -245,7 +268,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
             </div>
 
             {/* Job Description */}
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-2">
                 <div className="h-1 w-1 bg-button rounded-full" />
                 <p className="font-semibold text-[20px] text-[#1C1C1C]">
@@ -253,7 +276,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                 </p>
               </div>
               <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-                {jobDesc}
+                {company.description}
               </p>
             </div>
 
@@ -287,12 +310,13 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                   onClick: handleChat,
                 }}
                 primary={{
-                  label: 'Apply Now',
-                  onClick: handleApplyClick,
+                  label: hasApplied ? 'Already Applied' : (checkingApplied ? 'Checking...' : 'Apply Now'),
+                  onClick: hasApplied ? (() => {}) : handleApplyClick,
+                  disabled: hasApplied || checkingApplied,
                 }}
               />
             </div>
-          </>
+          </div>
         );
     }
   };

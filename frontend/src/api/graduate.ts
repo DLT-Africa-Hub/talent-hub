@@ -116,6 +116,12 @@ export const graduateApi = {
     const response = await api.post(`/graduates/apply/${jobId}`, data || {});
     return response.data;
   },
+
+  alreadyApplied: async (jobId: string) => {
+    const response = await api.get(`/graduates/apply/${jobId}/already-applied`);
+    return response.data;
+  },
+  
   
 
   getApplications: async (params?: { page?: number; limit?: number; status?: string }) => {

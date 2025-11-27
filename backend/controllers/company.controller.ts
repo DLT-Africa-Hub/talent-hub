@@ -915,7 +915,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
     Match.find(query)
       .populate({
         path: 'graduateId',
-        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position',
+        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location',
         populate: {
           path: 'userId',
           select: 'email',
@@ -1015,7 +1015,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
     Application.find(query)
       .populate({
         path: 'graduateId',
-        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position',
+        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location',
         populate: {
           path: 'userId',
           select: 'email',

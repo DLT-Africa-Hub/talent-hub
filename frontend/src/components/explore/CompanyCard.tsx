@@ -14,6 +14,7 @@ export interface Company {
   wageType: string;
   wage: string;
   image: string;
+  description?: string; 
 }
 
 interface CompanyCardProps {

@@ -1490,6 +1490,7 @@ export const getAvailableJobs = async (
             : undefined,
         location: job.location,
         jobType: job.jobType,
+        description: job.description, 
         salary: job.salary,
         requirements: job.requirements,
         matchScore: matchScores.get(job._id.toString()) ?? null,
@@ -1852,6 +1853,38 @@ export const applyToJob = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const alreadyApplied = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) return;
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) return;
+
+    const { jobId } = req.params;
+    if (!jobId || !ObjectId.isValid(jobId)) {
+      res.status(400).json({ message: 'Invalid jobId' });
+      return;
+    }
+
+    const exists = await Application.exists({
+      graduateId: graduate._id,
+      jobId,
+    });
+
+    res.status(200).json({
+      applied: Boolean(exists),
+    });
+  } catch (error) {
+    console.error('Already applied check error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 
 
 export const getApplications = async (

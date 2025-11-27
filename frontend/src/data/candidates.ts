@@ -20,7 +20,7 @@ export interface CandidateProfile {
     max?: number;
     currency?: string;
   };
-  directContact?: boolean; // Whether company handles directly or admin handles
+  directContact?: boolean; 
 }
 
 export const companyCandidates: CandidateProfile[] = [

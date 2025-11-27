@@ -28,6 +28,7 @@ interface AvailableJob {
     currency?: string;
   };
   matchScore?: number | null;
+  description?: string;
 }
 
 const ExploreCompany = () => {
@@ -138,10 +139,12 @@ const ExploreCompany = () => {
             ? '—'
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
+        description: job.description || 'No description provided.'
       };
     },
     []
   );
+  console.log(jobsData)
 
   // Transform all jobs to companies
   const companies = useMemo(() => {

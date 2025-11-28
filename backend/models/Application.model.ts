@@ -6,6 +6,7 @@ export interface IApplication extends Document {
   graduateId: mongoose.Types.ObjectId;
   jobId: mongoose.Types.ObjectId;
   matchId?: mongoose.Types.ObjectId;
+  interviewId?: mongoose.Types.ObjectId;
   status:
     | 'pending'
     | 'reviewed'
@@ -26,6 +27,7 @@ export interface IApplication extends Document {
   extraAnswers?: Record<string, string>; // Map of requirement label to answer
   interviewScheduledAt?: Date;
   interviewLink?: string;
+  interviewRoomSlug?: string;
   appliedAt: Date;
   reviewedAt?: Date;
   notes?: string;
@@ -48,6 +50,11 @@ const ApplicationSchema: Schema = new Schema(
     matchId: {
       type: Schema.Types.ObjectId,
       ref: 'Match',
+      required: false,
+    },
+    interviewId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Interview',
       required: false,
     },
     status: {
@@ -117,6 +124,10 @@ const ApplicationSchema: Schema = new Schema(
       required: false,
     },
     interviewLink: {
+      type: String,
+      required: false,
+    },
+    interviewRoomSlug: {
       type: String,
       required: false,
     },

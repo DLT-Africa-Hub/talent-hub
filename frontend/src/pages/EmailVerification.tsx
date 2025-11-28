@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
@@ -11,24 +11,70 @@ const EmailVerification = () => {
   const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [shouldPromptLogin, setShouldPromptLogin] = useState(false);
   const navigate = useNavigate();
 
   // Check if token is in URL (from email link)
   const token = searchParams.get('token');
 
+  const getDestinationForRole = (role?: string | null) => {
+    switch (role) {
+      case 'graduate':
+        return '/graduate';
+      case 'company':
+        return '/company';
+      case 'admin':
+        return '/admin';
+      default:
+        return '/';
+    }
+  };
+
+  const handleVerifyEmail = useCallback(
+    async (verificationToken: string) => {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+
+      try {
+        const response = await authApi.verifyEmail(verificationToken);
+        const responseRole = response?.user?.role || user?.role || null;
+
+        // Update user in context
+        if (user) {
+          const updatedUser = { ...user, emailVerified: true };
+          updateUser(updatedUser);
+        }
+
+        if (isAuthenticated) {
+          setSuccess(
+            'Email verified successfully! Redirecting to your dashboard...'
+          );
+          const destination = getDestinationForRole(responseRole);
+          setTimeout(() => {
+            navigate(destination);
+          }, 2000);
+        } else {
+          setSuccess('Email verified successfully! You can now sign in.');
+          setShouldPromptLogin(true);
+        }
+      } catch (err: any) {
+        console.error('Email verification error:', err);
+        setError(
+          err.response?.data?.message ||
+            'Failed to verify email. The link may be invalid or expired.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isAuthenticated, navigate, updateUser, user]
+  );
+
   useEffect(() => {
     // If already verified, redirect to dashboard when logged in
     if (user?.emailVerified && isAuthenticated) {
-      const role = user.role;
-      if (role === 'graduate') {
-        navigate('/graduate');
-      } else if (role === 'company') {
-        navigate('/company');
-      } else if (role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      navigate(getDestinationForRole(user.role));
       return;
     }
 
@@ -42,51 +88,7 @@ const EmailVerification = () => {
     if (!isAuthenticated) {
       navigate('/login');
     }
-  }, [token, isAuthenticated, user, navigate]);
-
-  const handleVerifyEmail = async (verificationToken: string) => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const response = await authApi.verifyEmail(verificationToken);
-      setSuccess('Email verified successfully! Redirecting...');
-
-      // Update user in context
-      if (user) {
-        const updatedUser = { ...user, emailVerified: true };
-        updateUser(updatedUser);
-      }
-
-      // Get user role from response or context
-      const userRole = response?.user?.role || user?.role;
-
-      // Redirect after a short delay
-      setTimeout(() => {
-        // Navigate to dashboard based on role (from response or context)
-        const role = userRole || user?.role;
-        if (role === 'graduate') {
-          navigate('/graduate');
-        } else if (role === 'company') {
-          navigate('/company');
-        } else if (role === 'admin') {
-          navigate('/admin');
-        } else {
-          // Default to graduate dashboard if role unknown
-          navigate('/graduate');
-        }
-      }, 2000);
-    } catch (err: any) {
-      console.error('Email verification error:', err);
-      setError(
-        err.response?.data?.message ||
-          'Failed to verify email. The link may be invalid or expired.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [token, isAuthenticated, user, navigate, handleVerifyEmail]);
 
   const handleResendVerification = async () => {
     setResendLoading(true);
@@ -108,8 +110,6 @@ const EmailVerification = () => {
   };
 
   const canResend = Boolean(isAuthenticated && user);
-  const isVerified = Boolean(user?.emailVerified);
-
   return (
     <div className="flex items-center justify-center min-h-screen w-full font-inter bg-form bg-cover bg-center">
       <div className="absolute inset-0 bg-white/50"></div>
@@ -123,7 +123,7 @@ const EmailVerification = () => {
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 w-full bg-white rounded-[12px] p-6 border border-fade">
+          <div className="flex flex-col gap-4 w-full bg-white rounded-[12px] p-6 border border-fade">
           <div className="text-center">
             <div className="mx-auto w-16 h-16 bg-[#1E9500]/10 rounded-full flex items-center justify-center mb-4">
               <svg
@@ -179,12 +179,25 @@ const EmailVerification = () => {
               </Button>
             )}
 
-            <button
-              onClick={() => navigate('/login')}
-              className="text-center text-[14px] font-normal text-[#1E9500] hover:underline transition-all"
-            >
-              Back to Login
-            </button>
+            {(shouldPromptLogin || !canResend) && (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => navigate('/login')}
+                disabled={loading}
+              >
+                Go to Login
+              </Button>
+            )}
+
+            {!shouldPromptLogin && canResend && (
+              <button
+                onClick={() => navigate('/login')}
+                className="text-center text-[14px] font-normal text-[#1E9500] hover:underline transition-all"
+              >
+                Back to Login
+              </button>
+            )}
           </div>
 
           {loading && (

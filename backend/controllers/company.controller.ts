@@ -5,6 +5,7 @@ import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
 import Application from '../models/Application.model';
+import Interview, { InterviewStatus } from '../models/Interview.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
 import { queueJobMatching } from '../services/aiMatching.service';
 import {
@@ -26,6 +27,60 @@ import {
   notifyCompanyProfileUpdated,
 } from '../services/notification.dispatcher';
 import { createNotification } from '../services/notification.service';
+import {
+  buildInterviewRoomUrl,
+  generateInterviewSlug,
+} from '../utils/interview.utils';
+
+const INTERVIEW_STATUS_VALUES: readonly InterviewStatus[] = [
+  'scheduled',
+  'in_progress',
+  'completed',
+  'cancelled',
+] as const;
+
+const serializeCompanyInterview = (interview: any) => {
+  const interviewData = interview as Record<string, any>;
+  const graduate = interviewData.graduateId || {};
+  const job = interviewData.jobId || {};
+  const companyInfo =
+    job.companyId &&
+    typeof job.companyId === 'object' &&
+    'companyName' in job.companyId
+      ? job.companyId
+      : null;
+
+  const rawApplicationId = interviewData.applicationId;
+  const applicationId =
+    rawApplicationId instanceof mongoose.Types.ObjectId
+      ? rawApplicationId.toString()
+      : typeof rawApplicationId === 'string'
+        ? rawApplicationId
+        : undefined;
+
+  return {
+    id: interviewData._id?.toString?.() ?? '',
+    applicationId,
+    scheduledAt: interviewData.scheduledAt,
+    status: interviewData.status,
+    durationMinutes: interviewData.durationMinutes,
+    roomSlug: interviewData.roomSlug,
+    roomUrl: interviewData.roomUrl,
+    job: {
+      id: job._id?.toString?.(),
+      title: job.title,
+      location: job.location,
+      jobType: job.jobType,
+      companyName: companyInfo?.companyName,
+    },
+    participant: {
+      name: `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim(),
+      role: graduate.position,
+      rank: graduate.rank,
+      avatar: graduate.profilePictureUrl,
+    },
+  };
+};
 
 /**
  * Get company profile
@@ -1169,7 +1224,7 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
   }
 
   const { applicationId } = req.params;
-  const { scheduledAt, interviewLink } = req.body;
+  const { scheduledAt } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(applicationId)) {
     res.status(400).json({ message: 'Invalid application ID' });
@@ -1218,8 +1273,68 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
     return;
   }
 
+  const graduate = application.graduateId as any;
+  if (!graduate?.userId) {
+    res.status(400).json({
+      message: 'Graduate profile is missing a linked user account',
+    });
+    return;
+  }
+
+  const graduateUserId =
+    graduate.userId instanceof mongoose.Types.ObjectId
+      ? graduate.userId
+      : new mongoose.Types.ObjectId(graduate.userId);
+
+  const durationRaw = req.body?.durationMinutes;
+  const durationNumber =
+    typeof durationRaw === 'number'
+      ? durationRaw
+      : typeof durationRaw === 'string'
+        ? Number(durationRaw)
+        : NaN;
+  const durationMinutes = Number.isFinite(durationNumber)
+    ? Math.min(Math.max(Math.floor(durationNumber), 15), 240)
+    : 30;
+
+  let interview = await Interview.findOne({ applicationId: application._id });
+  const roomSlug = interview?.roomSlug ?? generateInterviewSlug();
+  const roomUrl = buildInterviewRoomUrl(roomSlug);
+
+  if (!interview) {
+    interview = new Interview({
+      applicationId: application._id,
+      jobId: job._id,
+      companyId: company._id,
+      companyUserId: new mongoose.Types.ObjectId(userId),
+      graduateId: graduate._id ?? new mongoose.Types.ObjectId(graduate.id),
+      graduateUserId,
+      scheduledAt: scheduledDate,
+      durationMinutes,
+      status: 'scheduled',
+      roomSlug,
+      roomUrl,
+      provider: 'jitsi',
+      createdBy: new mongoose.Types.ObjectId(userId),
+    });
+  } else {
+    interview.scheduledAt = scheduledDate;
+    interview.durationMinutes = durationMinutes;
+    interview.status = 'scheduled';
+    interview.roomSlug = roomSlug;
+    interview.roomUrl = roomUrl;
+    interview.updatedBy = new mongoose.Types.ObjectId(userId);
+  }
+
+
+  const persistedInterview = interview as NonNullable<typeof interview>;
+  const interviewId = persistedInterview._id as mongoose.Types.ObjectId;
+  await persistedInterview.save();
+
   application.interviewScheduledAt = scheduledDate;
-  application.interviewLink = typeof interviewLink === 'string' ? interviewLink.trim() : undefined;
+  application.interviewLink = roomUrl;
+  application.interviewRoomSlug = roomSlug;
+  application.interviewId = interviewId;
   application.status = 'interviewed';
   if (!application.reviewedAt) {
     application.reviewedAt = new Date();
@@ -1227,10 +1342,6 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
 
   await application.save();
 
-  // Send notifications
-  try {
-    const graduate = application.graduateId as any;
-    if (graduate?.userId) {
       const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
       const formattedDate = scheduledDate.toLocaleString('en-US', {
         weekday: 'long',
@@ -1241,25 +1352,30 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
         minute: '2-digit',
       });
 
-      const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
-        ? graduate.userId.toString()
-        : String(graduate.userId);
-
-      await createNotification({
+  // Send notifications
+  try {
+    await Promise.all([
+      createNotification({
         userId: graduateUserId,
-        type: 'application',
+        type: 'interview',
         title: 'Interview Scheduled',
-        message: `An interview has been scheduled for your application to "${job.title}" on ${formattedDate}.`,
-        relatedId: application._id instanceof mongoose.Types.ObjectId
-          ? application._id.toString()
-          : String(application._id),
-        relatedType: 'application',
+        message: `Your interview for "${job.title}" at ${company.companyName} is set for ${formattedDate}.`,
+        relatedId: interviewId,
+        relatedType: 'interview',
         email: {
           subject: `Interview Scheduled: ${job.title} at ${company.companyName}`,
-          text: `Hello ${graduateName},\n\nAn interview has been scheduled for your application to "${job.title}" at ${company.companyName}.\n\nDate: ${formattedDate}${application.interviewLink ? `\nInterview Link: ${application.interviewLink}` : ''}\n\nWe look forward to speaking with you!`,
+          text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${job.title}" at ${company.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
         },
-      });
-    }
+      }),
+      createNotification({
+        userId,
+        type: 'interview',
+        title: 'Interview Scheduled',
+        message: `Interview with ${graduateName || 'a candidate'} scheduled for ${formattedDate}.`,
+        relatedId: interviewId,
+        relatedType: 'interview',
+      }),
+    ]);
   } catch (error) {
     console.error('Failed to send interview scheduling notification:', error);
   }
@@ -1267,5 +1383,97 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
   res.json({
     message: 'Interview scheduled successfully',
     application: application.toObject({ versionKey: false }),
+    interview: {
+      id: interviewId.toString(),
+      scheduledAt: persistedInterview.scheduledAt,
+      status: persistedInterview.status,
+      roomSlug: persistedInterview.roomSlug,
+      roomUrl: persistedInterview.roomUrl,
+      durationMinutes: persistedInterview.durationMinutes,
+    },
+  });
+};
+
+/**
+ * Get scheduled interviews for the company
+ * GET /api/companies/interviews
+ */
+export const getCompanyInterviews = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const company = await Company.findOne({ userId }).lean();
+
+  if (!company) {
+    res.status(404).json({ message: 'Company profile not found' });
+    return;
+  }
+
+  const { status, page = '1', limit = '10', upcoming } = req.query;
+
+  const pagination = validatePagination(page as string, limit as string, res);
+  if (!pagination) return;
+
+  const validatedStatus = status
+    ? validateOptionalEnum(
+        status as string,
+        INTERVIEW_STATUS_VALUES,
+        'Status',
+        res
+      )
+    : null;
+  if (status && validatedStatus === null) return;
+
+  const query: Record<string, unknown> = {
+    companyId: company._id,
+  };
+
+  if (validatedStatus) {
+    query.status = validatedStatus;
+  }
+
+  if (typeof upcoming === 'string') {
+    if (upcoming === 'true') {
+      query.scheduledAt = { $gte: new Date(Date.now() - 6 * 60 * 60 * 1000) };
+    } else if (upcoming === 'false') {
+      query.scheduledAt = { $lt: new Date() };
+    }
+  }
+
+  const skip = (pagination.page - 1) * pagination.limit;
+
+  const [interviews, total] = await Promise.all([
+    Interview.find(query)
+      .populate({
+        path: 'graduateId',
+        select: 'firstName lastName profilePictureUrl rank position',
+      })
+      .populate({
+        path: 'jobId',
+        select: 'title location jobType companyId',
+        populate: {
+          path: 'companyId',
+          select: 'companyName',
+        },
+      })
+      .sort({ scheduledAt: 1 })
+      .skip(skip)
+      .limit(pagination.limit)
+      .lean(),
+    Interview.countDocuments(query),
+  ]);
+
+  res.json({
+    interviews: interviews.map(serializeCompanyInterview),
+    pagination: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      pages: Math.ceil(total / pagination.limit),
+    },
   });
 };

@@ -124,6 +124,11 @@ const Notifications: React.FC = () => {
         } else if (notification.type === 'message' && notification.relatedId) {
           navigate(`/messages/${notification.relatedId}`);
         } else if (
+          notification.type === 'interview' ||
+          notification.relatedType === 'interview'
+        ) {
+          navigate('/interviews');
+        } else if (
           notification.relatedType === 'application' &&
           notification.relatedId
         ) {
@@ -145,6 +150,11 @@ const Notifications: React.FC = () => {
           navigate(`/candidates`);
         } else if (notification.type === 'message' && notification.relatedId) {
           navigate(`/messages/${notification.relatedId}`);
+        } else if (
+          notification.type === 'interview' ||
+          notification.relatedType === 'interview'
+        ) {
+          navigate('/interviews');
         } else if (notification.relatedType === 'job' && notification.relatedId) {
           navigate(`/jobs`);
         } else if (notification.type === 'job_alert' && notification.relatedId) {

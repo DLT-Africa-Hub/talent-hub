@@ -122,6 +122,16 @@ export const graduateApi = {
     return response.data;
   },
   
+  getInterviews: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    upcoming?: 'true' | 'false';
+  }) => {
+    const response = await api.get('/graduates/interviews', { params });
+    return response.data;
+  },
+
   
 
   getApplications: async (params?: { page?: number; limit?: number; status?: string }) => {

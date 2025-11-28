@@ -2,11 +2,23 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId;
-  type: 'match' | 'application' | 'message' | 'system' | 'job_alert';
+  type:
+    | 'match'
+    | 'application'
+    | 'message'
+    | 'system'
+    | 'job_alert'
+    | 'interview';
   title: string;
   message: string;
   relatedId?: mongoose.Types.ObjectId;
-  relatedType?: 'match' | 'job' | 'application' | 'company' | 'graduate';
+  relatedType?:
+    | 'match'
+    | 'job'
+    | 'application'
+    | 'company'
+    | 'graduate'
+    | 'interview';
   read: boolean;
   readAt?: Date;
   createdAt: Date;
@@ -22,7 +34,7 @@ const NotificationSchema: Schema = new Schema(
     },
     type: {
       type: String,
-      enum: ['match', 'application', 'message', 'system', 'job_alert'],
+      enum: ['match', 'application', 'message', 'system', 'job_alert', 'interview'],
       required: true,
     },
     title: {
@@ -39,7 +51,7 @@ const NotificationSchema: Schema = new Schema(
     },
     relatedType: {
       type: String,
-      enum: ['match', 'job', 'application', 'company', 'graduate'],
+      enum: ['match', 'job', 'application', 'company', 'graduate', 'interview'],
       required: false,
     },
     read: {

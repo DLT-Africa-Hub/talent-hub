@@ -7,6 +7,7 @@ import { RiHomeSmile2Line } from 'react-icons/ri';
 import { IconType } from 'react-icons';
 import { BiBell, BiChevronDown, BiLogOut, BiUser } from 'react-icons/bi';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
+import { HiVideoCamera } from 'react-icons/hi';
 import { PiUsersThreeLight } from 'react-icons/pi';
 import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
@@ -24,12 +25,14 @@ const pagesByRole: Record<string, Page[]> = {
     { page: 'Dashboard', link: 'company', icon: RiHomeSmile2Line },
     { page: 'Candidates', link: 'candidates', icon: PiUsersThreeLight },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
+    { page: 'Interviews', link: 'interviews', icon: HiVideoCamera },
     { page: 'Jobs', link: 'jobs', icon: LuBriefcase },
     { page: 'Notification', link: 'notifications', icon: BiBell },
   ],
   graduate: [
     { page: 'Dashboard', link: 'graduate', icon: RiHomeSmile2Line },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
+    { page: 'Interviews', link: 'interviews', icon: HiVideoCamera },
     { page: 'Explore', link: 'explore', icon: BsSearch },
     { page: 'Applications', link: 'applications', icon: LuBriefcase },
     { page: 'Notification', link: 'notifications', icon: BiBell },

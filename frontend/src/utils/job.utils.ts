@@ -171,7 +171,8 @@ export const getCompanyName = (_notification: any, userRole?: string): string =>
 export const mapNotificationType = (
   type: string,
   relatedType?: string | null
-): 'job' | 'message' | 'match' | 'application' => {
+): 'job' | 'message' | 'match' | 'application' | 'interview' => {
+  if (type === 'interview' || relatedType === 'interview') return 'interview';
   if (type === 'job_alert' || relatedType === 'job') return 'job';
   if (type === 'message') return 'message';
   if (type === 'match' || relatedType === 'match') return 'match';

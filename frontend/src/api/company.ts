@@ -65,16 +65,24 @@ export const companyApi = {
     return response.data;
   },
 
+  getInterviews: async (params?: { page?: number; limit?: number; status?: string; upcoming?: 'true' | 'false' }) => {
+    const response = await api.get('/companies/interviews', { params });
+    return response.data;
+  },
+
   updateApplicationStatus: async (applicationId: string, status: string, notes?: string) => {
     const response = await api.put(`/companies/applications/${applicationId}/status`, { status, notes });
     return response.data;
   },
 
-  scheduleInterview: async (applicationId: string, scheduledAt: string, interviewLink?: string) => {
-    const response = await api.post(`/companies/applications/${applicationId}/schedule-interview`, {
-      scheduledAt,
-      interviewLink,
-    });
+  scheduleInterview: async (
+    applicationId: string,
+    payload: { scheduledAt: string; durationMinutes?: number }
+  ) => {
+    const response = await api.post(
+      `/companies/applications/${applicationId}/schedule-interview`,
+      payload
+    );
     return response.data;
   },
 };

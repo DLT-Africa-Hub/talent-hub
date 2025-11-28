@@ -30,6 +30,8 @@ import {
   ResetPassword,
   EmailVerification,
   EmailVerificationGuard,
+  Interviews,
+  InterviewRoom,
 } from './index';
 import GuestRoute from './components/GuestRoute';
 
@@ -208,6 +210,16 @@ function App() {
             }
           />
           <Route
+            path="/interviews/:slug"
+            element={
+              <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                <EmailVerificationGuard>
+                  <InterviewRoom />
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/company/onboarding"
             element={
               <ProtectedRoute allowedRoles={['company']}>
@@ -247,6 +259,19 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/interviews"
+            element={
+              <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                <EmailVerificationGuard>
+                  <Layout>
+                    <Interviews />
+                  </Layout>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
+
 
           <Route
             path="/candidate-preview/:id"

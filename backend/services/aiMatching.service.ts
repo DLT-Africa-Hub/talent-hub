@@ -108,7 +108,7 @@ const parseRankPreference = (
   }
 
   const parts = preference
-    .split(/(?:\band\b|,|\/)/gi)
+    .split(/(?:\b(?:and|or)\b|,|\/)/gi)
     .map((part) => normalizeRankLetter(part))
     .filter((value): value is RankLetter => Boolean(value));
 

@@ -4,6 +4,7 @@ import Graduate, { GraduateDocument } from '../models/Graduate.model';
 import Match from '../models/Match.model';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
+import Interview from '../models/Interview.model';
 import Company from '../models/Company.model';
 import {
   AIServiceError,
@@ -362,62 +363,62 @@ export const createProfile = async (
       socials:
         typeof socials === 'object' && socials !== null
           ? {
-              github:
-                typeof socials.github === 'string'
-                  ? socials.github.trim()
-                  : undefined,
-              twitter:
-                typeof socials.twitter === 'string'
-                  ? socials.twitter.trim()
-                  : undefined,
-              linkedin:
-                typeof socials.linkedin === 'string'
-                  ? socials.linkedin.trim()
-                  : undefined,
-            }
+            github:
+              typeof socials.github === 'string'
+                ? socials.github.trim()
+                : undefined,
+            twitter:
+              typeof socials.twitter === 'string'
+                ? socials.twitter.trim()
+                : undefined,
+            linkedin:
+              typeof socials.linkedin === 'string'
+                ? socials.linkedin.trim()
+                : undefined,
+          }
           : undefined,
       portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
       workExperiences: Array.isArray(workExperiences)
         ? workExperiences
-            .map((exp) => {
-              if (!exp || typeof exp !== 'object') {
-                return null;
+          .map((exp) => {
+            if (!exp || typeof exp !== 'object') {
+              return null;
+            }
+            const { company, title, startDate, endDate, description } = exp;
+            if (
+              typeof company !== 'string' ||
+              typeof title !== 'string' ||
+              !startDate
+            ) {
+              return null;
+            }
+            const parsedStart = new Date(startDate);
+            if (Number.isNaN(parsedStart.getTime())) {
+              return null;
+            }
+            let parsedEnd: Date | undefined;
+            if (endDate) {
+              const end = new Date(endDate);
+              if (!Number.isNaN(end.getTime())) {
+                parsedEnd = end;
               }
-              const { company, title, startDate, endDate, description } = exp;
-              if (
-                typeof company !== 'string' ||
-                typeof title !== 'string' ||
-                !startDate
-              ) {
-                return null;
-              }
-              const parsedStart = new Date(startDate);
-              if (Number.isNaN(parsedStart.getTime())) {
-                return null;
-              }
-              let parsedEnd: Date | undefined;
-              if (endDate) {
-                const end = new Date(endDate);
-                if (!Number.isNaN(end.getTime())) {
-                  parsedEnd = end;
-                }
-              }
-              return {
-                company: company.trim(),
-                title: title.trim(),
-                startDate: parsedStart,
-                endDate: parsedEnd,
-                description:
-                  typeof description === 'string'
-                    ? description.trim()
-                    : undefined,
-              };
-            })
-            .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
+            }
+            return {
+              company: company.trim(),
+              title: title.trim(),
+              startDate: parsedStart,
+              endDate: parsedEnd,
+              description:
+                typeof description === 'string'
+                  ? description.trim()
+                  : undefined,
+            };
+          })
+          .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
         : [],
     });
 
- 
+
 
     res.status(201).json({
       message: 'Profile created successfully',
@@ -608,7 +609,7 @@ export const updateProfile = async (
       const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
         ? graduate.userId.toString()
         : String(graduate.userId);
-      
+
       await notifyGraduateProfileUpdated({
         graduateId: graduateUserId,
         graduateName: `${graduate.firstName} ${graduate.lastName}`.trim(),
@@ -923,7 +924,7 @@ export const updateWorkExperience = async (
     const experience = graduate.workExperiences[experienceIndex];
     const { company, title, startDate, endDate, description, current } = req.body;
 
-  
+
 
     // Validate and update fields
     if (typeof company === 'string' && company.trim()) experience.company = company.trim();
@@ -938,7 +939,7 @@ export const updateWorkExperience = async (
       experience.startDate = parsedStart;
     }
 
-  
+
     if (typeof current === 'boolean') {
       experience.current = current;
       if (current) {
@@ -1064,7 +1065,7 @@ export const getAssessmentQuestions = async (
 
     const language =
       typeof req.query.language === 'string' &&
-      req.query.language.trim().length > 0
+        req.query.language.trim().length > 0
         ? req.query.language.trim()
         : undefined;
 
@@ -1134,14 +1135,14 @@ export const submitAssessment = async (
     }
 
     const { answers } = req.body as { answers?: string[] | unknown };
-    
+
     if (!answers) {
       res.status(400).json({ message: 'Answers array is required' });
       return;
     }
 
     if (!Array.isArray(answers)) {
-      res.status(400).json({ 
+      res.status(400).json({
         message: 'Answers must be an array',
         received: typeof answers,
         value: answers
@@ -1155,7 +1156,7 @@ export const submitAssessment = async (
     }
 
     // Filter out any empty or invalid answers
-    const validAnswers = answers.filter((answer): answer is string => 
+    const validAnswers = answers.filter((answer): answer is string =>
       typeof answer === 'string' && answer.trim().length > 0
     );
 
@@ -1200,7 +1201,7 @@ export const submitAssessment = async (
     const rank =
       score !== undefined
         ? rankThresholds.find((threshold) => score >= threshold.minScore)
-            ?.rank
+          ?.rank
         : undefined;
 
     const {
@@ -1240,7 +1241,7 @@ export const submitAssessment = async (
         return;
       }
 
-        console.error('Unexpected embedding generation error:', embeddingError);
+      console.error('Unexpected embedding generation error:', embeddingError);
       res.status(500).json({
         message: 'Failed to generate profile embedding. Please try again.',
       });
@@ -1268,22 +1269,22 @@ export const submitAssessment = async (
 
         const templateOverrides =
           feedbackTemplateOverrides &&
-          typeof feedbackTemplateOverrides === 'object'
+            typeof feedbackTemplateOverrides === 'object'
             ? Object.fromEntries(
-                Object.entries(
-                  feedbackTemplateOverrides as Record<string, unknown>
-                )
-                  .filter((entry): entry is [string, string] => {
-                    const [, value] = entry;
-                    return typeof value === 'string' && value.trim().length > 0;
-                  })
-                  .map(([key, value]) => [key, value.trim()])
+              Object.entries(
+                feedbackTemplateOverrides as Record<string, unknown>
               )
+                .filter((entry): entry is [string, string] => {
+                  const [, value] = entry;
+                  return typeof value === 'string' && value.trim().length > 0;
+                })
+                .map(([key, value]) => [key, value.trim()])
+            )
             : undefined;
 
         const language =
           typeof feedbackLanguage === 'string' &&
-          feedbackLanguage.trim().length >= 2
+            feedbackLanguage.trim().length >= 2
             ? feedbackLanguage.trim()
             : undefined;
 
@@ -1401,7 +1402,7 @@ export const getAvailableJobs = async (
       typeof req.query.sortBy === 'string' ? req.query.sortBy.trim() : 'createdAt';
 
     const jobFilter: Record<string, unknown> = { status: 'active' };
-    
+
     // Search filter
     if (search.length > 0) {
       jobFilter.$or = [
@@ -1475,8 +1476,8 @@ export const getAvailableJobs = async (
     const jobsPayload = jobs.map((job) => {
       const companyName =
         job.companyId &&
-        typeof job.companyId === 'object' &&
-        'companyName' in job.companyId
+          typeof job.companyId === 'object' &&
+          'companyName' in job.companyId
           ? (job.companyId as { companyName: string }).companyName
           : undefined;
 
@@ -1490,7 +1491,7 @@ export const getAvailableJobs = async (
             : undefined,
         location: job.location,
         jobType: job.jobType,
-        description: job.description, 
+        description: job.description,
         salary: job.salary,
         requirements: job.requirements,
         matchScore: matchScores.get(job._id.toString()) ?? null,
@@ -1750,7 +1751,7 @@ export const applyToJob = async (
     const jobWithRequirements = await Job.findById(jobId)
       .select('requirements directContact title companyId')
       .lean();
-    
+
     let validatedExtraAnswers: Record<string, string> | undefined;
     if (extraAnswers && jobWithRequirements?.requirements?.extraRequirements) {
       validatedExtraAnswers = {};
@@ -1829,7 +1830,7 @@ export const applyToJob = async (
       if (!jobDirectContact) {
         const User = (await import('../models/User.model')).default;
         const adminUsers = await User.find({ role: 'admin' }).select('_id email').lean();
-        
+
         for (const admin of adminUsers) {
           await createNotification({
             userId: admin._id,
@@ -1845,7 +1846,7 @@ export const applyToJob = async (
           });
         }
       }
-      } catch (error) {
+    } catch (error) {
       console.error('Failed to send application notifications:', error);
     }
   } catch (error) {
@@ -1922,6 +1923,140 @@ export const getApplications = async (
   } catch (error) {
     console.error('Get applications error:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getInterviews = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const pageParam =
+      typeof req.query.page === 'string' ? req.query.page : '1';
+    const limitParam =
+      typeof req.query.limit === 'string' ? req.query.limit : '10';
+
+    const page = Math.max(1, Number.parseInt(pageParam, 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, Number.parseInt(limitParam, 10) || 10)
+    );
+
+    const statusFilter =
+      typeof req.query.status === 'string' ? req.query.status : null;
+    const upcomingFilter =
+      typeof req.query.upcoming === 'string' ? req.query.upcoming : null;
+
+    if (
+      statusFilter &&
+      !['scheduled', 'in_progress', 'completed', 'cancelled'].includes(
+        statusFilter
+      )
+    ) {
+      res.status(400).json({ message: 'Invalid status filter' });
+      return;
+    }
+
+    const query: Record<string, unknown> = { graduateId: graduate._id };
+
+    if (statusFilter) {
+      query.status = statusFilter;
+    }
+
+    if (upcomingFilter === 'true') {
+      query.scheduledAt = { $gte: new Date(Date.now() - 6 * 60 * 60 * 1000) };
+    } else if (upcomingFilter === 'false') {
+      query.scheduledAt = { $lt: new Date() };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [interviews, total] = await Promise.all([
+      Interview.find(query)
+        .populate({
+          path: 'jobId',
+          select: 'title location jobType companyId',
+          populate: {
+            path: 'companyId',
+            select: 'companyName',
+          },
+        })
+        .populate({
+          path: 'companyId',
+          select: 'companyName',
+        })
+        .sort({ scheduledAt: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Interview.countDocuments(query),
+    ]);
+
+    const payload = interviews.map((interview) => {
+      const interviewData = interview as Record<string, any>;
+      const job = (interviewData.jobId as Record<string, any>) || {};
+      const companyInfo =
+        (job.companyId &&
+          typeof job.companyId === 'object' &&
+          'companyName' in job.companyId &&
+          job.companyId) ||
+        (interviewData.companyId &&
+          typeof interviewData.companyId === 'object' &&
+          'companyName' in interviewData.companyId &&
+          interviewData.companyId) ||
+        null;
+      const rawApplicationId = interviewData.applicationId;
+      const applicationId =
+        rawApplicationId instanceof mongoose.Types.ObjectId
+          ? rawApplicationId.toString()
+          : typeof rawApplicationId === 'string'
+            ? rawApplicationId
+            : undefined;
+
+      return {
+        id: interviewData._id?.toString?.() ?? '',
+        applicationId,
+        scheduledAt: interviewData.scheduledAt,
+        status: interviewData.status,
+        durationMinutes: interviewData.durationMinutes,
+        roomSlug: interviewData.roomSlug,
+        roomUrl: interviewData.roomUrl,
+        job: {
+          id: job._id?.toString?.(),
+          title: job.title,
+          location: job.location,
+          jobType: job.jobType,
+          companyName: companyInfo?.companyName,
+        },
+        participant: {
+          name: companyInfo?.companyName,
+          role: 'company',
+        },
+      };
+    });
+
+    res.json({
+      interviews: payload,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Graduate interviews fetch error:', error);
+    res.status(500).json({ message: 'Failed to load interviews' });
   }
 };
 
@@ -2057,7 +2192,7 @@ export const addCV = async (
       return;
     }
 
-    
+
     const existingCV = graduate.cv?.find((cv) => cv.fileUrl === fileUrl.trim());
     if (existingCV) {
       res.status(409).json({
@@ -2066,14 +2201,14 @@ export const addCV = async (
       return;
     }
 
- 
+
     if (onDisplay === true && graduate.cv) {
       graduate.cv.forEach((cv) => {
         cv.onDisplay = false;
       });
     }
 
-   
+
     const newCV = {
       fileName: fileName.trim(),
       fileUrl: fileUrl.trim(),
@@ -2082,7 +2217,7 @@ export const addCV = async (
       onDisplay: typeof onDisplay === 'boolean' ? onDisplay : false,
     };
 
-  
+
     if (!graduate.cv) {
       graduate.cv = [];
     }
@@ -2144,7 +2279,7 @@ export const deleteCV = async (
     const deletedCV = graduate.cv[cvIndex];
     const publicId = deletedCV.publicId;
 
-   
+
     graduate.cv.splice(cvIndex, 1);
     graduate.markModified('cv');
     await graduate.save();
@@ -2196,12 +2331,12 @@ export const updateCVDisplay = async (
       return;
     }
 
-   
+
     graduate.cv.forEach((cv) => {
       cv.onDisplay = false;
     });
 
-  
+
     graduate.cv[cvIndex].onDisplay = true;
 
     graduate.markModified('cv');

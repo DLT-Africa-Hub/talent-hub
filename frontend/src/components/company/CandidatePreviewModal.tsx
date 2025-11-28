@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HiOutlineBriefcase, HiVideoCamera } from 'react-icons/hi';
 import { CandidateProfile } from '../../data/candidates';
 import BaseModal from '../ui/BaseModal';
@@ -13,7 +13,10 @@ interface CandidatePreviewModalProps {
   onViewCV?: (candidate: CandidateProfile) => void;
   onAccept?: (candidate: CandidateProfile) => void;
   onReject?: (candidate: CandidateProfile) => void;
-  onScheduleInterview?: (candidate: CandidateProfile, scheduledAt: string, interviewLink?: string) => void;
+  onScheduleInterview?: (
+    candidate: CandidateProfile,
+    scheduledAt: string
+  ) => Promise<void> | void;
 }
 
 
@@ -29,13 +32,39 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 }) => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
-  const [interviewLink, setInterviewLink] = useState('');
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowScheduleForm(false);
+      setScheduledAt('');
+      setScheduleError('');
+      setScheduleSuccess('');
+    }
+  }, [isOpen]);
 
   if (!candidate) return null;
-  console.log(candidate)
 
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
+  const existingInterviewDate = candidate.interviewScheduledAt
+    ? new Date(candidate.interviewScheduledAt)
+    : null;
+  const formattedInterviewDate = existingInterviewDate
+    ? existingInterviewDate.toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+  const canScheduleInterview =
+    candidate.directContact !== false &&
+    !!candidate.applicationId &&
+    typeof onScheduleInterview === 'function';
   
   // Format job details
   const jobType = candidate.jobType ? formatJobType(candidate.jobType) : 'Not specified';
@@ -64,13 +93,39 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
     onReject?.(candidate);
   };
 
-  const handleScheduleSubmit = (e: React.FormEvent) => {
+  const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (scheduledAt) {
-      onScheduleInterview?.(candidate, scheduledAt, interviewLink || undefined);
+    setScheduleError('');
+    setScheduleSuccess('');
+
+    if (!scheduledAt) {
+      setScheduleError('Please select an interview date and time.');
+      return;
+    }
+
+    if (!canScheduleInterview || !onScheduleInterview) {
+      setScheduleError(
+        'Scheduling is unavailable for this candidate. Please review the application first.'
+      );
+      return;
+    }
+
+    try {
+      setIsScheduling(true);
+      await onScheduleInterview(candidate, scheduledAt);
+      setScheduleSuccess(
+        'Interview scheduled successfully. The candidate has been notified.'
+      );
       setShowScheduleForm(false);
       setScheduledAt('');
-      setInterviewLink('');
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to schedule interview. Please try again.';
+      setScheduleError(message);
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -127,6 +182,24 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
             </span>
           ))}
         </div>
+
+        {formattedInterviewDate && (
+          <div className="p-3 rounded-xl border border-[#1B77001A] bg-[#EFFFE2] text-sm text-[#1C1C1C]">
+            Next interview scheduled for <strong>{formattedInterviewDate}</strong>. You can join from the Interviews tab when it's time.
+          </div>
+        )}
+
+        {scheduleError && (
+          <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+            {scheduleError}
+          </div>
+        )}
+
+        {scheduleSuccess && (
+          <div className="p-3 rounded-xl border border-green-200 bg-green-50 text-sm text-green-700">
+            {scheduleSuccess}
+          </div>
+        )}
 
         {/* Employment Details */}
         <div className="flex items-center gap-[16px] border-t border-[#E0E0E0] pt-[20px]">
@@ -196,12 +269,17 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
               {/* Only show Schedule Interview if direct contact is enabled */}
               {candidate.directContact !== false && (
                 <Button
-                  onClick={() => setShowScheduleForm(true)}
+                  onClick={() => {
+                    setScheduleError('');
+                    setScheduleSuccess('');
+                    setShowScheduleForm(true);
+                  }}
                   variant="secondary"
-                  className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3"
+                  className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={!canScheduleInterview}
                 >
                   <HiVideoCamera className="text-[18px] mr-2" />
-                  Schedule Interview
+                  {canScheduleInterview ? 'Schedule Interview' : 'Interview scheduling unavailable'}
                 </Button>
               )}
               {candidate.directContact === false && (
@@ -209,6 +287,11 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                   <p className="text-[14px] text-blue-800">
                     This application is being handled by DLT Africa admin team. They will review and manage this candidate on your behalf.
                   </p>
+                </div>
+              )}
+              {candidate.directContact !== false && !candidate.applicationId && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
+                  Invite the candidate to apply or review their application before scheduling an interview.
                 </div>
               )}
             </div>
@@ -221,27 +304,24 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                 onChange={(e) => setScheduledAt(e.target.value)}
                 required
               />
-              <Input
-                type="url"
-                label="Video Call Link (optional)"
-                placeholder="https://meet.google.com/..."
-                value={interviewLink}
-                onChange={(e) => setInterviewLink(e.target.value)}
-              />
+              <p className="text-[13px] text-[#1C1C1C80]">
+                A secure Talent Hub interview room will be generated automatically. Both you and the candidate will receive the link and notifications.
+              </p>
               <div className="flex gap-2">
                 <Button
                   type="submit"
                   variant="primary"
                   className="flex-1"
+                  disabled={isScheduling}
                 >
-                  Schedule Interview
+                  {isScheduling ? 'Scheduling...' : 'Schedule Interview'}
                 </Button>
                 <Button
                   type="button"
                   onClick={() => {
                     setShowScheduleForm(false);
                     setScheduledAt('');
-                    setInterviewLink('');
+                    setScheduleError('');
                   }}
                   className="flex-1"
                   variant="secondary"

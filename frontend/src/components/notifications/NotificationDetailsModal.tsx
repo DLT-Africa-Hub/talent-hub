@@ -18,24 +18,29 @@ const headerStyles: Record<
   }
 > = {
   job: {
-    gradient: 'from-[#E7F6EB] via-white to-white',
+    gradient: 'bg-[#E7F6EB]',
     accent: 'text-[#1B7700]',
     iconBg: 'bg-[#1B770022]',
   },
   match: {
-    gradient: 'from-[#E8F1FF] via-white to-white',
+    gradient: 'bg-[#E8F1FF]',
     accent: 'text-[#1B5F77]',
     iconBg: 'bg-[#1B5F7722]',
   },
   message: {
-    gradient: 'from-[#FFF0E5] via-white to-white',
+    gradient: 'bg-[#FFF0E5]',
     accent: 'text-[#C55000]',
     iconBg: 'bg-[#C5500022]',
   },
   application: {
-    gradient: 'from-[#F6ECFF] via-white to-white',
+    gradient: 'bg-[#F6ECFF]',
     accent: 'text-[#5D1B77]',
     iconBg: 'bg-[#5D1B7722]',
+  },
+  interview: {
+    gradient: 'bg-[#E8ECFF]',
+    accent: 'text-[#1B45A0]',
+    iconBg: 'bg-[#1B45A022]',
   },
 };
 
@@ -62,7 +67,7 @@ const NotificationDetailsModal = ({
     <BaseModal isOpen={isOpen} onClose={onClose} size="md" className="p-0">
       <div className="flex flex-col text-[#1C1C1C]">
         <div
-          className={`rounded-t-2xl bg-gradient-to-br ${gradient} px-6 py-5 border-b border-[#0000000d]`}
+          className={`rounded-t-2xl ${gradient} px-6 py-5 border-b border-[#0000000d]`}
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -86,7 +91,7 @@ const NotificationDetailsModal = ({
               className={`text-xs px-3 py-1 rounded-full border ${
                 notification.read
                   ? 'border-[#DFE4EA] text-[#7A838F]'
-                  : 'border-[#1B7700] text-[#1B7700]'
+                  : 'border-button text-button'
               }`}
             >
               {notification.read ? 'Read' : 'New'}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
@@ -18,6 +18,7 @@ import {
 const CompanyDashboard = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch matches (Matched Professionals)
   const { data: matchesResponse, isLoading: loadingMatches } = useQuery({
@@ -43,6 +44,25 @@ const CompanyDashboard = () => {
     },
   });
 
+  const scheduleInterviewMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      scheduledAt,
+    }: {
+      applicationId: string;
+      scheduledAt: string;
+    }) => {
+      return companyApi.scheduleInterview(applicationId, {
+        scheduledAt,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews', 'company'] });
+    },
+  });
+
   // Transform matches to candidate profiles
   const transformMatch = useCallback(
     (match: any, index: number): CandidateProfile => {
@@ -57,6 +77,15 @@ const CompanyDashboard = () => {
 
       return {
         id: match._id || `match-${index}`,
+        applicationId: match.applicationId || undefined,
+        jobId: job._id?.toString?.() || job.id,
+        jobTitle: job.title,
+        companyName:
+          (job.companyId &&
+            typeof job.companyId === 'object' &&
+            'companyName' in job.companyId &&
+            (job.companyId as { companyName?: string }).companyName) ||
+          undefined,
         name: fullName || 'Unknown Candidate',
         role: job.title || graduate.position || 'Developer',
         status: 'matched',
@@ -93,6 +122,15 @@ const CompanyDashboard = () => {
 
       return {
         id: app._id || index,
+        applicationId: app._id?.toString?.() || app.id,
+        jobId: job._id?.toString?.() || job.id,
+        jobTitle: job.title,
+        companyName:
+          (job.companyId &&
+            typeof job.companyId === 'object' &&
+            'companyName' in job.companyId &&
+            (job.companyId as { companyName?: string }).companyName) ||
+          undefined,
         name: fullName || 'Unknown Candidate',
         role: job.title || graduate.position || 'Developer',
         status: candidateStatus,
@@ -113,6 +151,9 @@ const CompanyDashboard = () => {
         jobType: job.jobType,
         salary: job.salary,
         directContact: job.directContact !== false, // Default to true
+        interviewScheduledAt: app.interviewScheduledAt,
+        interviewRoomSlug: app.interviewRoomSlug,
+        interviewStatus: app.interviewScheduledAt ? 'scheduled' : undefined,
       };
     },
     []
@@ -170,6 +211,19 @@ const CompanyDashboard = () => {
     setIsModalOpen(false);
     setSelectedCandidate(null);
   };
+
+  const handleScheduleInterview = useCallback(
+    async (candidate: CandidateProfile, scheduledAt: string) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      await scheduleInterviewMutation.mutateAsync({
+        applicationId: candidate.applicationId,
+        scheduledAt,
+      });
+    },
+    [scheduleInterviewMutation]
+  );
 
   if (loading) {
     return (
@@ -232,6 +286,7 @@ const CompanyDashboard = () => {
         isOpen={isModalOpen}
         candidate={selectedCandidate}
         onClose={handleCloseModal}
+        onScheduleInterview={handleScheduleInterview}
       />
     </DashboardLayout>
   );

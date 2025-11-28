@@ -24,6 +24,7 @@ import {
   deleteCV,
   updateCVDisplay,
   alreadyApplied,
+  getInterviews,
 } from '../controllers/graduate.controller';
 import {
   authenticate,
@@ -72,6 +73,7 @@ router.get('/apply/:jobId/already-applied', alreadyApplied);
 router.post('/apply/:jobId', applyToJob);
 
 router.get('/applications', getApplications);
+router.get('/interviews', getInterviews);
 router.put('/applications/:applicationId', updateApplicationStatus);
 
 export default router;

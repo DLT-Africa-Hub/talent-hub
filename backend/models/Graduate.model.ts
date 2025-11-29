@@ -53,6 +53,7 @@ export interface IGraduate {
   | 'other';
   profilePictureUrl?: string;
   location?: string;
+  salaryPerAnnum?: number; // Expected salary per annum
   skills: string[];
   education: IEducationDetails;
   interests: string[];
@@ -134,6 +135,11 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
     location: {
       type: String,
       required: false,
+    },
+    salaryPerAnnum: {
+      type: Number,
+      required: false,
+      min: 0,
     },
     skills: {
       type: [String],

@@ -48,12 +48,15 @@ const CompanyDashboard = () => {
     mutationFn: async ({
       applicationId,
       scheduledAt,
+      durationMinutes,
     }: {
       applicationId: string;
       scheduledAt: string;
+      durationMinutes?: number;
     }) => {
       return companyApi.scheduleInterview(applicationId, {
         scheduledAt,
+        durationMinutes,
       });
     },
     onSuccess: () => {
@@ -213,13 +216,18 @@ const CompanyDashboard = () => {
   };
 
   const handleScheduleInterview = useCallback(
-    async (candidate: CandidateProfile, scheduledAt: string) => {
+    async (
+      candidate: CandidateProfile,
+      scheduledAt: string,
+      durationMinutes?: number
+    ) => {
       if (!candidate.applicationId) {
         throw new Error('Missing application reference for this candidate.');
       }
       await scheduleInterviewMutation.mutateAsync({
         applicationId: candidate.applicationId,
         scheduledAt,
+        durationMinutes,
       });
     },
     [scheduleInterviewMutation]

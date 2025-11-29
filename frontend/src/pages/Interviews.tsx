@@ -81,10 +81,15 @@ const Interviews = () => {
       const scheduledTime = interview.scheduledAt
         ? new Date(interview.scheduledAt).getTime()
         : 0;
-      if (scheduledTime >= now - JOIN_GRACE_MINUTES * 60 * 1000) {
-        future.push(interview);
-      } else {
+      const duration = interview.durationMinutes || 30;
+      // Calculate end time: scheduledAt + durationMinutes
+      const endTime = scheduledTime + duration * 60 * 1000;
+      
+      // If the interview end time has passed, it's in the past
+      if (endTime < now) {
         completed.push(interview);
+      } else {
+        future.push(interview);
       }
     });
 

@@ -27,6 +27,12 @@ import {
   getInterviews,
 } from '../controllers/graduate.controller';
 import {
+  getOffer,
+  uploadSignedOffer,
+  acceptOffer,
+  rejectOffer,
+} from '../controllers/offer.controller';
+import {
   authenticate,
   authorize,
   requireEmailVerification,
@@ -75,5 +81,11 @@ router.post('/apply/:jobId', applyToJob);
 router.get('/applications', getApplications);
 router.get('/interviews', getInterviews);
 router.put('/applications/:applicationId', updateApplicationStatus);
+
+// Offer management
+router.get('/offers/:applicationId', getOffer);
+router.post('/offers/:offerId/upload-signed', uploadSignedOffer);
+router.post('/offers/:offerId/accept', acceptOffer);
+router.post('/offers/:offerId/reject', rejectOffer);
 
 export default router;

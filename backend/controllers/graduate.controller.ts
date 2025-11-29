@@ -245,6 +245,7 @@ export const createProfile = async (
       portfolio,
       profilePictureUrl,
       location,
+      salaryPerAnnum,
       workExperiences = [],
       cv,
       summary
@@ -351,6 +352,10 @@ export const createProfile = async (
       location:
         typeof location === 'string'
           ? location.trim()
+          : undefined,
+      salaryPerAnnum:
+        typeof salaryPerAnnum === 'number' && Number.isFinite(salaryPerAnnum) && salaryPerAnnum > 0
+          ? salaryPerAnnum
           : undefined,
       skills: sanitizeStringArray(skills),
       education: educationData || {
@@ -1187,21 +1192,25 @@ export const submitAssessment = async (
       });
       score = Math.round((correctAnswers / storedQuestions.length) * 100);
     }
+    // Pass threshold is 60 (C rank minimum)
     const passed = score !== undefined && score >= 60;
+    // Below 60 requires retake (rank D)
+    const needsRetake = score !== undefined && score < 60;
 
     // Calculate rank based on assessment score
-    // A: 90-100%, B: 75-89%, C: 60-74%, D: Below 60%
+    // 85-100: A, 75-84: B, 60-74: C, below 60: D (needs retake)
     const rankThresholds = [
-      { minScore: 90, rank: 'A' },
-      { minScore: 75, rank: 'B' },
-      { minScore: 60, rank: 'C' },
-      { minScore: 0, rank: 'D' },
+      { minScore: 85, maxScore: 100, rank: 'A' },
+      { minScore: 75, maxScore: 84, rank: 'B' },
+      { minScore: 60, maxScore: 74, rank: 'C' },
+      { minScore: 0, maxScore: 59, rank: 'D' },
     ] as const;
 
     const rank =
       score !== undefined
-        ? rankThresholds.find((threshold) => score >= threshold.minScore)
-          ?.rank
+        ? rankThresholds.find(
+            (threshold) => score >= threshold.minScore && score <= threshold.maxScore
+          )?.rank
         : undefined;
 
     const {
@@ -1228,7 +1237,6 @@ export const submitAssessment = async (
       additionalContext
     );
 
-    // Generate embedding - required for AI matching
     let embedding: number[];
     try {
       embedding = await generateProfileEmbedding(profileText);
@@ -1323,10 +1331,10 @@ export const submitAssessment = async (
 
     graduate.assessmentData = {
       submittedAt: new Date(),
-      embedding, // Embedding is now required and always generated successfully
+      embedding,
       feedback,
       attempts,
-      needsRetake: score !== undefined && !passed, // Set needsRetake based on score
+      needsRetake: needsRetake,
       lastScore: score,
       questionSetVersion,
     };
@@ -1428,7 +1436,7 @@ export const getAvailableJobs = async (
     const sortOptions: Record<string, Record<string, 1 | -1>> = {
       createdAt: { createdAt: -1 },
       title: { title: 1 },
-      salary: { 'salary.min': -1, 'salary.max': -1 },
+      salary: { 'salary.amount': -1 },
     };
     const sort = sortOptions[sortBy] || sortOptions.createdAt;
 
@@ -1980,6 +1988,32 @@ export const getInterviews = async (
     }
 
     const skip = (page - 1) * limit;
+
+    // First, update any interviews that have passed their end time to 'completed'
+    const now = new Date();
+    await Interview.updateMany(
+      {
+        graduateId: graduate._id,
+        status: { $in: ['scheduled', 'in_progress'] },
+        $expr: {
+          $lte: [
+            {
+              $add: [
+                '$scheduledAt',
+                { $multiply: ['$durationMinutes', 60 * 1000] }
+              ]
+            },
+            now
+          ]
+        }
+      },
+      {
+        $set: {
+          status: 'completed',
+          endedAt: now,
+        }
+      }
+    );
 
     const [interviews, total] = await Promise.all([
       Interview.find(query)

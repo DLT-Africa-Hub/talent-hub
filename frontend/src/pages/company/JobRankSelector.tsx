@@ -17,8 +17,7 @@ interface LocationState {
       skills: string[];
     };
     salary?: {
-      min?: number;
-      max?: number;
+      amount?: number;
       currency: string;
     };
     status: 'active';
@@ -27,8 +26,7 @@ interface LocationState {
     title: string;
     jobType: string;
     location: string;
-    salaryMin: string;
-    salaryMax: string;
+    salaryAmount: string;
     description: string;
     skills: string;
   };
@@ -57,8 +55,7 @@ const JobRankSelector = () => {
       title: jobData.title,
       jobType: jobData.jobType,
       location: jobData.location,
-      salaryMin: jobData.salary?.min?.toString() || '',
-      salaryMax: jobData.salary?.max?.toString() || '',
+      salaryAmount: jobData.salary?.amount ? (jobData.salary.amount / 1000).toString() : '',
       description: jobData.description,
       skills: jobData.requirements.skills.join(', '),
     };

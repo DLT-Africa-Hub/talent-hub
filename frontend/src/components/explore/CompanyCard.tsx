@@ -71,9 +71,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     if (label === 'Preview') {
       if (onPreviewClick) {
         onPreviewClick(companyId);
-      } else {
-        console.warn('Preview clicked but no onPreviewClick handler provided');
-      }
+      } 
       return;
     }
 
@@ -108,7 +106,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           </p>
         </div>
         <div
-          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[50px] leading-none rounded-[9999px] border border-transparent shadow-sm flex-shrink-0 ${badgeConfig.container}`}
+          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[50px] leading-none rounded-[9999px] border border-transparent shadow-sm shrink-0 ${badgeConfig.container}`}
         >
           <span className={`w-2.5 h-2.5 rounded-full ${badgeConfig.dot}`} />
           <div className="flex flex-col leading-tight">

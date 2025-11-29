@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiPlus } from 'react-icons/fi';
 import JobCard from '../../components/company/JobCard';
-import JobMatchesModal from '../../components/company/JobMatchesModal';
+import CandidatesListModal from '../../components/company/CandidatesListModal';
 import { CompanyJob } from '../../data/jobs';
 import { companyApi } from '../../api/company';
 import {
@@ -22,6 +22,7 @@ const CompanyJobs = () => {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobTitle, setSelectedJobTitle] = useState<string | undefined>(undefined);
   const [isMatchesModalOpen, setIsMatchesModalOpen] = useState(false);
+  const [isApplicantsModalOpen, setIsApplicantsModalOpen] = useState(false);
 
   // Transform API job to CompanyJob format using useCallback
   const transformJob = useCallback(
@@ -31,6 +32,7 @@ const CompanyJobs = () => {
       skills?: string[];
       preferedRank?: string;
       createdAt?: string | Date;
+      applicantCount?: number;
     } => {
       const matchedCount = job.matchCount || job.matches?.length || 0;
       const salaryRange = formatSalaryRange(job.salary);
@@ -51,6 +53,7 @@ const CompanyJobs = () => {
         skills: job.requirements?.skills || [],
         preferedRank: job.preferedRank,
         createdAt: job.createdAt,
+        applicantCount: job.applicantCount || 0,
       };
     },
     []
@@ -93,13 +96,25 @@ const CompanyJobs = () => {
   };
 
   const handleViewMatches = (job: CompanyJob) => {
-    setSelectedJobId(job.id as string);
+    setSelectedJobId(String(job.id));
     setSelectedJobTitle(job.title);
     setIsMatchesModalOpen(true);
   };
 
   const handleCloseMatchesModal = () => {
     setIsMatchesModalOpen(false);
+    setSelectedJobId(null);
+    setSelectedJobTitle(undefined);
+  };
+
+  const handleViewApplicants = (job: CompanyJob) => {
+    setSelectedJobId(String(job.id));
+    setSelectedJobTitle(job.title);
+    setIsApplicantsModalOpen(true);
+  };
+
+  const handleCloseApplicantsModal = () => {
+    setIsApplicantsModalOpen(false);
     setSelectedJobId(null);
     setSelectedJobTitle(undefined);
   };
@@ -161,6 +176,7 @@ const CompanyJobs = () => {
                     key={job.id}
                     job={job}
                     onViewMatches={handleViewMatches}
+                    onViewApplicants={handleViewApplicants}
                   />
                 ))}
               </div>
@@ -188,11 +204,20 @@ const CompanyJobs = () => {
         onJobCreated={handleJobCreated}
       />
 
-      <JobMatchesModal
+      <CandidatesListModal
         isOpen={isMatchesModalOpen}
         jobId={selectedJobId}
         jobTitle={selectedJobTitle}
+        type="matches"
         onClose={handleCloseMatchesModal}
+      />
+
+      <CandidatesListModal
+        isOpen={isApplicantsModalOpen}
+        jobId={selectedJobId}
+        jobTitle={selectedJobTitle}
+        type="applicants"
+        onClose={handleCloseApplicantsModal}
       />
     </div>
   );

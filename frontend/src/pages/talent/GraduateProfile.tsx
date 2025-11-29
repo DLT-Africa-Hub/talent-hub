@@ -5,7 +5,7 @@ import { graduateApi } from '../../api/graduate';
 import { PageLoader, ErrorState } from '../../components/ui';
 import { DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
 import ChangePassword from '../../components/ChangePassword';
-import GraduateProfileEditModal from '../../components/profile/GraduateProfileEditModal';
+import ProfileEditModal from '../../components/profile/ProfileEditModal';
 import ProfilePictureEditor from '../../components/profile/ProfilePictureEditor';
 import { useQueryClient } from '@tanstack/react-query';
 import WorkingExperience from '../../components/profile/WorkingExperience';
@@ -372,10 +372,11 @@ const GraduateProfile = () => {
         </div>
       </div>
 
-      <GraduateProfileEditModal
+      <ProfileEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        graduate={graduate}
+        profileType="graduate"
+        profile={graduate}
       />
 
       <ResumeModal

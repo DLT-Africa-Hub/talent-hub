@@ -18,6 +18,7 @@ import {
   AccountType,
   Layout,
   ExploreCompany,
+  ExploreGraduates,
   GraduateApplications,
   CompanyPreview,
   CandidatePreview,
@@ -183,6 +184,18 @@ function App() {
                     <ExploreCompany />
                   </Layout>
                   </AssessmentGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/explore"
+            element={
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <Layout>
+                    <ExploreGraduates />
+                  </Layout>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }

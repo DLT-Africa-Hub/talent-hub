@@ -32,20 +32,15 @@ export const jobStatusLabels: Record<JobStatus, string> = {
 
 // Format salary range
 export const formatSalaryRange = (salary?: {
-  min?: number;
-  max?: number;
+  amount?: number;
   currency?: string;
 }): string => {
-  if (!salary || (!salary.min && !salary.max)) return 'Not specified';
+  if (!salary || !salary.amount) return 'Not specified';
   const currency = salary.currency || 'USD';
   const symbol = currency === 'USD' ? '$' : currency;
-  if (salary.min && salary.max) {
-    return `${symbol}${salary.min.toLocaleString()}k-${salary.max.toLocaleString()}k`;
-  }
-  if (salary.min) {
-    return `${symbol}${salary.min.toLocaleString()}k+`;
-  }
-  return `${symbol}${salary.max?.toLocaleString()}k`;
+  // Format as thousands (e.g., 50000 -> 50k)
+  const amountInK = Math.round(salary.amount / 1000);
+  return `${symbol}${amountInK.toLocaleString()}k`;
 };
 
 // Format job type to duration-like string
@@ -100,11 +95,30 @@ export const mapApplicationStatusToCandidateStatus = (
   appStatus: string,
   hasMatch: boolean
 ): CandidateStatus => {
-  if (appStatus === 'accepted') return 'hired';
-  if (hasMatch || ['reviewed', 'shortlisted', 'interviewed'].includes(appStatus))
+  // Hired status
+  if (appStatus === 'accepted' || appStatus === 'hired') return 'hired';
+  
+  // Pending status - when offer is sent but not yet accepted
+  if (appStatus === 'offer_sent') return 'pending';
+  
+  // Matched status - only when explicitly reviewed/shortlisted/interviewed
+  // Having a match alone doesn't make it 'matched' - they need to be reviewed first
+  if (['reviewed', 'shortlisted', 'interviewed'].includes(appStatus)) {
     return 'matched';
-  if (appStatus === 'pending') return 'pending';
-  return 'applied'; // Default for other statuses
+  }
+  
+  // Applied status - when status is 'pending' (default when someone applies)
+  // Even if they have a match, if status is still 'pending', they're 'applied' until reviewed
+  if (appStatus === 'pending' || !appStatus) {
+    return 'applied';
+  }
+  
+  // Rejected or withdrawn - still show as 'applied' for now (could add 'rejected' status later)
+  if (appStatus === 'rejected' || appStatus === 'withdrawn') {
+    return 'applied';
+  }
+  
+  return 'applied'; // Default fallback
 };
 
 // Format experience years

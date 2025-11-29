@@ -3,7 +3,11 @@ import { HiOutlineBriefcase, HiVideoCamera } from 'react-icons/hi';
 import { CandidateProfile } from '../../data/candidates';
 import BaseModal from '../ui/BaseModal';
 import { Input, Button } from '../ui';
-import { formatJobType, formatSalaryRange, getSalaryType } from '../../utils/job.utils';
+import {
+  formatJobType,
+  formatSalaryRange,
+  getSalaryType,
+} from '../../utils/job.utils';
 
 interface CandidatePreviewModalProps {
   isOpen: boolean;
@@ -15,10 +19,10 @@ interface CandidatePreviewModalProps {
   onReject?: (candidate: CandidateProfile) => void;
   onScheduleInterview?: (
     candidate: CandidateProfile,
-    scheduledAt: string
+    scheduledAt: string,
+    durationMinutes?: number
   ) => Promise<void> | void;
 }
-
 
 const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   isOpen,
@@ -32,6 +36,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 }) => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState<number>(30);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleSuccess, setScheduleSuccess] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
@@ -40,12 +45,17 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
     if (!isOpen) {
       setShowScheduleForm(false);
       setScheduledAt('');
+      setDurationMinutes(30);
       setScheduleError('');
       setScheduleSuccess('');
     }
   }, [isOpen]);
 
   if (!candidate) return null;
+
+  // Disable accept/reject buttons if offer is already sent or candidate is hired
+  const isOfferSent = candidate.status === 'pending' || candidate.status === 'hired';
+  const canAcceptOrReject = !isOfferSent && (onAccept || onReject);
 
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
@@ -61,19 +71,33 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
         minute: '2-digit',
       })
     : null;
+  // Check if there's an upcoming interview that hasn't ended yet
+  // Backend calculates this based on scheduledAt + durationMinutes
+  const hasUpcomingInterview = candidate.hasUpcomingInterview || false;
+
+  // If there's an upcoming interview, cannot schedule another one
+  const hasActiveInterview = hasUpcomingInterview;
+
   const canScheduleInterview =
+    !hasActiveInterview &&
     candidate.directContact !== false &&
     !!candidate.applicationId &&
     typeof onScheduleInterview === 'function';
-  
-  // Format job details
-  const jobType = candidate.jobType ? formatJobType(candidate.jobType) : 'Not specified';
-  const salaryRange = formatSalaryRange(candidate.salary);
-  const salaryType = candidate.jobType ? getSalaryType(candidate.jobType) : 'Annual';
-  const locationParts = candidate.location ? candidate.location.split(' • ') : [];
-  const locationCity = locationParts.length > 1 ? locationParts[1] : candidate.location;
-  const locationType = locationParts.length > 0 ? locationParts[0] : '';
 
+  // Format job details
+  const jobType = candidate.jobType
+    ? formatJobType(candidate.jobType)
+    : 'Not specified';
+  const salaryRange = formatSalaryRange(candidate.salary);
+  const salaryType = candidate.jobType
+    ? getSalaryType(candidate.jobType)
+    : 'Annual';
+  const locationParts = candidate.location
+    ? candidate.location.split(' • ')
+    : [];
+  const locationCity =
+    locationParts.length > 1 ? locationParts[1] : candidate.location;
+  const locationType = locationParts.length > 0 ? locationParts[0] : '';
 
   const handleChat = () => {
     onChat?.(candidate);
@@ -83,7 +107,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   const handleViewCV = () => {
     onViewCV?.(candidate);
   };
-  
 
   const handleAccept = () => {
     onAccept?.(candidate);
@@ -112,12 +135,13 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
     try {
       setIsScheduling(true);
-      await onScheduleInterview(candidate, scheduledAt);
+      await onScheduleInterview(candidate, scheduledAt, durationMinutes);
       setScheduleSuccess(
         'Interview scheduled successfully. The candidate has been notified.'
       );
       setShowScheduleForm(false);
       setScheduledAt('');
+      setDurationMinutes(30);
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||
@@ -150,7 +174,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
             <h2 className="text-[28px] font-semibold text-[#1C1C1C]">
               {candidate.name}
             </h2>
-            <p className="font-sf text-[18px] text-[#1C1C1CBF]">
+            <p className="font-sf text-[18px] text-[#1C1C1CBF] capitalize">
               {candidate.role}
             </p>
           </div>
@@ -185,7 +209,9 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
         {formattedInterviewDate && (
           <div className="p-3 rounded-xl border border-[#1B77001A] bg-[#EFFFE2] text-sm text-[#1C1C1C]">
-            Next interview scheduled for <strong>{formattedInterviewDate}</strong>. You can join from the Interviews tab when it's time.
+            Next interview scheduled for{' '}
+            <strong>{formattedInterviewDate}</strong>. You can join from the
+            Interviews tab when it's time.
           </div>
         )}
 
@@ -207,7 +233,9 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
             <span className="text-[18px] font-semibold text-[#1C1C1C]">
               {candidate.experience}
             </span>
-            <span className="text-[14px] text-[#1C1C1CBF]">{jobType}</span>
+            <span className="text-[14px] text-[#1C1C1CBF]">
+              Years of Experience
+            </span>
           </div>
           <div className="h-[40px] w-px bg-[#E0E0E0]" />
           <div className="flex flex-col">
@@ -215,15 +243,19 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
               {locationType || locationCity.split(',')[0]}
             </span>
             <span className="text-[14px] text-[#1C1C1CBF]">
-              {locationType ? locationCity : 'Location'}
+              Location (City)
             </span>
           </div>
           <div className="h-[40px] w-px bg-[#E0E0E0]" />
           <div className="flex flex-col">
             <span className="text-[18px] font-semibold text-[#1C1C1C]">
-              {salaryRange === 'Not specified' ? '—' : salaryRange.replace(/[k$]/g, '')}
+              {salaryRange === 'Not specified'
+                ? '—'
+                : salaryRange.replace(/[k$]/g, '')}
             </span>
-            <span className="text-[14px] text-[#1C1C1CBF]">{salaryType}</span>
+            <span className="text-[14px] text-[#1C1C1CBF]">
+              Salary (Annual)
+            </span>
           </div>
         </div>
 
@@ -234,8 +266,9 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
               variant="secondary"
               onClick={handleViewCV}
               className="flex-1"
+              disabled={!candidate.cv}
             >
-              View CV
+              {candidate.cv ? 'View CV' : 'No CV Available'}
             </Button>
             {/* Only show Chat if direct contact is enabled */}
             {candidate.directContact !== false && (
@@ -250,53 +283,76 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
           </div>
 
           {!showScheduleForm ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  onClick={handleAccept}
-                  className="flex-1 bg-button text-white hover:bg-[#176300] font-semibold py-3"
-                >
-                  Accept
-                </Button>
-                <Button
-                  onClick={handleReject}
-                  className="flex-1 bg-red-600 text-white hover:bg-red-700 font-semibold py-3 border-0"
-                >
-                  Reject
-                </Button>
+            // Only show Accept/Reject/Schedule buttons if handlers are provided
+            (canAcceptOrReject || onScheduleInterview) && (
+              <div className="flex flex-col gap-3">
+                {canAcceptOrReject && (
+                  <div className="flex gap-2">
+                    {onAccept && (
+                      <Button
+                        variant="primary"
+                        onClick={handleAccept}
+                        disabled={isOfferSent}
+                        className="flex-1 bg-button text-white hover:bg-[#176300] font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Accept
+                      </Button>
+                    )}
+                    {onReject && (
+                      <Button
+                        onClick={handleReject}
+                        disabled={isOfferSent}
+                        className="flex-1 bg-red-600 text-white hover:bg-red-700 font-semibold py-3 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Reject
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {/* Only show Schedule Interview if direct contact is enabled and handler is provided */}
+                {onScheduleInterview && candidate.directContact !== false && (
+                  <Button
+                    onClick={() => {
+                      setScheduleError('');
+                      setScheduleSuccess('');
+                      setShowScheduleForm(true);
+                    }}
+                    variant="secondary"
+                    className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={!canScheduleInterview}
+                  >
+                    <HiVideoCamera className="text-[18px] mr-2" />
+                    {hasActiveInterview
+                      ? 'Interview Already Scheduled'
+                      : canScheduleInterview
+                        ? 'Schedule Interview'
+                        : 'Interview scheduling unavailable'}
+                  </Button>
+                )}
+                {candidate.directContact === false && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-[14px] text-blue-800">
+                      This application is being handled by DLT Africa admin
+                      team. They will review and manage this candidate on your
+                      behalf.
+                    </p>
+                  </div>
+                )}
+                {candidate.directContact !== false &&
+                  !candidate.applicationId &&
+                  onScheduleInterview && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
+                      Invite the candidate to apply or review their application
+                      before scheduling an interview.
+                    </div>
+                  )}
               </div>
-              {/* Only show Schedule Interview if direct contact is enabled */}
-              {candidate.directContact !== false && (
-                <Button
-                  onClick={() => {
-                    setScheduleError('');
-                    setScheduleSuccess('');
-                    setShowScheduleForm(true);
-                  }}
-                  variant="secondary"
-                  className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                  disabled={!canScheduleInterview}
-                >
-                  <HiVideoCamera className="text-[18px] mr-2" />
-                  {canScheduleInterview ? 'Schedule Interview' : 'Interview scheduling unavailable'}
-                </Button>
-              )}
-              {candidate.directContact === false && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-[14px] text-blue-800">
-                    This application is being handled by DLT Africa admin team. They will review and manage this candidate on your behalf.
-                  </p>
-                </div>
-              )}
-              {candidate.directContact !== false && !candidate.applicationId && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
-                  Invite the candidate to apply or review their application before scheduling an interview.
-                </div>
-              )}
-            </div>
+            )
           ) : (
-            <form onSubmit={handleScheduleSubmit} className="flex flex-col gap-3 p-4 border border-fade rounded-lg bg-[#F8F8F8]">
+            <form
+              onSubmit={handleScheduleSubmit}
+              className="flex flex-col gap-3 p-4 border border-fade rounded-lg bg-[#F8F8F8]"
+            >
               <Input
                 type="datetime-local"
                 label="Interview Date & Time"
@@ -304,8 +360,31 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                 onChange={(e) => setScheduledAt(e.target.value)}
                 required
               />
+              <div className="flex flex-col gap-2">
+                <label className="text-[14px] font-medium text-[#1C1C1C]">
+                  Session Duration
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[15, 30, 45, 60].map((duration) => (
+                    <button
+                      key={duration}
+                      type="button"
+                      onClick={() => setDurationMinutes(duration)}
+                      className={`px-4 py-2 rounded-lg border text-[14px] font-medium transition ${
+                        durationMinutes === duration
+                          ? 'border-button bg-[#DBFFC0] text-[#1C1C1C]'
+                          : 'border-[#E5E7EB] bg-white text-[#1C1C1C80] hover:border-[#C5D2BF]'
+                      }`}
+                    >
+                      {duration === 60 ? '1 hour' : `${duration} min`}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <p className="text-[13px] text-[#1C1C1C80]">
-                A secure Talent Hub interview room will be generated automatically. Both you and the candidate will receive the link and notifications.
+                A secure Talent Hub interview room will be generated
+                automatically. Both you and the candidate will receive the link
+                and notifications.
               </p>
               <div className="flex gap-2">
                 <Button
@@ -321,6 +400,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                   onClick={() => {
                     setShowScheduleForm(false);
                     setScheduledAt('');
+                    setDurationMinutes(30);
                     setScheduleError('');
                   }}
                   className="flex-1"

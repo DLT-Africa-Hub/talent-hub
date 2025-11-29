@@ -18,8 +18,7 @@ export interface IJob extends Document {
   };
   location?: string;
   salary?: {
-    min: number;
-    max: number;
+    amount: number;
     currency: string;
   };
   preferedRank: 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
@@ -90,8 +89,7 @@ const JobSchema: Schema = new Schema(
     },
     location: String,
     salary: {
-      min: Number,
-      max: Number,
+      amount: Number,
       currency: {
         type: String,
         default: 'USD',
@@ -137,7 +135,7 @@ JobSchema.index({ companyId: 1 });
 JobSchema.index({ status: 1 });
 JobSchema.index({ 'requirements.skills': 1 });
 JobSchema.index({ location: 1 });
-JobSchema.index({ 'salary.min': 1, 'salary.max': 1 });
+JobSchema.index({ 'salary.amount': 1 });
 JobSchema.index({ createdAt: -1 });
 JobSchema.index({ companyId: 1, status: 1 }); // Compound index for company jobs by status
 

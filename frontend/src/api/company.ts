@@ -85,6 +85,18 @@ export const companyApi = {
     );
     return response.data;
   },
+
+  // Graduates
+  getAvailableGraduates: async (params?: {
+    page?: number;
+    limit?: number;
+    rank?: string;
+    search?: string;
+    sortBy?: string;
+  }) => {
+    const response = await api.get('/companies/graduates', { params });
+    return response.data;
+  },
 };
 
 export default companyApi;

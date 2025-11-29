@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useState, useRef, useEffect } from 'react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { FaUpload, FaFilePdf, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
 import BaseModal from '../ui/BaseModal';
 import { Input, Textarea, Button } from '../ui';
 import { graduateApi } from '../../api/graduate';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
 
 interface ApplicationFormModalProps {
   isOpen: boolean;
@@ -144,17 +145,9 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     }
   };
 
-  const applicationMutation = useMutation({
-    mutationFn: async () => {
-      return await graduateApi.applyToJob(jobId, {
-        coverLetter: coverLetter.trim() || undefined,
-        resume: uploadedResume || undefined,
-        extraAnswers: Object.keys(extraAnswers).length > 0 ? extraAnswers : undefined,
-      });
-    },
+  const { submitApplication, isSubmitting, submitError: submissionError, resetError } = useApplicationSubmission({
+    jobId,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graduateApplications'] });
-      queryClient.invalidateQueries({ queryKey: ['graduates/matches'] });
       setCoverLetter('');
       setExtraAnswers({});
       setUploadedResume(null);
@@ -166,6 +159,20 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
       onClose();
     },
   });
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCoverLetter('');
+      setExtraAnswers({});
+      setUploadedResume(null);
+      setUploadError(null);
+      resetError();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [isOpen, resetError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,7 +193,11 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
       return;
     }
 
-    applicationMutation.mutate();
+    await submitApplication({
+      resume: uploadedResume || undefined,
+      coverLetter,
+      extraAnswers: Object.keys(extraAnswers).length > 0 ? extraAnswers : undefined,
+    });
   };
 
   const handleExtraAnswerChange = (label: string, value: string) => {
@@ -330,11 +341,10 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
             </div>
           ))}
 
-          {applicationMutation.isError && (
+          {submissionError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-[14px] text-red-600">
-                {(applicationMutation.error as any)?.response?.data?.message ||
-                  'Failed to submit application. Please try again.'}
+                {submissionError}
               </p>
             </div>
           )}
@@ -345,7 +355,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
               variant="secondary"
               onClick={onClose}
               className="flex-1"
-              disabled={applicationMutation.isPending}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
@@ -353,9 +363,9 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
               type="submit"
               variant="primary"
               className="flex-1"
-              disabled={applicationMutation.isPending}
+              disabled={isSubmitting}
             >
-              {applicationMutation.isPending ? (
+              {isSubmitting ? (
                 <LoadingSpinner message="Submitting..." />
               ) : (
                 'Submit Application'

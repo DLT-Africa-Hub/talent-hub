@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { HiOutlineEye } from 'react-icons/hi2';
 import BaseModal from '../ui/BaseModal';
 import CandidatePreviewModal from './CandidatePreviewModal';
@@ -10,40 +10,64 @@ import {
   formatLocation,
   getCandidateRank,
   DEFAULT_PROFILE_IMAGE,
+  mapApplicationStatusToCandidateStatus,
 } from '../../utils/job.utils';
 import { InlineLoader, EmptyState, ImageWithFallback } from '../ui';
 
-interface JobMatchesModalProps {
+export type CandidatesListType = 'matches' | 'applicants';
+
+interface CandidatesListModalProps {
   isOpen: boolean;
   jobId: string | null;
   jobTitle?: string;
+  type: CandidatesListType;
   onClose: () => void;
 }
 
-const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
+const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   isOpen,
   jobId,
   jobTitle,
+  type,
   onClose,
 }) => {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
-  // Fetch matches for the job
+  // Determine query key and fetch function based on type
+  const queryKey = useMemo(() => {
+    return type === 'matches' ? ['jobMatches', jobId] : ['jobApplicants', jobId];
+  }, [type, jobId]);
+
+  const fetchFunction = useMemo(() => {
+    return async () => {
+      if (!jobId) return null;
+      
+      if (type === 'matches') {
+        const response = await companyApi.getJobMatches(jobId, {
+          page: 1,
+          limit: 100,
+        });
+        return response;
+      } else {
+        const response = await companyApi.getApplications({
+          page: 1,
+          limit: 100,
+          jobId: jobId,
+        });
+        return response;
+      }
+    };
+  }, [type, jobId]);
+
+  // Fetch candidates
   const {
-    data: matchesResponse,
+    data: responseData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['jobMatches', jobId],
-    queryFn: async () => {
-      if (!jobId) return null;
-      const response = await companyApi.getJobMatches(jobId, {
-        page: 1,
-        limit: 100,
-      });
-      return response;
-    },
+    queryKey,
+    queryFn: fetchFunction,
     enabled: isOpen && !!jobId,
   });
 
@@ -79,10 +103,95 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
     };
   };
 
-  const matches = matchesResponse?.matches || [];
-  const candidates = matches.map((match: any, index: number) =>
-    transformMatch(match, index)
-  );
+  // Transform application to CandidateProfile
+  const transformApplication = (application: any, index: number): CandidateProfile => {
+    const graduate = application.graduateId || {};
+    const job = application.jobId || {};
+    const company = job.companyId || {};
+
+    const fullName = `${graduate.firstName || ''} ${
+      graduate.lastName || ''
+    }`.trim();
+
+    const hasMatch = !!application.matchId;
+    const candidateStatus = mapApplicationStatusToCandidateStatus(
+      application.status,
+      hasMatch
+    );
+
+    const matchScore = application.matchId?.score
+      ? application.matchId.score > 1
+        ? Math.min(100, Math.round(application.matchId.score))
+        : Math.min(100, Math.round(application.matchId.score * 100))
+      : undefined;
+
+    // Get CV from graduate or application resume
+    let cvUrl: string | undefined;
+    if (graduate.cv && Array.isArray(graduate.cv) && graduate.cv.length > 0) {
+      const displayCV = graduate.cv.find((cv: any) => cv.onDisplay);
+      cvUrl = displayCV?.fileUrl || graduate.cv[0]?.fileUrl;
+    }
+    if (!cvUrl && application.resume?.fileUrl) {
+      cvUrl = application.resume.fileUrl;
+    }
+
+    return {
+      id: application._id || `application-${index}`,
+      applicationId: application._id?.toString(),
+      jobId: application.jobId?._id?.toString() || jobId || '',
+      jobTitle: job.title,
+      companyName: company.companyName,
+      name: fullName || 'Unknown Candidate',
+      role: graduate.position || 'Developer',
+      status: candidateStatus,
+      rank: getCandidateRank(graduate.rank),
+      statusLabel: application.status.charAt(0).toUpperCase() + application.status.slice(1),
+      experience: formatExperience(graduate.expYears || 0),
+      location: formatLocation(job.location || graduate.location),
+      skills: (graduate.skills || []).slice(0, 3),
+      image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+      summary: graduate.summary,
+      cv: cvUrl,
+      matchPercentage: matchScore,
+      jobType: job.jobType,
+      salary: job.salary,
+      directContact: job.directContact,
+    };
+  };
+
+  // Get candidates based on type
+  const candidates = useMemo(() => {
+    if (!responseData) return [];
+    
+    if (type === 'matches') {
+      const matches = responseData.matches || [];
+      return matches.map((match: any, index: number) => transformMatch(match, index));
+    } else {
+      const applications = responseData.applications || [];
+      return applications.map((application: any, index: number) => transformApplication(application, index));
+    }
+  }, [responseData, type, jobId]);
+
+  // Modal configuration based on type
+  const modalConfig = useMemo(() => {
+    if (type === 'matches') {
+      return {
+        title: 'Matched Candidates',
+        loadingMessage: 'Loading matches...',
+        errorTitle: 'Failed to load matches',
+        emptyTitle: 'No matches yet',
+        emptyDescription: "Candidates will appear here once they're matched with this job posting.",
+      };
+    } else {
+      return {
+        title: 'Applicants',
+        loadingMessage: 'Loading applicants...',
+        errorTitle: 'Failed to load applicants',
+        emptyTitle: 'No applicants yet',
+        emptyDescription: "Candidates will appear here once they apply to this job posting.",
+      };
+    }
+  }, [type]);
 
   const handlePreview = (candidate: CandidateProfile) => {
     setSelectedCandidate(candidate);
@@ -111,7 +220,7 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
           {/* Header */}
           <div className="flex flex-col gap-[8px]">
             <h2 className="text-[24px] font-semibold text-[#1C1C1C]">
-              Matched Candidates
+              {modalConfig.title}
             </h2>
             {jobTitle && (
               <p className="text-[16px] text-[#1C1C1CBF]">
@@ -123,7 +232,7 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
           {/* Loading State */}
           {isLoading && (
             <div className="py-[60px]">
-              <InlineLoader message="Loading matches..." />
+              <InlineLoader message={modalConfig.loadingMessage} />
             </div>
           )}
 
@@ -131,13 +240,13 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
           {error && (
             <div className="py-[60px]">
               <EmptyState
-                title="Failed to load matches"
+                title={modalConfig.errorTitle}
                 description="Please try again later."
               />
             </div>
           )}
 
-          {/* Matches List - Landscape Table */}
+          {/* Candidates List - Landscape Table */}
           {!isLoading && !error && (
             <>
               {candidates.length > 0 ? (
@@ -160,6 +269,12 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
                         <th className="px-[16px] py-[12px] text-left text-[14px] font-semibold text-[#1C1C1C]">
                           Rank
                         </th>
+                        {/* Status column only for applicants */}
+                        {type === 'applicants' && (
+                          <th className="px-[16px] py-[12px] text-left text-[14px] font-semibold text-[#1C1C1C]">
+                            Status
+                          </th>
+                        )}
                         <th className="px-[16px] py-[12px] text-left text-[14px] font-semibold text-[#1C1C1C]">
                           Location
                         </th>
@@ -202,6 +317,14 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
                               {candidate.rank}
                             </span>
                           </td>
+                          {/* Status cell only for applicants */}
+                          {type === 'applicants' && (
+                            <td className="px-[16px] py-[12px]">
+                              <span className="inline-block px-3 py-1 rounded-[20px] text-[12px] font-medium capitalize bg-[#F8F8F8] text-[#1C1C1C]">
+                                {candidate.statusLabel}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-[16px] py-[12px]">
                             <p className="text-[14px] text-[#1C1C1CBF]">
                               {candidate.location}
@@ -224,8 +347,8 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
                 </div>
               ) : (
                 <EmptyState
-                  title="No matches yet"
-                  description="Candidates will appear here once they're matched with this job posting."
+                  title={modalConfig.emptyTitle}
+                  description={modalConfig.emptyDescription}
                 />
               )}
             </>
@@ -245,5 +368,5 @@ const JobMatchesModal: React.FC<JobMatchesModalProps> = ({
   );
 };
 
-export default JobMatchesModal;
+export default CandidatesListModal;
 

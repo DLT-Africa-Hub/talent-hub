@@ -3,6 +3,7 @@ import { CiMail } from 'react-icons/ci';
 import { HiOutlineBriefcase, HiOutlineLocationMarker } from 'react-icons/hi';
 import { CompanyJob } from '../../data/jobs';
 import { jobStatusLabels } from '../../utils/job.utils';
+import { stripHtmlAndTruncate } from '../../utils/text.utils';
 import { Badge, ImageWithFallback } from '../ui';
 import type { BadgeVariant } from '../ui/Badge';
 
@@ -11,8 +12,10 @@ interface JobCardProps {
     skills?: string[];
     preferedRank?: string;
     createdAt?: string | Date;
+    applicantCount?: number;
   };
   onViewMatches?: (job: CompanyJob) => void;
+  onViewApplicants?: (job: CompanyJob) => void;
 }
 
 // Map job status to badge variant
@@ -23,21 +26,24 @@ const getJobStatusVariant = (status: string): BadgeVariant => {
   return 'default';
 };
 
-const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
-  const handleClick = () => {
+const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches, onViewApplicants }) => {
+  const handleViewMatches = () => {
     onViewMatches?.(job);
   };
 
-  // Truncate description to 120 characters
-  const truncatedDescription =
-    job.description && job.description.length > 150
-      ? `${job.description.substring(0, 150)}...`
-      : job.description || 'No description provided.';
+  const handleViewApplicants = () => {
+    onViewApplicants?.(job);
+  };
+
+  // Strip HTML tags and truncate description
+  const truncatedDescription = job.description
+    ? stripHtmlAndTruncate(job.description, 150)
+    : 'No description provided.';
 
   return (
     <article className="group flex max-w-[560px] flex-col gap-[18px] rounded-[20px] border border-fade bg-white p-[18px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)] transition-all hover:shadow-[0_24px_48px_-24px_rgba(47,81,43,0.18)] hover:border-button/20">
       {/* Image Section */}
-      <div className="relative h-[200px] w-full overflow-hidden rounded-[16px] bg-gradient-to-br from-button/10 to-button/5">
+      <div className="relative h-[200px] w-full overflow-hidden rounded-[16px] bg-linear-to-br from-button/10 to-button/5">
         <ImageWithFallback
           src={job.image}
           alt={job.title}
@@ -116,19 +122,42 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
             {job.matchedCount === 1 ? 'Match' : 'Matches'}
           </span>
         </div>
+        {job.applicantCount !== undefined && (
+          <>
+            <span className="hidden h-[32px] w-px bg-fade sm:block" />
+            <div className="flex min-w-[100px] flex-col gap-[4px]">
+              <span className="font-semibold text-[#1C1C1C]">
+                {job.applicantCount || 0}
+              </span>
+              <span className="text-[13px]">
+                {job.applicantCount === 1 ? 'Applicant' : 'Applicants'}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Footer Section */}
-      <div className="w-full">
+      <div className="w-full flex gap-2">
         <button
           type="button"
-          onClick={handleClick}
+          onClick={handleViewMatches}
           disabled={!onViewMatches}
-          className="w-full flex h-[48px] items-center justify-center gap-[10px] rounded-[12px] bg-button text-[15px] font-medium text-white transition-all hover:bg-[#176300] disabled:opacity-50 disabled:cursor-not-allowed "
+          className="flex-1 flex h-[48px] items-center justify-center gap-[10px] rounded-[12px] bg-button text-[15px] font-medium text-white transition-all hover:bg-[#176300] disabled:opacity-50 disabled:cursor-not-allowed "
         >
           <CiMail className="text-[20px]" />
           View Matches
         </button>
+        {onViewApplicants && (
+          <button
+            type="button"
+            onClick={handleViewApplicants}
+            className="flex-1 flex h-[48px] items-center justify-center gap-[10px] rounded-[12px] border-2 border-button text-[15px] font-medium text-button transition-all hover:bg-button/5 disabled:opacity-50 disabled:cursor-not-allowed "
+          >
+            <CiMail className="text-[20px]" />
+            View Applicants
+          </button>
+        )}
       </div>
     </article>
   );

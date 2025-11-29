@@ -160,6 +160,66 @@ const Assessment: React.FC = () => {
     navigate('/graduate');
   };
 
+  // Prevent copying text
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent Ctrl+C, Ctrl+A, Ctrl+X, Ctrl+V, Ctrl+S, F12 (DevTools)
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === 'c' || e.key === 'C' || e.key === 'a' || e.key === 'A' || 
+         e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V' ||
+         e.key === 's' || e.key === 'S')
+      ) {
+        e.preventDefault();
+        return false;
+      }
+      // Prevent F12 (DevTools)
+      if (e.key === 'F12') {
+        e.preventDefault();
+        return false;
+      }
+      // Prevent Ctrl+Shift+I (DevTools)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+        return false;
+      }
+      // Prevent Ctrl+Shift+J (Console)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, []);
+
   const calculateScore = () => {
     let correct = 0;
     questions.forEach((q, index) => {
@@ -299,11 +359,21 @@ const Assessment: React.FC = () => {
         </div>
 
         <div className="flex flex-col w-full gap-2.5 text-left md:text-center max-w-[542px] mx-auto">
-          <h2 className="font-semibold text-[20px] md:text-[24px] text-[#1C1C1C] leading-relaxed wrap-break-word">
+          <h2 
+            className="font-semibold text-[20px] md:text-[24px] text-[#1C1C1C] leading-relaxed wrap-break-word select-none"
+            style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+          >
             {currentQuestion.question}
           </h2>
           {currentQuestion.skill && (
-            <p className="text-[14px] text-[#1C1C1CBF] font-normal">
+            <p 
+              className="text-[14px] text-[#1C1C1CBF] font-normal select-none"
+              style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+            >
               Skill: {currentQuestion.skill}
             </p>
           )}
@@ -333,7 +403,12 @@ const Assessment: React.FC = () => {
                   <div className="h-full w-full bg-button rounded-full" />
                 )}
               </div>
-              <p className="text-[#1C1C1C] text-[15px] leading-relaxed wrap-break-word text-left flex-1">
+              <p 
+                className="text-[#1C1C1C] text-[15px] leading-relaxed wrap-break-word text-left flex-1 select-none"
+                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+              >
                 {option}
               </p>
             </button>

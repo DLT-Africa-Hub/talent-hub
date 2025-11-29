@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
 import ChangePassword from '../../components/ChangePassword';
-import CompanyProfileEditModal from '../../components/profile/CompanyProfileEditModal';
+import ProfileEditModal from '../../components/profile/ProfileEditModal';
 
 const CompanyProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -76,10 +76,11 @@ const CompanyProfile = () => {
         <ChangePassword />
       </div>
 
-      <CompanyProfileEditModal
+      <ProfileEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        company={company}
+        profileType="company"
+        profile={company}
       />
     </div>
   );

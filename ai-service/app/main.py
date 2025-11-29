@@ -171,7 +171,12 @@ class FeedbackResponse(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "ok", "message": "AI Service is running"}
+    api_key_set = bool(os.getenv("OPENAI_API_KEY"))
+    return {
+        "status": "ok",
+        "message": "AI Service is running",
+        "openai_configured": api_key_set
+    }
 
 
 @app.post("/embed", response_model=EmbedResponse)

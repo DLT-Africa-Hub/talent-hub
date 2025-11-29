@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
+import Graduate from '../models/Graduate.model';
 import Application from '../models/Application.model';
 import Interview, { InterviewStatus } from '../models/Interview.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
@@ -241,6 +242,118 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
+ * Parse preferred rank string into array of ranks
+ * Examples: "A" -> ["A"], "A and B" -> ["A", "B"], "B and C" -> ["B", "C"]
+ */
+const parsePreferredRank = (
+  preferedRank: 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D'
+): string[] => {
+  if (preferedRank.includes(' and ')) {
+    return preferedRank.split(' and ') as string[];
+  }
+  return [preferedRank];
+};
+
+/**
+ * Match graduates based on rank when a job is posted
+ * This creates matches automatically for graduates whose rank matches the job's preferred rank
+ */
+const matchGraduatesByRank = async (
+  jobId: mongoose.Types.ObjectId,
+  preferedRank: 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D',
+  jobTitle: string,
+  companyName: string
+): Promise<void> => {
+  try {
+    // Parse the preferred rank into an array
+    const requiredRanks = parsePreferredRank(preferedRank);
+
+    // Find all graduates with matching ranks
+    const matchingGraduates = await Graduate.find({
+      rank: { $in: requiredRanks },
+    }).select('_id userId').lean();
+
+    if (matchingGraduates.length === 0) {
+      console.log(
+        `[Rank Matching] No graduates found with ranks: ${requiredRanks.join(', ')}`
+      );
+      return;
+    }
+
+    console.log(
+      `[Rank Matching] Found ${matchingGraduates.length} graduates matching ranks: ${requiredRanks.join(', ')}`
+    );
+
+    // Create matches for each graduate
+    const matchPromises = matchingGraduates.map(async (graduate) => {
+      try {
+        // Check if match already exists
+        const existingMatch = await Match.findOne({
+          graduateId: graduate._id,
+          jobId: jobId,
+        });
+
+        if (existingMatch) {
+          console.log(
+            `[Rank Matching] Match already exists for graduate ${graduate._id} and job ${jobId}`
+          );
+          return;
+        }
+
+        // Create new match with a base score of 100 (rank-based match)
+        const match = new Match({
+          graduateId: graduate._id,
+          jobId: jobId,
+          score: 100, // Full score for rank-based match
+          status: 'pending',
+        });
+
+        await match.save();
+
+        // Send notification to graduate
+        // The userId field in Graduate model references User._id
+        const graduateUserId =
+          graduate.userId instanceof mongoose.Types.ObjectId
+            ? graduate.userId.toString()
+            : String(graduate.userId);
+
+        const matchId = match._id instanceof mongoose.Types.ObjectId
+          ? match._id.toString()
+          : String(match._id);
+
+        // Send notification with custom message for rank-based match
+        await createNotification({
+          userId: graduateUserId,
+          type: 'match',
+          title: 'New Job Match Based on Your Rank!',
+          message: `Your rank matched you with "${jobTitle}" at ${companyName}. You've been automatically matched based on your assessment rank.`,
+          relatedId: matchId,
+          relatedType: 'match',
+        });
+
+        console.log(
+          `[Rank Matching] Created match and sent notification for graduate ${graduate._id}`
+        );
+      } catch (error) {
+        console.error(
+          `[Rank Matching] Error creating match for graduate ${graduate._id}:`,
+          error
+        );
+        // Continue with other graduates even if one fails
+      }
+    });
+
+    await Promise.all(matchPromises);
+    console.log(
+      `[Rank Matching] Completed matching for job ${jobId} with ${matchingGraduates.length} graduates`
+    );
+  } catch (error) {
+    console.error('[Rank Matching] Error in matchGraduatesByRank:', error);
+    // Don't throw - matching shouldn't break job creation
+  }
+};
+
+/**
  * Create a new job posting
  * POST /api/companies/jobs
  */
@@ -376,6 +489,17 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 
   await job.save();
 
+  // Match graduates based on rank (automatic matching)
+  // This happens before AI matching to ensure rank-based matches are created immediately
+  if (job.status === 'active') {
+    await matchGraduatesByRank(
+      job._id as mongoose.Types.ObjectId,
+      validatedPreferedRank,
+      validatedTitle,
+      company.companyName
+    );
+  }
+
   // Queue matching since embedding was successfully generated
   queueJobMatching(job._id as mongoose.Types.ObjectId);
 
@@ -473,7 +597,31 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
     matchCountMap.set(jobIdStr, item.count);
   });
 
-  // Add match count to each job
+  // Get applicant counts for each job
+  const applicantCounts = await Application.aggregate([
+    {
+      $match: {
+        jobId: { $in: jobIds },
+      },
+    },
+    {
+      $group: {
+        _id: '$jobId',
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const applicantCountMap = new Map();
+  applicantCounts.forEach((item) => {
+    const jobIdStr =
+      item._id instanceof mongoose.Types.ObjectId
+        ? item._id.toString()
+        : String(item._id);
+    applicantCountMap.set(jobIdStr, item.count);
+  });
+
+  // Add match count and applicant count to each job
   const jobsWithMatches = jobs.map((job) => {
     const jobIdStr =
       job._id instanceof mongoose.Types.ObjectId
@@ -482,6 +630,7 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
     return {
       ...job,
       matchCount: matchCountMap.get(jobIdStr) || 0,
+      applicantCount: applicantCountMap.get(jobIdStr) || 0,
     };
   });
 
@@ -1132,7 +1281,7 @@ export const updateApplicationStatus = async (req: Request, res: Response): Prom
 
   const validatedStatus = validateEnum(
     status,
-    ['accepted', 'rejected', 'reviewed', 'shortlisted', 'interviewed'] as const,
+    ['accepted', 'rejected', 'reviewed', 'shortlisted', 'interviewed', 'offer_sent', 'hired'] as const,
     'Status',
     res
   );
@@ -1164,43 +1313,64 @@ export const updateApplicationStatus = async (req: Request, res: Response): Prom
     return;
   }
 
-  application.status = validatedStatus;
-  application.reviewedAt = new Date();
-  if (notes !== undefined) {
-    application.notes = typeof notes === 'string' ? notes.trim() : undefined;
-  }
-
-  await application.save();
-
-  // Send notifications
-  try {
-    const graduate = application.graduateId as any;
-    if (graduate?.userId) {
-      const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
-        ? graduate.userId.toString()
-        : String(graduate.userId);
-      await createNotification({
-        userId: graduateUserId,
-        type: 'application',
-        title: `Application ${validatedStatus === 'accepted' ? 'Accepted' : validatedStatus === 'rejected' ? 'Rejected' : 'Updated'}`,
-        message: `Your application for "${job.title}" has been ${validatedStatus}.`,
-        relatedId: application._id instanceof mongoose.Types.ObjectId
-          ? application._id.toString()
-          : String(application._id),
-        relatedType: 'application',
-        email: {
-          subject: `Application Update: ${job.title}`,
-          text: `Your application for "${job.title}" at ${company.companyName} has been ${validatedStatus}.`,
-        },
+  // If status is 'accepted', create and send offer
+  if (validatedStatus === 'accepted') {
+    try {
+      const { createAndSendOffer } = await import('../services/offer.service');
+      await createAndSendOffer(applicationId, userId);
+      // Status will be set to 'offer_sent' by the service
+    } catch (error: any) {
+      console.error('Failed to create offer:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to create and send offer' 
       });
+      return;
     }
-  } catch (error) {
-    console.error('Failed to send application status notification:', error);
+  } else {
+    application.status = validatedStatus;
+    application.reviewedAt = new Date();
+    if (notes !== undefined) {
+      application.notes = typeof notes === 'string' ? notes.trim() : undefined;
+    }
+    await application.save();
   }
+
+  // Send notifications (only if not already sent by offer service)
+  if (validatedStatus !== 'accepted') {
+    try {
+      const graduate = application.graduateId as any;
+      if (graduate?.userId) {
+        const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
+          ? graduate.userId.toString()
+          : String(graduate.userId);
+        await createNotification({
+          userId: graduateUserId,
+          type: 'application',
+          title: `Application ${validatedStatus === 'rejected' ? 'Rejected' : 'Updated'}`,
+          message: `Your application for "${job.title}" has been ${validatedStatus}.`,
+          relatedId: application._id instanceof mongoose.Types.ObjectId
+            ? application._id.toString()
+            : String(application._id),
+          relatedType: 'application',
+          email: {
+            subject: `Application Update: ${job.title}`,
+            text: `Your application for "${job.title}" at ${company.companyName} has been ${validatedStatus}.`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send application status notification:', error);
+    }
+  }
+
+  // Reload application to get updated status
+  const updatedApplication = await Application.findById(applicationId).lean();
 
   res.json({
-    message: 'Application status updated successfully',
-    application: application.toObject({ versionKey: false }),
+    message: validatedStatus === 'accepted' 
+      ? 'Application accepted and offer sent successfully' 
+      : 'Application status updated successfully',
+    application: updatedApplication || application.toObject({ versionKey: false }),
   });
 };
 
@@ -1286,6 +1456,26 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       ? graduate.userId
       : new mongoose.Types.ObjectId(graduate.userId);
 
+  // Check if this graduate has an active interview that has already started
+  const now = new Date();
+  const existingActiveInterviews = await Interview.find({
+    graduateId: graduate._id ?? new mongoose.Types.ObjectId(graduate.id),
+    status: { $in: ['scheduled', 'in_progress'] },
+  }).lean();
+
+  // Check if any of these interviews have started (scheduledAt <= now)
+  const activeStartedInterview = existingActiveInterviews.find((interview) => {
+    const interviewStartTime = new Date(interview.scheduledAt);
+    return interviewStartTime <= now;
+  });
+
+  if (activeStartedInterview) {
+    res.status(400).json({ 
+      message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.' 
+    });
+    return;
+  }
+
   const durationRaw = req.body?.durationMinutes;
   const durationNumber =
     typeof durationRaw === 'number'
@@ -1293,9 +1483,19 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       : typeof durationRaw === 'string'
         ? Number(durationRaw)
         : NaN;
-  const durationMinutes = Number.isFinite(durationNumber)
-    ? Math.min(Math.max(Math.floor(durationNumber), 15), 240)
+  
+  // Only allow 15, 30, 45, or 60 minutes
+  const allowedDurations = [15, 30, 45, 60];
+  const durationMinutes = Number.isFinite(durationNumber) && allowedDurations.includes(Math.floor(durationNumber))
+    ? Math.floor(durationNumber)
     : 30;
+  
+  if (!allowedDurations.includes(durationMinutes)) {
+    res.status(400).json({ 
+      message: 'Invalid duration. Allowed values are: 15, 30, 45, or 60 minutes.' 
+    });
+    return;
+  }
 
   let interview = await Interview.findOne({ applicationId: application._id });
   const roomSlug = interview?.roomSlug ?? generateInterviewSlug();
@@ -1450,6 +1650,32 @@ export const getCompanyInterviews = async (req: Request, res: Response): Promise
 
   const skip = (pagination.page - 1) * pagination.limit;
 
+  // First, update any interviews that have passed their end time to 'completed'
+  const now = new Date();
+  await Interview.updateMany(
+    {
+      companyId: company._id,
+      status: { $in: ['scheduled', 'in_progress'] },
+      $expr: {
+        $lte: [
+          {
+            $add: [
+              '$scheduledAt',
+              { $multiply: ['$durationMinutes', 60 * 1000] }
+            ]
+          },
+          now
+        ]
+      }
+    },
+    {
+      $set: {
+        status: 'completed',
+        endedAt: now,
+      }
+    }
+  );
+
   const [interviews, total] = await Promise.all([
     Interview.find(query)
       .populate({
@@ -1480,4 +1706,206 @@ export const getCompanyInterviews = async (req: Request, res: Response): Promise
       pages: Math.ceil(total / pagination.limit),
     },
   });
+};
+
+/**
+ * Get all available graduates grouped by rank
+ * GET /api/companies/graduates
+ */
+export const getAvailableGraduates = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const { page = 1, limit = 20, rank, search, sortBy = 'createdAt' } = req.query;
+
+  const pagination = validatePagination(
+    page as string,
+    limit as string,
+    res
+  );
+  if (!pagination) return;
+
+  try {
+    // Get company ID
+    const company = await Company.findOne({ userId }).lean();
+    if (!company) {
+      res.status(404).json({ message: 'Company profile not found' });
+      return;
+    }
+
+    // Build query
+    const query: any = {
+      rank: { $exists: true, $ne: null }, // Only graduates with a rank
+    };
+
+    // Filter by rank if provided
+    if (rank && typeof rank === 'string') {
+      const rankValues = rank.split(',').map((r) => r.trim());
+      query.rank = { $in: rankValues };
+    }
+
+    // Search filter
+    if (search && typeof search === 'string' && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { position: searchRegex },
+        { location: searchRegex },
+        { 'education.field': searchRegex },
+        { 'education.institution': searchRegex },
+        { skills: { $in: [searchRegex] } },
+      ];
+    }
+
+    // Build sort
+    const sort: any = {};
+    if (sortBy === 'name') {
+      sort.firstName = 1;
+      sort.lastName = 1;
+    } else if (sortBy === 'rank') {
+      sort.rank = 1;
+    } else {
+      sort.createdAt = -1;
+    }
+
+    // Get total count
+    const total = await Graduate.countDocuments(query);
+
+    // Get graduates with pagination
+    const graduates = await Graduate.find(query)
+      .select(
+        'firstName lastName position location skills education rank profilePictureUrl summary expLevel expYears workExperiences cv'
+      )
+      .sort(sort)
+      .skip((pagination.page - 1) * pagination.limit)
+      .limit(pagination.limit)
+      .lean();
+
+    // Get rank distribution for statistics
+    const rankDistribution = await Graduate.aggregate([
+      { $match: { rank: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: '$rank',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const totalWithRank = rankDistribution.reduce(
+      (sum, item) => sum + item.count,
+      0
+    );
+
+    const rankStats = rankDistribution.reduce(
+      (acc, item) => {
+        acc[item._id] = {
+          count: item.count,
+          percentage: totalWithRank > 0 
+            ? Math.round((item.count / totalWithRank) * 100) 
+            : 0,
+        };
+        return acc;
+      },
+      {} as Record<string, { count: number; percentage: number }>
+    );
+
+    // Get graduate IDs
+    const graduateIds = graduates.map((g) => g._id);
+
+    // Find interviews for these graduates with this company
+    // Get all interviews (we'll filter by end time in the logic below)
+    const interviews = await Interview.find({
+      graduateId: { $in: graduateIds },
+      companyId: company._id,
+      status: { $in: ['scheduled', 'in_progress'] },
+    })
+      .select('graduateId scheduledAt status durationMinutes')
+      .lean();
+
+    // Create a map of graduateId -> interview
+    const interviewMap = new Map();
+    interviews.forEach((interview) => {
+      const gradId = interview.graduateId.toString();
+      if (!interviewMap.has(gradId)) {
+        interviewMap.set(gradId, interview);
+      } else {
+        // If multiple interviews, get the earliest one
+        const existing = interviewMap.get(gradId);
+        if (new Date(interview.scheduledAt) < new Date(existing.scheduledAt)) {
+          interviewMap.set(gradId, interview);
+        }
+      }
+    });
+
+    res.json({
+      graduates: graduates.map((g) => {
+        // Find the CV that's on display, or get the first CV if available
+        const displayCV = g.cv?.find((cv) => cv.onDisplay) || g.cv?.[0];
+        
+        const graduateId = g._id.toString();
+        const interview = interviewMap.get(graduateId);
+        
+        // Check if there's a scheduled interview that hasn't passed yet
+        let hasUpcomingInterview = false;
+        let interviewScheduledAt: string | undefined;
+        if (interview) {
+          const scheduledTime = new Date(interview.scheduledAt);
+          const now = new Date();
+          // Check if interview is scheduled and hasn't ended yet
+          // Add duration (in minutes) to scheduled time to get end time
+          // Default duration is 30 minutes if not specified
+          const durationMinutes = interview.durationMinutes || 30;
+          const endTime = new Date(scheduledTime.getTime() + durationMinutes * 60 * 1000);
+          // Interview is considered "upcoming" only if:
+          // 1. It hasn't been cancelled
+          // 2. The end time hasn't passed yet (current time is before end time)
+          hasUpcomingInterview = interview.status !== 'cancelled' && endTime > now;
+          interviewScheduledAt = interview.scheduledAt.toISOString();
+        }
+        
+        return {
+          id: graduateId,
+          firstName: g.firstName,
+          lastName: g.lastName,
+          name: `${g.firstName} ${g.lastName}`,
+          position: g.position,
+          location: g.location,
+          skills: g.skills || [],
+          education: g.education,
+          rank: g.rank,
+          profilePictureUrl: g.profilePictureUrl,
+          summary: g.summary,
+          expLevel: g.expLevel,
+          expYears: g.expYears,
+          workExperiences: g.workExperiences || [],
+          cv: displayCV ? {
+            fileUrl: displayCV.fileUrl,
+            fileName: displayCV.fileName,
+          } : null,
+          hasUpcomingInterview,
+          interviewScheduledAt,
+        };
+      }),
+      rankStatistics: rankStats,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching graduates:', error);
+    res.status(500).json({ message: 'Failed to fetch graduates' });
+  }
 };

@@ -20,8 +20,7 @@ interface JobFormData {
   title: string;
   jobType: 'Full time' | 'Part time' | 'Contract' | 'Internship' | '';
   location: string;
-  salaryMin: string;
-  salaryMax: string;
+  salaryAmount: string;
   description: string;
   skills: string[];
   directContact: boolean;
@@ -38,8 +37,7 @@ type JobPayload = {
   };
   directContact: boolean;
   salary?: {
-    min?: number;
-    max?: number;
+    amount: number;
     currency: string;
   };
   status: 'active';
@@ -55,8 +53,7 @@ const defaultFormData: JobFormData = {
   title: '',
   jobType: '',
   location: '',
-  salaryMin: '',
-  salaryMax: '',
+  salaryAmount: '',
   description: '',
   skills: [],
   directContact: true, // Default to direct contact
@@ -135,8 +132,7 @@ const JobCreationModal = ({
       return;
     }
 
-    const salaryMin = formData.salaryMin ? parseInt(formData.salaryMin, 10) : undefined;
-    const salaryMax = formData.salaryMax ? parseInt(formData.salaryMax, 10) : undefined;
+    const salaryAmount = formData.salaryAmount ? parseInt(formData.salaryAmount, 10) : undefined;
 
     const payload: JobPayload = {
       title: formData.title,
@@ -148,14 +144,12 @@ const JobCreationModal = ({
         skills: formData.skills,
       },
       directContact: formData.directContact,
-      salary:
-        salaryMin || salaryMax
-          ? {
-              min: salaryMin,
-              max: salaryMax,
-              currency: 'USD',
-            }
-          : undefined,
+      salary: salaryAmount
+        ? {
+            amount: salaryAmount * 1000, // Convert from k to actual amount
+            currency: 'USD',
+          }
+        : undefined,
       status: 'active',
     };
 
@@ -272,27 +266,20 @@ const JobCreationModal = ({
 
         <div className="flex flex-col gap-2">
           <label className="text-[#1C1C1C] text-[16px] font-medium">
-            Salary range
+            Salary (Annual)
           </label>
-          <div className="flex items-center gap-2">
-            <Input
-              name="salaryMin"
-              type="number"
-              placeholder="Min (k)"
-              value={formData.salaryMin}
-              onChange={handleFormChange}
-              className="flex-1"
-            />
-            <span className="text-[#1C1C1C80]">-</span>
-            <Input
-              name="salaryMax"
-              type="number"
-              placeholder="Max (k)"
-              value={formData.salaryMax}
-              onChange={handleFormChange}
-              className="flex-1"
-            />
-          </div>
+          <Input
+            name="salaryAmount"
+            type="number"
+            placeholder="e.g., 50 (in thousands)"
+            value={formData.salaryAmount}
+            onChange={handleFormChange}
+            min="0"
+            step="1"
+          />
+          <p className="text-[12px] text-[#1C1C1C80]">
+            Enter salary in thousands (e.g., 50 for $50k)
+          </p>
         </div>
       </div>
 

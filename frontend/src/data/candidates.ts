@@ -28,6 +28,7 @@ export interface CandidateProfile {
   interviewScheduledAt?: string;
   interviewRoomSlug?: string;
   interviewStatus?: string;
+  hasUpcomingInterview?: boolean;
 }
 
 export const companyCandidates: CandidateProfile[] = [

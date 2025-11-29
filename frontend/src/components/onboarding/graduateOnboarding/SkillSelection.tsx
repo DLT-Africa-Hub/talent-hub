@@ -60,6 +60,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         skills: selectedSkills,
         cv:form.cv,
         summary:form.summary,
+        salaryPerAnnum: form.salaryPerAnnum,
         interests: form.interests || [],
         socials: form.socials || {},
         portfolio: form.portfolio?.trim() || undefined,

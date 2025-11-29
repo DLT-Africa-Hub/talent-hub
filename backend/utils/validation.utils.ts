@@ -173,19 +173,17 @@ export const validateOptionalEnum = <T extends string>(
 };
 
 interface SalaryInput {
-  min?: number;
-  max?: number;
+  amount?: number;
   currency?: string;
 }
 
 interface SalaryOutput {
-  min: number;
-  max: number;
+  amount: number;
   currency: string;
 }
 
 /**
- * Validate salary object
+ * Validate salary object (single amount, no min/max)
  */
 export const validateSalary = (
   salary: RequestObjectValue,
@@ -202,28 +200,15 @@ export const validateSalary = (
 
   const salaryObj = salary as SalaryInput;
 
-  if (typeof salaryObj.min !== 'number' || salaryObj.min < 0) {
+  if (typeof salaryObj.amount !== 'number' || salaryObj.amount < 0) {
     res
       .status(400)
-      .json({ message: 'Salary min must be a non-negative number' });
-    return null;
-  }
-
-  if (typeof salaryObj.max !== 'number' || salaryObj.max < 0) {
-    res
-      .status(400)
-      .json({ message: 'Salary max must be a non-negative number' });
-    return null;
-  }
-
-  if (salaryObj.min > salaryObj.max) {
-    res.status(400).json({ message: 'Salary min cannot be greater than max' });
+      .json({ message: 'Salary amount must be a non-negative number' });
     return null;
   }
 
   return {
-    min: salaryObj.min,
-    max: salaryObj.max,
+    amount: salaryObj.amount,
     currency: salaryObj.currency || 'USD',
   };
 };

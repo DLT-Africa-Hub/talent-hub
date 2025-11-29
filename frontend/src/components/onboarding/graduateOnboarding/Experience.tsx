@@ -31,7 +31,9 @@ const Experience: React.FC<Props>  = ({ form, onChange, onNext }) => {
       
         (form.rank?.trim() ?? '') !== '' &&
         (form.yearsOfExperience?.trim() ?? '') !== '' &&
-        (form.summary?.trim() ?? '') 
+        (form.summary?.trim() ?? '') &&
+        form.salaryPerAnnum !== undefined &&
+        form.salaryPerAnnum > 0
        
         // && (form.cv?.length ?? 0) > 0 // <-- uncomment to require resume
       );
@@ -39,6 +41,7 @@ const Experience: React.FC<Props>  = ({ form, onChange, onNext }) => {
       form.rank,
       form.yearsOfExperience,
       form.summary,
+      form.salaryPerAnnum,
     ]);
   
     return (
@@ -99,6 +102,27 @@ const Experience: React.FC<Props>  = ({ form, onChange, onNext }) => {
             options={experienceYears}
             placeholder="Select range"
           />
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[14px] font-medium text-[#1C1C1C]">
+              Expected Salary Per Annum (USD)
+            </label>
+            <input
+              type="number"
+              name="salaryPerAnnum"
+              value={form.salaryPerAnnum || ''}
+              onChange={(e) =>
+                handleInputChange('salaryPerAnnum', e.target.value ? Number(e.target.value) : undefined)
+              }
+              placeholder="e.g., 50000"
+              min="0"
+              step="1000"
+              className="w-full px-4 py-3 rounded-lg border border-[#E5E7EB] text-[16px] focus:outline-none focus:ring-2 focus:ring-button focus:border-transparent"
+            />
+            <p className="text-[12px] text-[#1C1C1C80]">
+              Enter your expected annual salary in USD
+            </p>
+          </div>
   
   
   

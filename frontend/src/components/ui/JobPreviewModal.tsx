@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import LoadingSpinner from './LoadingSpinner';
 import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../../utils/job.utils';
+import { stripHtml } from '../../utils/text.utils';
+import { graduateApi } from '../../api/graduate';
 import api from '../../api/client';
 
 interface JobData {
@@ -40,11 +42,15 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   jobId,
   jobData: preloadedJobData,
   matchScore,
-  hasApplied = false,
+  hasApplied: hasAppliedProp = false,
   onClose,
   onChat,
   onApply,
 }) => {
+  // State for real-time application status check
+  const [hasApplied, setHasApplied] = useState(hasAppliedProp);
+  const [checkingApplied, setCheckingApplied] = useState(false);
+
   // Fetch job details only if not provided
   const {
     data: fetchedJobData,
@@ -72,6 +78,30 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
     },
     enabled: isOpen && !!jobId && !preloadedJobData,
   });
+
+  // Check if graduate has already applied when modal opens
+  useEffect(() => {
+    if (!jobId || !isOpen) return;
+
+    const jobIdStr = jobId; // Store in variable after null check
+    if (!jobIdStr) return;
+
+    const checkApplied = async () => {
+      try {
+        setCheckingApplied(true);
+        const res = await graduateApi.alreadyApplied(jobIdStr);
+        setHasApplied(res.applied); // backend returns { applied: true/false }
+      } catch (err) {
+        console.error('Failed to check application status', err);
+        // Fallback to prop value on error
+        setHasApplied(hasAppliedProp);
+      } finally {
+        setCheckingApplied(false);
+      }
+    };
+
+    checkApplied();
+  }, [jobId, isOpen, hasAppliedProp]);
 
   // Use preloaded data if available, otherwise use fetched data
   const job = preloadedJobData || fetchedJobData;
@@ -200,12 +230,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                   You have already applied for this job. Sit tight — we will notify you when the company responds.
                 </div>
               )}
-              <div
-                className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: job.description || '<p>No description available.</p>',
-                }}
-              />
+              <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
+                {job.description ? stripHtml(job.description) : 'No description available.'}
+              </p>
             </div>
 
             {/* Skills */}

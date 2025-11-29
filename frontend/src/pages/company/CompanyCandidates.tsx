@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BsSearch } from 'react-icons/bs';
 import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
@@ -12,19 +13,19 @@ import {
   formatLocation,
   getCandidateRank,
   DEFAULT_PROFILE_IMAGE,
-  formatJobType,
-  formatSalaryRange,
-  getSalaryType,
 } from '../../utils/job.utils';
 import { LoadingSpinner } from '../../index';
 import { EmptyState } from '../../components/ui';
 import { MdFilterList } from 'react-icons/md';
 
 const CompanyCandidates = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStatus, setActiveStatus] = useState<CandidateStatus | 'all'>(
-    'all'
+    'matched'
   );
+  const [selectedJobId, setSelectedJobId] = useState<string | 'all'>('all');
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -47,6 +48,9 @@ const CompanyCandidates = () => {
 
       return {
         id: app._id || index,
+        applicationId: app._id?.toString(),
+        jobId: job._id?.toString() || job.id?.toString(),
+        jobTitle: job.title,
         name: fullName || 'Unknown Candidate',
         role: job.title || graduate.position || 'Developer',
         status: candidateStatus,
@@ -90,6 +94,8 @@ const CompanyCandidates = () => {
 
       return {
         id: match._id || `match-${index}`,
+        jobId: job._id?.toString() || job.id?.toString(),
+        jobTitle: job.title,
         name: fullName || 'Unknown Candidate',
         role: job.title || graduate.position || 'Developer',
         status: 'matched',
@@ -226,8 +232,32 @@ const CompanyCandidates = () => {
 
   const loading = loadingApplications || loadingMatches;
 
+  // Get unique jobs from candidates
+  const availableJobs = useMemo(() => {
+    const jobMap = new Map<string, { id: string; title: string }>();
+    candidates.forEach((candidate) => {
+      if (candidate.jobId && candidate.jobTitle) {
+        if (!jobMap.has(candidate.jobId)) {
+          jobMap.set(candidate.jobId, {
+            id: candidate.jobId,
+            title: candidate.jobTitle,
+          });
+        }
+      }
+    });
+    return Array.from(jobMap.values());
+  }, [candidates]);
+
+
   const filteredCandidates = useMemo(() => {
     let filtered = candidates;
+
+    // Filter by job
+    if (selectedJobId !== 'all') {
+      filtered = filtered.filter(
+        (candidate: CandidateProfile) => candidate.jobId === selectedJobId
+      );
+    }
 
     // Filter by status
     if (activeStatus !== 'all') {
@@ -246,12 +276,13 @@ const CompanyCandidates = () => {
           candidate.skills.some((skill: string) =>
             skill.toLowerCase().includes(query)
           ) ||
-          candidate.location.toLowerCase().includes(query)
+          candidate.location.toLowerCase().includes(query) ||
+          candidate.jobTitle?.toLowerCase().includes(query)
       );
     }
 
     return filtered;
-  }, [candidates, activeStatus, searchQuery]);
+  }, [candidates, selectedJobId, activeStatus, searchQuery]);
 
   const handlePreview = (candidate: CandidateProfile) => {
     setSelectedCandidate(candidate);
@@ -268,17 +299,109 @@ const CompanyCandidates = () => {
     console.log('Chat clicked for candidate:', candidate.id);
   };
 
+  const scheduleInterviewMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      scheduledAt,
+      durationMinutes,
+    }: {
+      applicationId: string;
+      scheduledAt: string;
+      durationMinutes?: number;
+    }) => {
+      return companyApi.scheduleInterview(applicationId, {
+        scheduledAt,
+        durationMinutes,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews', 'company'] });
+      queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+    },
+  });
+
+  const updateApplicationStatusMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      status,
+      notes,
+    }: {
+      applicationId: string;
+      status: string;
+      notes?: string;
+    }) => {
+      return companyApi.updateApplicationStatus(applicationId, status, notes);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+      // If status is 'accepted', navigate to messages
+      if (variables.status === 'accepted') {
+        navigate('/messages');
+      }
+    },
+  });
+
+  const handleScheduleInterview = useCallback(
+    async (
+      candidate: CandidateProfile,
+      scheduledAt: string,
+      durationMinutes?: number
+    ) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      await scheduleInterviewMutation.mutateAsync({
+        applicationId: candidate.applicationId,
+        scheduledAt,
+        durationMinutes,
+      });
+    },
+    [scheduleInterviewMutation]
+  );
+
+  const handleAccept = useCallback(
+    (candidate: CandidateProfile) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      updateApplicationStatusMutation.mutate({
+        applicationId: candidate.applicationId,
+        status: 'accepted',
+      });
+    },
+    [updateApplicationStatusMutation]
+  );
+
+  const handleReject = useCallback(
+    (candidate: CandidateProfile) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      updateApplicationStatusMutation.mutate({
+        applicationId: candidate.applicationId,
+        status: 'rejected',
+      });
+    },
+    [updateApplicationStatusMutation]
+  );
+
   const handleViewCV = (candidate: CandidateProfile) => {
-    const resume = candidate.cv; // this is an object
+    const resume = candidate.cv;
     if (!resume) {
       console.warn('No resume available for candidate', candidate.id);
       return;
     }
   
-    // Extract fileUrl from the object
-    const url = resume.fileUrl; // <-- this is the actual URL string
+    // Handle both string URL and object with fileUrl property
+    const url = typeof resume === 'string' 
+      ? resume 
+      : (resume as any)?.fileUrl || resume;
+    
     if (!url) {
-      console.warn('Resume object missing fileUrl', resume);
+      console.warn('Resume missing URL', resume);
       return;
     }
   
@@ -306,8 +429,8 @@ const CompanyCandidates = () => {
       </div>
 
       <div className="relative z-10">
-        <div className="flex flex-col gap-[16px] mb-[24px] justify-end items-end">
-          <div className="flex items-center gap-[12px]">
+        <div className="flex flex-col gap-[16px] mb-[24px]">
+          <div className="flex items-center gap-[12px] justify-end">
             <div className=" relative">
               <BsSearch className="absolute left-[16px] top-1/2 -translate-y-1/2 text-[#1C1C1C66] text-[18px]" />
               <input
@@ -326,8 +449,40 @@ const CompanyCandidates = () => {
             </button>
           </div>
 
+          {/* Job Filter Dropdown */}
+          {availableJobs.length > 0 && (
+            <div className="flex items-center gap-[12px] justify-end">
+              <label className="text-[14px] font-medium text-[#1C1C1C]">
+                Filter by Job:
+              </label>
+              <select
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value)}
+                className="px-[16px] py-[10px] rounded-[10px] border border-[#DCE5D5] bg-white text-[14px] text-[#1C1C1C] focus:outline-none focus:border-button transition min-w-[250px]"
+              >
+                <option value="all">All Jobs</option>
+                {availableJobs.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Filter Pills */}
-          <div className="flex gap-[10px] flex-wrap">
+          <div className="flex gap-[10px] flex-wrap justify-end">
+            <button
+              type="button"
+              onClick={() => setActiveStatus('all')}
+              className={`flex items-center gap-[8px] px-[18px] py-[10px] rounded-[9px] border text-[14px] font-medium transition ${
+                activeStatus === 'all'
+                  ? 'border-button bg-[#DBFFC0] text-[#1C1C1C]'
+                  : 'border-[#E5E7EB] bg-white text-[#1C1C1C80] hover:border-[#C5D2BF]'
+              }`}
+            >
+              All
+            </button>
             {candidateStatusFilters.map((filter) => {
               const isActive = filter.value === activeStatus;
               const FilterIcon = filter.icon;
@@ -366,28 +521,92 @@ const CompanyCandidates = () => {
         {/* Loading State */}
         {loading && <LoadingSpinner message="Loading candidates..." fullPage />}
 
-        {/* Candidates Grid */}
+        {/* Candidates Grid - Grouped by Job */}
         {!loading && (
           <>
             {filteredCandidates.length > 0 ? (
-              <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredCandidates.map((candidate: CandidateProfile) => (
-                  <CandidateCard
-                    key={candidate.id}
-                    candidate={candidate}
-                    onPreview={handlePreview}
-                  />
-                ))}
-              </div>
+              selectedJobId === 'all' ? (
+                // Grouped view when showing all jobs
+                <div className="flex flex-col gap-[32px]">
+                  {availableJobs.map((job) => {
+                    const jobCandidates = filteredCandidates.filter(
+                      (c) => c.jobId === job.id
+                    );
+                    if (jobCandidates.length === 0) return null;
+                    
+                    return (
+                      <div key={job.id} className="flex flex-col gap-[16px]">
+                        <div className="flex items-center gap-[12px] pb-[8px] border-b border-fade">
+                          <h2 className="text-[20px] font-semibold text-[#1C1C1C]">
+                            {job.title}
+                          </h2>
+                          <span className="px-[12px] py-[4px] rounded-full bg-[#F8F8F8] text-[12px] font-medium text-[#1C1C1C80]">
+                            {jobCandidates.length} {jobCandidates.length === 1 ? 'candidate' : 'candidates'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {jobCandidates.map((candidate: CandidateProfile) => (
+                            <CandidateCard
+                              key={candidate.id}
+                              candidate={candidate}
+                              onPreview={handlePreview}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Show candidates without job ID at the end */}
+                  {(() => {
+                    const noJobCandidates = filteredCandidates.filter(
+                      (c) => !c.jobId
+                    );
+                    if (noJobCandidates.length === 0) return null;
+                    
+                    return (
+                      <div className="flex flex-col gap-[16px]">
+                        <div className="flex items-center gap-[12px] pb-[8px] border-b border-fade">
+                          <h2 className="text-[20px] font-semibold text-[#1C1C1C]">
+                            Other Candidates
+                          </h2>
+                          <span className="px-[12px] py-[4px] rounded-full bg-[#F8F8F8] text-[12px] font-medium text-[#1C1C1C80]">
+                            {noJobCandidates.length} {noJobCandidates.length === 1 ? 'candidate' : 'candidates'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {noJobCandidates.map((candidate: CandidateProfile) => (
+                            <CandidateCard
+                              key={candidate.id}
+                              candidate={candidate}
+                              onPreview={handlePreview}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                // Single job view when filtered
+                <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredCandidates.map((candidate: CandidateProfile) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      candidate={candidate}
+                      onPreview={handlePreview}
+                    />
+                  ))}
+                </div>
+              )
             ) : (
               <EmptyState
                 title={
-                  searchQuery || activeStatus !== 'all'
+                  searchQuery || activeStatus !== 'all' || selectedJobId !== 'all'
                     ? 'No candidates found'
                     : 'No candidates yet'
                 }
                 description={
-                  searchQuery || activeStatus !== 'all'
+                  searchQuery || activeStatus !== 'all' || selectedJobId !== 'all'
                     ? 'Try adjusting your search or filters to discover more candidates.'
                     : 'Candidates will appear here once they apply to your job postings.'
                 }
@@ -404,6 +623,9 @@ const CompanyCandidates = () => {
         onClose={handleCloseModal}
         onChat={handleChat}
         onViewCV={handleViewCV}
+        onScheduleInterview={handleScheduleInterview}
+        onAccept={handleAccept}
+        onReject={handleReject}
       />
     </div>
   );

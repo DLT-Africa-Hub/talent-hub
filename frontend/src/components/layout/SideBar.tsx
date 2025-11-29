@@ -25,6 +25,7 @@ const pagesByRole: Record<string, Page[]> = {
     { page: 'Dashboard', link: 'company', icon: RiHomeSmile2Line },
     { page: 'Candidates', link: 'candidates', icon: PiUsersThreeLight },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
+    { page: 'Explore', link: 'company/explore', icon: BsSearch },
     { page: 'Interviews', link: 'interviews', icon: HiVideoCamera },
     { page: 'Jobs', link: 'jobs', icon: LuBriefcase },
     { page: 'Notification', link: 'notifications', icon: BiBell },

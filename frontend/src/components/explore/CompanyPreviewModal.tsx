@@ -13,6 +13,8 @@ import CVSelectionStep from './CVSelectionStep';
 import CoverLetterStep from './CoverLetterStep';
 import ConfirmationStep from './ConfirmationStep';
 import graduateApi from '../../api/graduate';
+import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
+import { stripHtml } from '../../utils/text.utils';
 
 interface CompanyPreviewModalProps {
   isOpen: boolean;
@@ -42,18 +44,28 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [currentStep, setCurrentStep] = useState<ApplicationStep>('preview');
   const [applicationData, setApplicationData] = useState<ApplicationData>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasApplied, setHasApplied] = useState(false);
-const [checkingApplied, setCheckingApplied] = useState(true);
+  const [checkingApplied, setCheckingApplied] = useState(true);
+  
+  // Use shared application submission hook
+  const { submitApplication, isSubmitting, submitError, resetError } = useApplicationSubmission({
+    jobId: company?.jobId || '',
+    onSuccess: () => {
+      onApply?.();
+      handleClose();
+    },
+  });
 
 useEffect(() => {
   if (!company?.jobId || !isOpen) return;
 
+  const jobId = company.jobId; // Store in variable after null check
+  if (!jobId) return;
+
   const checkApplied = async () => {
     try {
       setCheckingApplied(true);
-      const res = await graduateApi.alreadyApplied(company.jobId);
+      const res = await graduateApi.alreadyApplied(jobId);
       setHasApplied(res.applied); // backend returns { applied: true/false }
     } catch (err) {
       console.error("Failed to check application status", err);
@@ -122,35 +134,18 @@ useEffect(() => {
   };
 
   const handleFinalSubmit = async () => {
-    if (!company.id) {
-      setSubmitError('Job ID is missing');
+    if (!company.jobId) {
       return;
     }
   
     if (!applicationData.cv) {
-      setSubmitError('Please select a CV');
       return;
     }
   
-    setIsSubmitting(true);
-    setSubmitError(null);
-  
-    try {
-      await graduateApi.applyToJob(company.jobId, {
-        resume: applicationData.cv, 
-        coverLetter: applicationData.coverLetter || "",
-      });
-  
-      onApply?.();
-      handleClose();
-    } catch (error: any) {
-      console.error('Error submitting application:', error);
-      setSubmitError(
-        error.response?.data?.message || 
-        'Failed to submit application. Please try again.'
-      );
-      setIsSubmitting(false);
-    }
+    await submitApplication({
+      resume: applicationData.cv,
+      coverLetter: applicationData.coverLetter || "",
+    });
   };
   
   const handleBookmark = (e: React.MouseEvent) => {
@@ -162,8 +157,7 @@ useEffect(() => {
   const handleClose = () => {
     setCurrentStep('preview');
     setApplicationData({});
-    setIsSubmitting(false);
-    setSubmitError(null);
+    resetError();
     onClose();
   };
 
@@ -204,7 +198,7 @@ useEffect(() => {
             coverLetter={applicationData.coverLetter || ''}
             isAIGenerated={applicationData.isAIGenerated || false}
             isSubmitting={isSubmitting}
-            submitError={submitError}
+            submitError={submitError || undefined}
             onBack={handleBackToCoverLetter}
             onEditCV={handleEditCV}
             onEditCoverLetter={handleEditCoverLetter}
@@ -274,7 +268,7 @@ useEffect(() => {
                 </p>
               </div>
               <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-                {company.description}
+                {company.description ? stripHtml(company.description) : 'No description available.'}
               </p>
             </div>
 

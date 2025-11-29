@@ -40,6 +40,12 @@ const CandidateCard: React.FC<CandidateCardProps> = ({
           <p className="text-[13px] text-[#1C1C1CBF] truncate">
             {candidate.role}
           </p>
+          {candidate.jobTitle && (
+            <p className="text-[11px] text-[#1C1C1C80] truncate mt-[2px] flex items-center gap-1">
+              <span className="font-medium">Job:</span>
+              <span>{candidate.jobTitle}</span>
+            </p>
+          )}
         </div>
         <div
           className={`flex items-center gap-[6px] rounded-full px-[12px] py-[5px] text-[11px] font-medium shrink-0 ${candidateStatusStyles[candidate.status]}`}

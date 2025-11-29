@@ -13,6 +13,7 @@ export { default as CompanyRouteGuard } from './components/CompanyRouteGuard';
 export { default as AccountType } from './pages/AccountType';
 export { default as Layout } from './components/layout/Layout';
 export { default as ExploreCompany } from './pages/talent/ExploreCompany';
+export { default as ExploreGraduates } from './pages/company/ExploreGraduates';
 export { default as GraduateApplications } from './pages/talent/GraduateApplications';
 export { default as CompanyPreview } from './pages/talent/CompanyPreview';
 export { default as CandidatePreview } from './pages/company/CandidatePreview';

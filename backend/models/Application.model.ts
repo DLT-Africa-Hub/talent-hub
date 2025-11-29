@@ -13,6 +13,8 @@ export interface IApplication extends Document {
     | 'shortlisted'
     | 'interviewed'
     | 'accepted'
+    | 'offer_sent'
+    | 'hired'
     | 'rejected'
     | 'withdrawn';
   coverLetter?: string;
@@ -65,6 +67,8 @@ const ApplicationSchema: Schema = new Schema(
         'shortlisted',
         'interviewed',
         'accepted',
+        'offer_sent',
+        'hired',
         'rejected',
         'withdrawn',
       ],

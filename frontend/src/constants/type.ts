@@ -19,6 +19,7 @@ export interface GraduateForm {
     portfolio?: string;
     yearsOfExperience?: string;
     rank?: string;
+    salaryPerAnnum?: number;
     cv: UploadedFile[]; 
     summary?:string;
     createdAt: Date;

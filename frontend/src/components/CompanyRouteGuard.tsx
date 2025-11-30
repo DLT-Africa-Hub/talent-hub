@@ -12,7 +12,6 @@ interface CompanyRouteGuardProps {
 
 const CompanyRouteGuard: React.FC<CompanyRouteGuardProps> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
-  console.log(isAuthenticated,user)
   const location = useLocation();
   const isOnOnboardingRoute = location.pathname === '/company/onboarding';
 

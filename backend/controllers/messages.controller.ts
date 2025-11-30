@@ -21,6 +21,14 @@ export const sendMessage = async (req: any, res: Response) => {
       return res.status(400).json({ message: 'receiverId and message are required' });
     }
 
+    // 🔒 SAFETY FIX — Validate user input to prevent MongoDB operator injection
+    if (
+      typeof receiverId !== 'string' ||
+      !mongoose.Types.ObjectId.isValid(receiverId)
+    ) {
+      return res.status(400).json({ message: 'Invalid receiverId format' });
+    }
+
     // Validate receiver
     const receiverExists = await UserModel.findById(receiverId);
     if (!receiverExists) {

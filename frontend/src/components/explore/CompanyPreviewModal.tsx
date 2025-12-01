@@ -35,6 +35,7 @@ interface ApplicationData {
 }
 
 const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
+  
   isOpen,
   company,
   onClose,

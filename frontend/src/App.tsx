@@ -1,6 +1,5 @@
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 import {
   Home,
@@ -35,10 +34,11 @@ import {
   InterviewRoom,
 } from './index';
 import GuestRoute from './components/GuestRoute';
-import Companies from './pages/admin/Companies';
-import Graduates from './pages/admin/Graduates';
-import Jobs from './pages/admin/Jobs';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import ApplicationStatus from './pages/admin/AppStatus';
+import Jobs from './pages/admin/Jobs';
+import Graduates from './pages/admin/Graduates';
+import Companies from './pages/admin/Companies';
 
 // Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {

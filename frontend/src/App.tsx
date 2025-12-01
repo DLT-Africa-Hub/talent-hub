@@ -35,6 +35,9 @@ import {
   InterviewRoom,
 } from './index';
 import GuestRoute from './components/GuestRoute';
+import Companies from './pages/admin/Companies';
+import Graduates from './pages/admin/Graduates';
+import Jobs from './pages/admin/Jobs';
 
 // Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {
@@ -348,11 +351,42 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['adnin']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
-                  <GraduateDashboard />
+                  <AdminDashboard />
                 </Layout>
             </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/companies"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <Companies />
+                </Layout>
+                </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/graduates"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <Graduates />
+                </Layout>
+                </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <Jobs />
+                </Layout>
+                </ProtectedRoute>
             }
           />
         </Routes>

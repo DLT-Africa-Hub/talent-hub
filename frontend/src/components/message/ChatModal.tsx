@@ -35,10 +35,17 @@ interface ChatModalProps {
 const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const { user } = useAuth();
   const [input, setInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
 
- 
+  // Your Cloudinary config - replace with your actual values
+  const CLOUDINARY_UPLOAD_PRESET = 'your_upload_preset'; // Replace this
+  const CLOUDINARY_CLOUD_NAME = 'your_cloud_name'; // Replace this
+
   const {
     data: messages,
     isLoading,
@@ -50,19 +57,18 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       return Array.isArray(response) ? response : [];
     },
     enabled: !!company?.id,
-    refetchInterval: 3000, 
+    refetchInterval: 3000,
   });
 
- 
   useEffect(() => {
     if (company?.id && messages && messages.length > 0) {
       const hasUnread = messages.some(
-        (msg: Message) => 
-          !msg.read && 
-          msg.receiverId === (user?.id ) &&
+        (msg: Message) =>
+          !msg.read &&
+          msg.receiverId === user?.id &&
           msg.senderId === company.id
       );
-      
+
       if (hasUnread) {
         messageApi.markAsRead(company.id as string).then(() => {
           queryClient.invalidateQueries({ queryKey: ['messages'] });
@@ -72,14 +78,19 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     }
   }, [company?.id, messages, user, queryClient]);
 
- 
   const sendMessageMutation = useMutation({
-    mutationFn: async (messageText: string) => {
+    mutationFn: async (data: {
+      message: string;
+      fileUrl?: string;
+      fileName?: string;
+    }) => {
       if (!company?.id) throw new Error('No conversation selected');
       return await messageApi.sendMessage({
         receiverId: company.id as string,
-        message: messageText,
-        type: 'text',
+        message: data.message,
+        type: data.fileUrl ? 'file' : 'text',
+        fileUrl: data.fileUrl,
+        fileName: data.fileName,
       });
     },
     onSuccess: () => {
@@ -88,19 +99,104 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     },
   });
 
- 
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const handleSend = (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || sendMessageMutation.isPending) return;
+  // Upload file to Cloudinary
+  const uploadToCloudinary = async (file: File): Promise<{ url: string; fileName: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-    sendMessageMutation.mutate(input.trim());
-    setInput('');
+    try {
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setUploadProgress(100);
+      
+      return {
+        url: data.secure_url,
+        fileName: file.name,
+      };
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      throw new Error('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleSend = async (e: FormEvent) => {
+    e.preventDefault();
+    
+    if ((!input.trim() && !selectedFile) || sendMessageMutation.isPending || isUploading) {
+      return;
+    }
+
+    try {
+      let fileUrl: string | undefined;
+      let fileName: string | undefined;
+
+      // Upload file if selected
+      if (selectedFile) {
+        const uploadResult = await uploadToCloudinary(selectedFile);
+        fileUrl = uploadResult.url;
+        fileName = uploadResult.fileName;
+      }
+
+      // Send message with or without file
+      await sendMessageMutation.mutateAsync({
+        message: input.trim() || `Sent a file: ${fileName}`,
+        fileUrl,
+        fileName,
+      });
+
+      // Reset form
+      setInput('');
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Send message error:', error);
+      alert('Failed to send message. Please try again.');
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -112,8 +208,24 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   };
 
   const isMyMessage = (msg: Message) => {
-    const myId = user?.id ;
+    const myId = user?.id;
     return msg.senderId === myId || msg.senderId.toString() === myId?.toString();
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (fileName: string): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    const docExts = ['pdf', 'doc', 'docx', 'txt'];
+    
+    if (imageExts.includes(ext || '')) return '🖼️';
+    if (docExts.includes(ext || '')) return '📄';
+    return '📎';
   };
 
   return (
@@ -196,47 +308,96 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
               return (
                 <div
                   key={msg._id}
-                  className={`max-w-[80%] ${isMine ? 'ml-auto text-left' : ''}`}
+                  className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`inline-block px-3 py-2 text-[14px] font-medium rounded-lg break-words ${
+                    className={`max-w-[80%] px-3 py-2 text-[14px] font-medium rounded-lg break-words ${
                       isMine
                         ? 'bg-[#5CFF0D20] text-[#1C1C1C]'
                         : 'bg-fade text-[#1C1C1C]'
                     }`}
                   >
-                    {msg.message}
+                    <div className="flex flex-col gap-1">
+                      <div>{msg.message}</div>
 
-                    {/* Display file attachment if present */}
-                    {msg.fileUrl && msg.fileName && (
-                      <div className="mt-2 pt-2 border-t border-[#00000020]">
-                        <a
-                          href={msg.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-[#0066CC] hover:underline"
-                        >
-                          <GrAttachment size={14} />
-                          <span className="text-[13px]">{msg.fileName}</span>
-                        </a>
-                      </div>
-                    )}
+                      {/* Display file attachment */}
+                      {msg.fileUrl && msg.fileName && (
+                        <div className="mt-2 pt-2 border-t border-[#00000020]">
+                          <a
+                            href={msg.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-[#0066CC] hover:underline"
+                          >
+                            <span className="text-[16px]">{getFileIcon(msg.fileName)}</span>
+                            <span className="text-[13px] truncate max-w-[200px]">
+                              {msg.fileName}
+                            </span>
+                          </a>
+                        </div>
+                      )}
 
-                    {/* Display offer badge if it's an offer message */}
-                    {msg.type === 'offer' && (
-                      <div className="mt-2 inline-block px-2 py-1 bg-[#5CFF0D] text-white text-[11px] rounded-md font-semibold">
-                        📄 Offer Letter
+                      {/* Display offer badge */}
+                      {msg.type === 'offer' && (
+                        <div className="mt-2 inline-block px-2 py-1 bg-[#5CFF0D] text-white text-[11px] rounded-md font-semibold">
+                          📄 Offer Letter
+                        </div>
+                      )}
+
+                      {/* Timestamp inside message bubble */}
+                      <div className="flex justify-end mt-1">
+                        <span className="text-[10px] text-[#00000066]">
+                          {formatTime(msg.createdAt)}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  <div className={`text-[11px] text-[#00000066] mt-1 ${isMine ? 'text-right' : ''}`}>
-                    {formatTime(msg.createdAt)}
+                    </div>
                   </div>
                 </div>
               );
             })
           )}
         </div>
+
+        {/* File preview */}
+        {selectedFile && (
+          <div className="px-4 py-2 bg-[#F5F5F5] border-t border-fade">
+            <div className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="text-[20px]">{getFileIcon(selectedFile.name)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-[#1C1C1C] truncate">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-[11px] text-[#1C1C1C80]">
+                    {formatFileSize(selectedFile.size)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleRemoveFile}
+                className="p-1 hover:bg-[#00000010] rounded-full transition-colors"
+                aria-label="Remove file"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Upload progress */}
+        {isUploading && (
+          <div className="px-4 py-2 bg-[#F5F5F5] border-t border-fade">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-white rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-[#5CFF0D] h-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <span className="text-[12px] text-[#1C1C1C80]">{uploadProgress}%</span>
+            </div>
+          </div>
+        )}
 
         {/* Input area */}
         <form
@@ -248,13 +409,27 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Write a message"
             className="flex-1 outline-none placeholder:text-[#1C1C1C80] bg-fade px-3 py-2 rounded-[20px] text-[14px]"
-            disabled={sendMessageMutation.isPending}
+            disabled={sendMessageMutation.isPending || isUploading}
+          />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="image/*,.pdf,.doc,.docx,.txt,.zip"
           />
 
           <button
             type="button"
-            className="p-2 rounded-full bg-fade cursor-pointer text-[#1C1C1C80] hover:bg-[#00000010] transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+            className={`p-2 rounded-full cursor-pointer transition-colors ${
+              selectedFile
+                ? 'bg-[#5CFF0D20] text-[#5CFF0D]'
+                : 'bg-fade text-[#1C1C1C80] hover:bg-[#00000010]'
+            }`}
             aria-label="Attach file"
+            disabled={isUploading}
           >
             <GrAttachment size={18} />
           </button>
@@ -263,7 +438,11 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
             type="submit"
             className="p-2 rounded-full cursor-pointer bg-fade text-[#1C1C1C80] disabled:opacity-50 hover:bg-[#00000010] transition-colors"
             aria-label="Send message"
-            disabled={sendMessageMutation.isPending || !input.trim()}
+            disabled={
+              sendMessageMutation.isPending ||
+              isUploading ||
+              (!input.trim() && !selectedFile)
+            }
           >
             <AiOutlineSend size={18} />
           </button>

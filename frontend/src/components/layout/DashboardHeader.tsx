@@ -172,7 +172,7 @@ const DashboardHeader = () => {
 
   return (
     <div className="hidden lg:flex items-center gap-[32px] sticky z-10 top-0 w-full h-[100px] font-inter">
-      <div className="p-[30px] h-full flex items-center justify-center gap-[6px] text-[18px] font-medium text-[#1C1C1C] border border-fade rounded-br-[16px] bg-[#F8F8F8] w-[210px]">
+      <div className="p-[30px] h-full flex items-center justify-center gap-[6px] text-[18px] font-medium text-[#1C1C1C] border border-fade rounded-br-[16px] bg-[#F8F8F8] w-[240px]">
         <RiHomeSmile2Line className="text-button text-[22px]" />
         <p>Talent Match</p>
       </div>

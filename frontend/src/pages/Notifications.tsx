@@ -141,7 +141,7 @@ const Notifications: React.FC = () => {
         }
       } else if (user?.role === 'company') {
         if (notification.relatedType === 'application' && notification.relatedId) {
-          navigate(`/candidate-preview/${notification.relatedId}`);
+          navigate(`/candidates/${notification.relatedId}`);
         } else if (notification.type === 'application' && notification.relatedId) {
           navigate(`/candidate-preview/${notification.relatedId}`);
         } else if (notification.relatedType === 'match' && notification.relatedId) {

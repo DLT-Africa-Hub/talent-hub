@@ -10,6 +10,7 @@ import adminRoutes from './routes/admin.routes';
 import notificationRoutes from './routes/notification.routes';
 import interviewRoutes from './routes/interview.routes';
 import cloudinaryRoutes from './routes/cloudinary.routes';
+import messageRoutes from './routes/message.routes';
 import { responseFormatter } from './middleware/response.middleware';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
@@ -73,6 +74,7 @@ app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/cloudinary`, cloudinaryRoutes);
 app.use(`${API_PREFIX}/interviews`, interviewRoutes);
+app.use(`${API_PREFIX}/messages`, messageRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

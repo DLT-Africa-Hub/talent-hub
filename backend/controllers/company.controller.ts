@@ -1526,10 +1526,6 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
     interview.updatedBy = new mongoose.Types.ObjectId(userId);
   }
 
-  if (!interview) {
-    res.status(500).json({ message: 'Unable to schedule interview' });
-    return;
-  }
 
   const persistedInterview = interview as NonNullable<typeof interview>;
   const interviewId = persistedInterview._id as mongoose.Types.ObjectId;

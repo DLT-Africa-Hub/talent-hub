@@ -35,6 +35,9 @@ import {
   InterviewRoom,
 } from './index';
 import GuestRoute from './components/GuestRoute';
+import Companies from './pages/admin/Companies';
+import Graduates from './pages/admin/Graduates';
+import Jobs from './pages/admin/Jobs';
 
 // Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {
@@ -261,6 +264,20 @@ function App() {
             }
           />
           <Route
+            path="/candidates/:id"
+            element={
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CompanyCandidates />
+                    </Layout>
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/messages"
             element={
               <ProtectedRoute allowedRoles={['company', 'graduate']}>
@@ -330,6 +347,47 @@ function App() {
           <Route
             path="/explore-preview/:id"
             element={<ExplorePreviewRedirect />}
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
+            </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/companies"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <Companies />
+                </Layout>
+                </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/graduates"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <Graduates />
+                </Layout>
+                </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <Jobs />
+                </Layout>
+                </ProtectedRoute>
+            }
           />
         </Routes>
       </div>

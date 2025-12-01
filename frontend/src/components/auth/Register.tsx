@@ -11,7 +11,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register } = useAuth();
+  const { register, ingestAuthPayload } = useAuth(); 
   const navigate = useNavigate();
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
@@ -27,7 +27,10 @@ const Register = () => {
           }
         );
 
-        console.log(res.data);
+    
+
+       
+        ingestAuthPayload(res.data);
 
         if (role === 'graduate') {
           navigate('/onboarding');
@@ -117,7 +120,6 @@ const Register = () => {
         isLoading={isSubmitting}
         loadingText="Registering..."
       />
-
     </>
   );
 };

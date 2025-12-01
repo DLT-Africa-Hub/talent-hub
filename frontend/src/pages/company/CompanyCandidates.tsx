@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BsSearch } from 'react-icons/bs';
 import CandidateCard from '../../components/company/CandidateCard';
@@ -19,11 +19,12 @@ import { EmptyState } from '../../components/ui';
 import { MdFilterList } from 'react-icons/md';
 
 const CompanyCandidates = () => {
+  const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStatus, setActiveStatus] = useState<CandidateStatus | 'all'>(
-    'matched'
+    'all'
   );
   const [selectedJobId, setSelectedJobId] = useState<string | 'all'>('all');
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
@@ -293,6 +294,27 @@ const CompanyCandidates = () => {
     setIsModalOpen(false);
     setSelectedCandidate(null);
   };
+
+ 
+
+  useEffect(() => {
+    if (!id) return; 
+    if (candidates.length === 0) return; 
+  
+    const candidate = candidates.find(c => c.id?.toString() === id);
+  
+    if (candidate) {
+      setSelectedCandidate(candidate);
+      setIsModalOpen(true);
+  
+     
+      setTimeout(() => {
+        navigate("/candidates", { replace: true });
+      }, 300); 
+    }
+  }, [id, candidates]);
+  
+  
 
   const handleChat = (candidate: CandidateProfile) => {
     // TODO: Navigate to chat

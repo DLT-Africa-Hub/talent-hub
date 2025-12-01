@@ -30,12 +30,14 @@ const Messages: React.FC = () => {
     data: messagesResponse,
     isLoading: loading,
     error: queryError,
+    refetch,
   } = useQuery({
     queryKey: ['messages'],
     queryFn: async () => {
       const response = await messageApi.getMessages({ page: 1, limit: 100 });
       return response;
     },
+    refetchInterval: 10000, // Refetch every 10 seconds for new conversations
   });
 
   const conversations = useMemo(() => {
@@ -56,19 +58,22 @@ const Messages: React.FC = () => {
       let image = DEFAULT_COMPANY_IMAGE;
 
       if (user?.role === 'graduate') {
-        const company = conv.company || conv.companyId || {};
-        name = company.companyName || company.name || 'Company';
-        image = company.logo || company.image || DEFAULT_COMPANY_IMAGE;
+        // User is graduate, so show company info
+        const company = conv.company || {};
+        name = company.companyName || 'Company';
+        role = company.industry || '';
+        image = DEFAULT_COMPANY_IMAGE; // Use default since no logo field
       } else if (user?.role === 'company') {
-        const graduate = conv.graduate || conv.graduateId || {};
+        // User is company, so show graduate info
+        const graduate = conv.graduate || {};
         const firstName = graduate.firstName || '';
         const lastName = graduate.lastName || '';
         name = `${firstName} ${lastName}`.trim() || 'Graduate';
-        role = graduate.position || graduate.role || '';
-        image = graduate.profilePictureUrl || graduate.image || DEFAULT_PROFILE_IMAGE;
+        role = graduate.position || '';
+        image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
       }
 
-      const lastMessage = conv.lastMessage?.text || conv.lastMessage || '';
+      const lastMessage = conv.lastMessage?.text || conv.lastMessage?.message || '';
       const lastMessageTime = conv.lastMessage?.createdAt
         ? new Date(conv.lastMessage.createdAt)
         : conv.updatedAt
@@ -111,9 +116,9 @@ const Messages: React.FC = () => {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
     });
   }, []);
 
@@ -130,7 +135,9 @@ const Messages: React.FC = () => {
     setIsOpen(false);
     setActiveChat(null);
     navigate('/messages', { replace: true });
-  }, [navigate]);
+    // Refetch messages to update unread counts
+    refetch();
+  }, [navigate, refetch]);
 
   useEffect(() => {
     if (id && conversations.length > 0) {
@@ -150,7 +157,7 @@ const Messages: React.FC = () => {
   }, [queryError]);
 
   return (
-    <div className="py-[20px] relative min-h-screen px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start">
+    <div className="py-[20px] relative min-h-screen px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start">
       <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
         <div className="flex flex-col gap-[30px] lg:flex-row justify-between items-start lg:items-center">
           <p className="font-medium text-[22px] text-[#1C1C1C]">Messages</p>
@@ -190,12 +197,13 @@ const Messages: React.FC = () => {
                         src={conversation.image}
                         alt={conversation.name}
                         className="object-cover w-full h-full"
+                        onError={(e) => {
+                          // Fallback to default image if image fails to load
+                          e.currentTarget.src = user?.role === 'graduate' 
+                            ? DEFAULT_COMPANY_IMAGE 
+                            : DEFAULT_PROFILE_IMAGE;
+                        }}
                       />
-                      {conversation.unreadCount && conversation.unreadCount > 0 && (
-                        <span className="absolute top-[-4px] right-[-4px] flex items-center justify-center min-w-[20px] h-[20px] px-[6px] rounded-full bg-button text-white text-[10px] font-semibold">
-                          {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
-                        </span>
-                      )}
                     </div>
                     <div className="flex flex-col gap-1 lg:gap-[5px]">
                       <p className="text-[#1C1C1C] font-medium text-[15px] lg:text-[20px]">
@@ -214,11 +222,18 @@ const Messages: React.FC = () => {
                     </div>
                   </div>
 
-                  {conversation.lastMessageTime && (
-                    <p className="text-[#1C1C1C80] font-normal text-[13px] lg:text-[18px]">
-                      {formatTime(conversation.lastMessageTime)}
-                    </p>
-                  )}
+                  <div className="flex flex-col items-end gap-[8px]">
+                    {conversation.lastMessageTime && (
+                      <p className="text-[#1C1C1C80] font-normal text-[13px] lg:text-[18px]">
+                        {formatTime(conversation.lastMessageTime)}
+                      </p>
+                    )}
+                    {conversation.unreadCount > 0 && (
+                      <span className="flex items-center justify-center min-w-[20px] h-[20px] px-[6px] rounded-full bg-button text-white text-[10px] font-semibold">
+                        {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

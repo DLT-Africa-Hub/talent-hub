@@ -6,13 +6,15 @@ import { LuBriefcase } from 'react-icons/lu';
 import { RiHomeSmile2Line } from 'react-icons/ri';
 import { IconType } from 'react-icons';
 import { BiBell, BiChevronDown, BiLogOut, BiUser } from 'react-icons/bi';
-import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
+import { HiOutlineChatBubbleLeftRight, HiOutlineUsers } from 'react-icons/hi2';
 import { HiVideoCamera } from 'react-icons/hi';
-import { PiUsersThreeLight } from 'react-icons/pi';
+import { PiBuildingApartmentLight, PiUsersThreeLight } from 'react-icons/pi';
 import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
 import { messageApi } from '../../api/message';
 import { useNotifications } from '../../hooks/useNotifications';
+import { FaArrowTrendUp } from 'react-icons/fa6';
+import { GoGear } from 'react-icons/go';
 
 interface Page {
   page: string;
@@ -30,6 +32,7 @@ const pagesByRole: Record<string, Page[]> = {
     { page: 'Jobs', link: 'jobs', icon: LuBriefcase },
     { page: 'Notification', link: 'notifications', icon: BiBell },
   ],
+
   graduate: [
     { page: 'Dashboard', link: 'graduate', icon: RiHomeSmile2Line },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
@@ -37,6 +40,16 @@ const pagesByRole: Record<string, Page[]> = {
     { page: 'Explore', link: 'explore', icon: BsSearch },
     { page: 'Applications', link: 'applications', icon: LuBriefcase },
     { page: 'Notification', link: 'notifications', icon: BiBell },
+  ],
+
+  admin: [
+    { page: 'Dashboard', link: 'admin', icon: RiHomeSmile2Line },
+    { page: 'Companies', link: 'admin/companies', icon: PiBuildingApartmentLight },
+    { page: 'Talents', link: 'admin/talents', icon: HiOutlineUsers },
+    { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
+    { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
+    { page: 'Notifications', link: 'admin/notifications', icon: BiBell },
+    { page: 'Settings', link: 'admin/settings', icon: GoGear },
   ],
 };
 

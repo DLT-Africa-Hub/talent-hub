@@ -38,6 +38,7 @@ import GuestRoute from './components/GuestRoute';
 import Companies from './pages/admin/Companies';
 import Graduates from './pages/admin/Graduates';
 import Jobs from './pages/admin/Jobs';
+import ApplicationStatus from './pages/admin/AppStatus';
 
 // Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {
@@ -360,7 +361,7 @@ function App() {
           />
           
           <Route
-            path="/companies"
+            path="/admin/companies"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
@@ -370,7 +371,7 @@ function App() {
             }
           />
           <Route
-            path="/admin/graduates"
+            path="/admin/talents"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
@@ -385,6 +386,16 @@ function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
                   <Jobs />
+                </Layout>
+                </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app-status"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <ApplicationStatus />
                 </Layout>
                 </ProtectedRoute>
             }

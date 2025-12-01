@@ -1,6 +1,7 @@
 import { SearchIcon } from 'lucide-react'
 import React from 'react'
 import { IoFilterOutline } from 'react-icons/io5'
+import JobItem from '../../components/admin/jobs/job-item';
 
 export interface JobItem {
   id: string;
@@ -135,8 +136,8 @@ const Jobs = () => {
   return (
     <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
     <div className='flex flex-col gap-2.5'>
-    <p className="text-[#1C1C1C] font-semibold text-[26px]">Graduates</p>
-    <p className='text-[#1C1C1CBF] font-medium text-[18px]'>Manage all registered graduates</p>
+    <p className="text-[#1C1C1C] font-semibold text-[26px]">Jobs</p>
+    <p className='text-[#1C1C1CBF] font-medium text-[18px]'>Manage all job postings</p>
     </div>
 
     <div className='flex flex-col gap-[18px] w-full'>
@@ -150,9 +151,15 @@ const Jobs = () => {
          <IoFilterOutline/>
        </div>
 
-     
+    
 
      </div>
+   
+     </div>
+     <div className='flex flex-col gap-[20px] w-full'>
+     {jobsData.map((job) => (
+      <JobItem applicants={job.applicants} company={job.company} id={job.id} location={job.location} postedAt={job.postedAt} salary={job.salary} status={job.status} title={job.title} views={job.views} key={job.id}/>
+     ))}
      </div>
      </div>
   )

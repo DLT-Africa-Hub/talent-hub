@@ -52,7 +52,6 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
     const lastScore = assessmentData.lastScore;
     const needsRetake = assessmentData.needsRetake;
 
-    // User has passed if they have a score >= 60 and don't need to retake
     return (
       lastScore !== undefined &&
       lastScore >= 60 &&

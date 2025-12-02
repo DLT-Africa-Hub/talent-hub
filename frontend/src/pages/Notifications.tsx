@@ -3,24 +3,42 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../api/notification';
+import { companyApi } from '../api/company';
+import { ApiNotification, ApiApplication, ApiResume } from '../types/api';
 import {
   DEFAULT_COMPANY_IMAGE,
   formatNotificationDate,
   getCompanyName,
   mapNotificationType,
+  mapApplicationStatusToCandidateStatus,
+  formatExperience,
+  formatLocation,
+  getCandidateRank,
+  DEFAULT_PROFILE_IMAGE,
 } from '../utils/job.utils';
 import { LoadingSpinner } from '../index';
 import { SearchBar, EmptyState } from '../components/ui';
 import NotificationDetailsModal from '../components/notifications/NotificationDetailsModal';
+import CandidatePreviewModal from '../components/company/CandidatePreviewModal';
+import JobPreviewModal from '../components/ui/JobPreviewModal';
 import { NotificationItem } from '../types/notification';
+import { CandidateProfile } from '../data/candidates';
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
-  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [selectedNotification, setSelectedNotification] =
+    useState<NotificationItem | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // Modal states
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateProfile | null>(null);
+  const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [isJobModalOpen, setIsJobModalOpen] = useState(false);
 
   const {
     data: notificationsData,
@@ -49,7 +67,7 @@ const Notifications: React.FC = () => {
   const notifications = useMemo(() => {
     if (!notificationsData) return [];
 
-    return notificationsData.map((notif: any): NotificationItem => {
+    return notificationsData.map((notif: ApiNotification): NotificationItem => {
       const createdAt =
         typeof notif.createdAt === 'string'
           ? new Date(notif.createdAt)
@@ -114,11 +132,23 @@ const Notifications: React.FC = () => {
   }, [filtered]);
 
   const handleNotificationAction = useCallback(
-    (notification: NotificationItem) => {
+    async (notification: NotificationItem) => {
+      setIsDetailsOpen(false);
+      setSelectedNotification(null);
+
       if (user?.role === 'graduate') {
-        if (notification.relatedType === 'job' && notification.relatedId) {
-          navigate(`/explore?preview=${notification.relatedId}`);
-        } else if (notification.relatedType === 'match' && notification.relatedId) {
+        if (
+          (notification.relatedType === 'job' ||
+            notification.type === 'job_alert') &&
+          notification.relatedId
+        ) {
+          // Open job preview modal
+          setSelectedJobId(notification.relatedId.toString());
+          setIsJobModalOpen(true);
+        } else if (
+          notification.relatedType === 'match' &&
+          notification.relatedId
+        ) {
           // For match notifications, navigate to explore with the match ID
           navigate(`/explore?match=${notification.relatedId}`);
         } else if (notification.type === 'message' && notification.relatedId) {
@@ -133,18 +163,91 @@ const Notifications: React.FC = () => {
           notification.relatedId
         ) {
           navigate(`/applications`);
-        } else if (notification.type === 'match' && notification.relatedId) {
-          // Fallback for match type
-          navigate(`/explore?match=${notification.relatedId}`);
-        } else if (notification.type === 'application' && notification.relatedId) {
-          navigate(`/applications`);
         }
       } else if (user?.role === 'company') {
-        if (notification.relatedType === 'application' && notification.relatedId) {
-          navigate(`/candidates/${notification.relatedId}`);
-        } else if (notification.type === 'application' && notification.relatedId) {
-          navigate(`/candidate-preview/${notification.relatedId}`);
-        } else if (notification.relatedType === 'match' && notification.relatedId) {
+        if (
+          (notification.relatedType === 'application' ||
+            notification.type === 'application') &&
+          notification.relatedId
+        ) {
+          // Fetch application data and open candidate preview modal
+          try {
+            const response = await companyApi.getApplications({
+              page: 1,
+              limit: 100,
+            });
+            const applications = response.applications || [];
+            // Convert both IDs to strings for comparison
+            const notifIdStr =
+              notification.relatedId?.toString() || notification.relatedId;
+            const application = applications.find((app: ApiApplication) => {
+              const appId =
+                app._id?.toString() || app._id || app.id?.toString() || app.id;
+              return appId === notifIdStr;
+            });
+
+            if (application) {
+              const graduate = application.graduateId || {};
+              const job = application.jobId || {};
+              const candidateStatus = mapApplicationStatusToCandidateStatus(
+                application.status
+              );
+              const fullName =
+                `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+
+              const candidate: CandidateProfile = {
+                id: application._id,
+                applicationId: application._id?.toString(),
+                jobId: job._id?.toString() || job.id?.toString(),
+                jobTitle: job.title,
+                name: fullName || 'Unknown Candidate',
+                role: job.title || graduate.position || 'Developer',
+                status: candidateStatus,
+                rank: getCandidateRank(graduate.rank),
+                statusLabel:
+                  candidateStatus.charAt(0).toUpperCase() +
+                  candidateStatus.slice(1),
+                experience: formatExperience(graduate.expYears || 0),
+                location: formatLocation(job.location || graduate.location),
+                skills: (graduate.skills || []).slice(0, 3),
+                image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+                summary: graduate.summary,
+                cv: application.resume,
+                matchPercentage: application.matchId?.score
+                  ? application.matchId.score > 1
+                    ? Math.min(100, Math.round(application.matchId.score))
+                    : Math.min(100, Math.round(application.matchId.score * 100))
+                  : undefined,
+                jobType: job.jobType,
+                salary: job.salary,
+                salaryPerAnnum: graduate.salaryPerAnnum,
+                directContact: job.directContact !== false,
+              };
+
+              setSelectedCandidate(candidate);
+              setIsCandidateModalOpen(true);
+            } else {
+              console.warn('Application not found for notification:', {
+                relatedId: notification.relatedId,
+                relatedType: notification.relatedType,
+                type: notification.type,
+                totalApplications: applications.length,
+                applicationIds: applications
+                  .map((app: ApiApplication) => app._id?.toString() || app._id)
+                  .slice(0, 5),
+              });
+              // Fallback to navigation
+              navigate(`/candidates`);
+            }
+          } catch (error) {
+            console.error('Failed to fetch application:', error);
+            // Fallback to navigation
+            navigate(`/candidates`);
+          }
+        } else if (
+          notification.relatedType === 'match' &&
+          notification.relatedId
+        ) {
           navigate(`/candidates`);
         } else if (notification.type === 'match' && notification.relatedId) {
           navigate(`/candidates`);
@@ -155,16 +258,19 @@ const Notifications: React.FC = () => {
           notification.relatedType === 'interview'
         ) {
           navigate('/interviews');
-        } else if (notification.relatedType === 'job' && notification.relatedId) {
+        } else if (
+          notification.relatedType === 'job' &&
+          notification.relatedId
+        ) {
           navigate(`/jobs`);
-        } else if (notification.type === 'job_alert' && notification.relatedId) {
-          navigate(`/jobs`);
-        } else if (notification.type === 'system' && notification.relatedType === 'job' && notification.relatedId) {
+        } else if (
+          (notification.type === 'job_alert' || 
+           (notification.type === 'system' && notification.relatedType === 'job')) &&
+          notification.relatedId
+        ) {
           navigate(`/jobs`);
         }
       }
-      setIsDetailsOpen(false);
-      setSelectedNotification(null);
     },
     [navigate, user?.role]
   );
@@ -219,7 +325,7 @@ const Notifications: React.FC = () => {
 
   const error = useMemo(() => {
     if (!queryError) return null;
-    const err = queryError as any;
+    const err = queryError as { response?: { data?: { message?: string } }; message?: string };
     return (
       err.response?.data?.message ||
       'Failed to load notifications. Please try again.'
@@ -299,6 +405,55 @@ const Notifications: React.FC = () => {
         notification={selectedNotification}
         onViewAction={handleNotificationAction}
       />
+
+      {/* Candidate Preview Modal (for companies) */}
+      <CandidatePreviewModal
+        isOpen={isCandidateModalOpen}
+        candidate={selectedCandidate}
+        onClose={() => {
+          setIsCandidateModalOpen(false);
+          setSelectedCandidate(null);
+        }}
+        onChat={() => {
+          if (selectedCandidate?.applicationId) {
+            navigate(`/messages/${selectedCandidate.applicationId}`);
+          }
+        }}
+        onViewCV={(candidate) => {
+          const resume = candidate?.cv;
+          if (resume) {
+            const url =
+              typeof resume === 'string'
+                ? resume
+                : (resume as ApiResume)?.fileUrl || resume;
+            if (url) {
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }
+          }
+        }}
+      />
+
+      {/* Job Preview Modal (for graduates) */}
+      {selectedJobId && (
+        <JobPreviewModal
+          isOpen={isJobModalOpen}
+          jobId={selectedJobId}
+          onClose={() => {
+            setIsJobModalOpen(false);
+            setSelectedJobId(null);
+          }}
+          onChat={() => {
+            if (selectedJobId) {
+              navigate(`/messages`);
+            }
+          }}
+          onApply={() => {
+            if (selectedJobId) {
+              navigate(`/explore?preview=${selectedJobId}`);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

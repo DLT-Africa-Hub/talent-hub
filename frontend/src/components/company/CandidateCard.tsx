@@ -4,6 +4,7 @@ import { CandidateProfile } from '../../data/candidates';
 import {
   candidateStatusStyles,
   candidateRankBadgeStyles,
+  formatSalaryPerAnnum,
 } from '../../utils/job.utils';
 
 interface CandidateCardProps {
@@ -69,6 +70,11 @@ const CandidateCard: React.FC<CandidateCardProps> = ({
             {candidate.location}
           </span>
         </div>
+        {candidate.salaryPerAnnum && (
+          <div className="text-[11px] font-medium text-[#1C1C1CE5]">
+             {formatSalaryPerAnnum(candidate.salaryPerAnnum)}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-[8px] text-[11px] font-medium text-[#1C1C1CE5]">
           {candidate.skills.map((skill) => (
             <span

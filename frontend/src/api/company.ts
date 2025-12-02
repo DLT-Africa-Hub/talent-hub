@@ -7,18 +7,18 @@ export const companyApi = {
     return response.data;
   },
 
-  createProfile: async (profileData: any) => {
+  createProfile: async (profileData: Record<string, unknown>) => {
     const response = await api.post('/companies/profile', profileData);
     return response.data;
   },
 
-  updateProfile: async (profileData: any) => {
+  updateProfile: async (profileData: Record<string, unknown>) => {
     const response = await api.put('/companies/profile', profileData);
     return response.data;
   },
 
   // Job Management
-  createJob: async (jobData: any) => {
+  createJob: async (jobData: Record<string, unknown>) => {
     const response = await api.post('/companies/jobs', jobData);
     return response.data;
   },
@@ -33,7 +33,7 @@ export const companyApi = {
     return response.data;
   },
 
-  updateJob: async (jobId: string, jobData: any) => {
+  updateJob: async (jobId: string, jobData: Record<string, unknown>) => {
     const response = await api.put(`/companies/jobs/${jobId}`, jobData);
     return response.data;
   },

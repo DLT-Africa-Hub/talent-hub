@@ -1,15 +1,16 @@
 import React from 'react';
 import { Graduate } from '../../../pages/admin/Graduates';
 import { ImageWithFallback } from '../../ui';
+import { formatSalaryPerAnnum } from '../../../utils/job.utils';
 
 const GraduateCard: React.FC<Graduate> = ({
-  id,
   name,
   role,
   email,
   matchScore,
   skills,
   avatar,
+  salaryPerAnnum,
 }) => {
   const progressWidth = `${matchScore}%`;
 
@@ -58,6 +59,16 @@ const GraduateCard: React.FC<Graduate> = ({
             ))}
           </div>
         </div>
+        {salaryPerAnnum && (
+          <div className="flex flex-col gap-[10px]">
+            <div className="flex w-full items-center justify-between">
+              <p className="text-[#1C1C1CBF] text-[14px] font-sf">Expected Salary</p>
+              <p className="text-button text-[14px] font-sf">
+                {formatSalaryPerAnnum(salaryPerAnnum)}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <button className="bg-button text-white p-[18px] rounded-[10px]">

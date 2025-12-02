@@ -7,7 +7,8 @@ import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
 import { CandidateProfile } from '../../data/candidates';
-import { formatExperience, DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
+import { formatExperience, DEFAULT_PROFILE_IMAGE, formatSalaryPerAnnum } from '../../utils/job.utils';
+import { WorkExperience } from '../../types/api';
 
 interface Graduate {
   id: string;
@@ -28,11 +29,12 @@ interface Graduate {
   summary?: string;
   expLevel: string;
   expYears: number;
-  workExperiences: any[];
+  workExperiences: WorkExperience[];
   cv?: {
     fileUrl: string;
     fileName: string;
   } | null;
+  salaryPerAnnum?: number;
   hasUpcomingInterview?: boolean;
   interviewScheduledAt?: string;
 }
@@ -141,6 +143,7 @@ const ExploreGraduates = () => {
         summary: graduate.summary,
         matchPercentage: undefined,
         cv: graduate.cv?.fileUrl,
+        salaryPerAnnum: graduate.salaryPerAnnum,
         interviewScheduledAt: graduate.interviewScheduledAt,
         hasUpcomingInterview: graduate.hasUpcomingInterview,
       };
@@ -399,13 +402,18 @@ const ExploreGraduates = () => {
                   </div>
                   {graduate.location && (
                     <p className="text-[14px] text-[#1C1C1C80] mb-3">
-                      📍 {graduate.location}
+                      {graduate.location}
                     </p>
                   )}
                   {graduate.education && (
                     <p className="text-[14px] text-[#1C1C1C80] mb-3">
                       🎓 {graduate.education.degree} in{' '}
                       {graduate.education.field}
+                    </p>
+                  )}
+                  {graduate.salaryPerAnnum && (
+                    <p className="text-[14px] text-[#1C1C1C80] mb-3 font-medium">
+                      {formatSalaryPerAnnum(graduate.salaryPerAnnum)}
                     </p>
                   )}
                   {graduate.skills && graduate.skills.length > 0 && (

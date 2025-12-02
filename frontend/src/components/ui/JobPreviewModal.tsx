@@ -49,7 +49,6 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
 }) => {
   // State for real-time application status check
   const [hasApplied, setHasApplied] = useState(hasAppliedProp);
-  const [checkingApplied, setCheckingApplied] = useState(false);
 
   // Fetch job details only if not provided
   const {
@@ -64,7 +63,7 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
       try {
         const response = await api.get(`/graduates/matches`);
         const matches = response.data.matches || [];
-        const match = matches.find((m: any) => m.job?.id === jobId);
+        const match = matches.find((m: { job?: { id?: string } }) => m.job?.id === jobId);
         if (match?.job) {
           return match.job as JobData;
         }
@@ -88,15 +87,12 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
 
     const checkApplied = async () => {
       try {
-        setCheckingApplied(true);
         const res = await graduateApi.alreadyApplied(jobIdStr);
         setHasApplied(res.applied); // backend returns { applied: true/false }
       } catch (err) {
         console.error('Failed to check application status', err);
         // Fallback to prop value on error
         setHasApplied(hasAppliedProp);
-      } finally {
-        setCheckingApplied(false);
       }
     };
 

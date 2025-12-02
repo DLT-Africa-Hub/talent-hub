@@ -22,7 +22,7 @@ interface ProfileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   profileType: ProfileType;
-  profile: any;
+  profile: Record<string, unknown>;
 }
 
 // Field configurations for each profile type
@@ -80,18 +80,19 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         if (profileType === 'graduate') {
           // Graduate-specific field mapping
           if (field.name === 'github' || field.name === 'twitter' || field.name === 'linkedin') {
-            newFormData[field.name] = profile.socials?.[field.name] || '';
+            const socials = (profile.socials || {}) as Record<string, string>;
+            newFormData[field.name] = socials[field.name] || '';
           } else if (field.name === 'phoneNumber') {
             newFormData[field.name] = profile.phoneNumber?.toString() || '';
           } else {
-            newFormData[field.name] = profile[field.name] || '';
+            newFormData[field.name] = String(profile[field.name] || '');
           }
         } else {
           // Company-specific field mapping
           if (field.name === 'companySize') {
             newFormData[field.name] = profile.companySize?.toString() || '';
           } else {
-            newFormData[field.name] = profile[field.name] || '';
+            newFormData[field.name] = String(profile[field.name] || '');
           }
         }
       });
@@ -102,7 +103,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
   // Mutation for updating profile
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (profileType === 'graduate') {
         return await graduateApi.updateProfile(data);
       } else {
@@ -119,7 +120,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (profileType === 'graduate') {
       // Graduate-specific data transformation

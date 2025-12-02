@@ -4,6 +4,11 @@ import { BsSend } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
 import React from 'react';
 import { CiMail } from 'react-icons/ci';
+import { useQuery } from '@tanstack/react-query';
+import { graduateApi } from '../../api/graduate';
+import { LoadingSpinner, EmptyState } from '../../components/ui';
+import { formatSalaryRange, getSalaryType, formatJobType, DEFAULT_JOB_IMAGE } from '../../utils/job.utils';
+import { ApiJob } from '../../types/api';
 
 export interface Company {
   name: string;
@@ -28,145 +33,60 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
 }) => {
   const { id } = useParams();
 
-  const companies: Company[] = [
-    {
-      id: 1,
-      name: 'TechCorp',
-      role: 'Frontend Developer',
-      match: 90,
-      contract: '3 months contract',
-      location: 'San Francisco',
-      wageType: 'Annual',
-      wage: '80k-100k',
-      image:
-        'https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2342',
-      jobDesc:
-        'We are seeking a talented Frontend Developer to join our dynamic team. You will be responsible for building and maintaining user-facing features using React and modern JavaScript. You will work closely with our design team to implement responsive, accessible, and performant web applications. The ideal candidate has experience with React, JavaScript, CSS, and HTML, and is passionate about creating exceptional user experiences. You will collaborate with backend developers to integrate APIs and ensure seamless data flow.',
-      skills: ['React', 'JavaScript', 'CSS', 'HTML'],
+  // Fetch job data from API
+  const {
+    data: jobData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['jobPreview', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const response = await graduateApi.getAvailableJobs({ page: 1, limit: 100 });
+      const jobs = response.jobs || [];
+      return jobs.find((job: ApiJob) => job.id === id || job._id?.toString() === id);
     },
-    {
-      id: 2,
-      name: 'DataFlow Solutions',
-      role: 'Backend Developer',
-      match: 85,
-      contract: '6 months contract',
-      location: 'New York',
-      wageType: 'Annual',
-      wage: '100k-120k',
-      image:
-        'https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069',
-      jobDesc:
-        'Join our backend engineering team to design and develop scalable server-side applications. You will be responsible for building robust APIs, managing database operations, and ensuring system reliability and performance. The role involves working with Node.js and Python to create efficient backend services, writing optimized SQL queries, and developing RESTful APIs. You will collaborate with frontend developers and DevOps teams to deliver high-quality solutions. Experience with database design, API development, and cloud services is highly valued.',
-      skills: ['Node.js', 'Python', 'SQL', 'API Development'],
-    },
-    {
-      id: 3,
-      name: 'CloudVault Inc',
-      role: 'Full Stack Developer',
-      match: 85,
-      contract: 'Full-time',
-      location: 'Austin',
-      wageType: 'Annual',
-      wage: '95k-115k',
-      image:
-        'https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069',
-      jobDesc:
-        'We are looking for a skilled Full Stack Developer to work on end-to-end feature development. You will build both frontend interfaces using React and backend services with Node.js. This role requires expertise in MongoDB for database management and REST API design. You will be involved in the entire software development lifecycle, from concept to deployment. The ideal candidate can seamlessly switch between frontend and backend tasks, write clean and maintainable code, and work collaboratively in an agile environment. You will help architect solutions and mentor junior developers.',
-      skills: ['React', 'Node.js', 'MongoDB', 'REST APIs'],
-    },
-    {
-      id: 4,
-      name: 'CodeForge',
-      role: 'React Developer',
-      match: 92,
-      contract: '1 year contract',
-      location: 'Seattle',
-      wageType: 'Annual',
-      wage: '85k-105k',
-      image:
-        'https://images.unsplash.com/photo-1497366811353-6870744d04b2?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069',
-      jobDesc:
-        'We are seeking an experienced React Developer to join our frontend team. You will develop complex, interactive web applications using React, TypeScript, and Redux for state management. Your responsibilities include building reusable components, implementing responsive designs, and writing comprehensive tests with Jest. You will work on optimizing application performance, implementing best practices, and ensuring code quality through code reviews. The ideal candidate has strong React expertise, TypeScript proficiency, and experience with modern frontend tooling and testing frameworks.',
-      skills: ['React', 'TypeScript', 'Redux', 'Jest'],
-    },
-    {
-      id: 5,
-      name: 'Digital Dynamics',
-      role: 'Node.js Developer',
-      match: 87,
-      contract: 'Full-time',
-      location: 'Boston',
-      wageType: 'Annual',
-      wage: '90k-110k',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070',
-      jobDesc:
-        'Join our backend development team to build scalable and high-performance server applications using Node.js and Express. You will develop RESTful APIs, work with MongoDB for data persistence, and implement efficient database queries. The role involves designing system architecture, optimizing application performance, and ensuring code reliability through testing. You will collaborate with frontend teams to define API contracts and work on microservices architecture. Strong experience with Node.js ecosystem, Express framework, and NoSQL databases is required.',
-      skills: ['Node.js', 'Express', 'MongoDB', 'REST APIs'],
-    },
-    {
-      id: 6,
-      name: 'InnovateLabs',
-      role: 'Vue.js Developer',
-      match: 83,
-      contract: '6 months contract',
-      location: 'Los Angeles',
-      wageType: 'Annual',
-      wage: '75k-95k',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070',
-      jobDesc:
-        'We are looking for a Vue.js Developer to create elegant and efficient user interfaces. You will work with Vue.js framework, Vuex for state management, and modern JavaScript to build interactive web applications. Your responsibilities include developing responsive components, implementing Vue.js best practices, and writing clean, maintainable code. You will collaborate with designers and backend developers to deliver seamless user experiences. The ideal candidate has strong Vue.js experience, proficiency in JavaScript, and expertise in CSS for styling responsive layouts.',
-      skills: ['Vue.js', 'JavaScript', 'Vuex', 'CSS'],
-    },
-    {
-      id: 7,
-      name: 'SwiftTech',
-      role: 'Python Developer',
-      match: 91,
-      contract: 'Full-time',
-      location: 'Chicago',
-      wageType: 'Annual',
-      wage: '95k-115k',
-      image:
-        'https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2069',
-      jobDesc:
-        'Join our Python development team to build robust backend systems using Django framework. You will develop web applications, create REST APIs, and work with PostgreSQL for database management. The role involves deploying applications on AWS cloud infrastructure, optimizing database performance, and implementing security best practices. You will work on scalable solutions, integrate third-party services, and collaborate with cross-functional teams. Strong Python skills, Django framework expertise, and experience with cloud platforms are essential for this role.',
-      skills: ['Python', 'Django', 'PostgreSQL', 'AWS'],
-    },
-    {
-      id: 8,
-      name: 'WebWorks',
-      role: 'Angular Developer',
-      match: 79,
-      contract: '3 months contract',
-      location: 'Denver',
-      wageType: 'Annual',
-      wage: '70k-90k',
-      image:
-        'https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2342',
-      jobDesc:
-        'We are seeking an Angular Developer to build enterprise-level web applications. You will work with Angular framework, TypeScript, and RxJS for reactive programming to create scalable frontend solutions. Your responsibilities include developing complex single-page applications, implementing Angular best practices, and writing type-safe code with TypeScript. You will work with HTML/CSS to create polished user interfaces and integrate with backend APIs. The ideal candidate has strong Angular experience, TypeScript proficiency, and expertise in RxJS for managing asynchronous data streams.',
-      skills: ['Angular', 'TypeScript', 'RxJS', 'HTML/CSS'],
-    },
-  ];
+    enabled: !!id,
+  });
 
-  const company = companies.find((office) => office.id === Number(id));
-
-  if (!company) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full">
-        <div className="text-center">
-          <p className="text-[24px] font-semibold text-[#1C1C1C]">
-            Company not found
-          </p>
-          <p className="text-[16px] text-[#1C1C1CBF] mt-2">
-            The company you're looking for doesn't exist.
-          </p>
-        </div>
+        <LoadingSpinner />
       </div>
     );
   }
+
+  if (error || !jobData) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full">
+        <EmptyState
+          title="Company not found"
+          description="The company you're looking for doesn't exist."
+        />
+      </div>
+    );
+  }
+
+  // Transform job data to Company format
+  const salaryRange = formatSalaryRange(jobData.salary);
+  const salaryType = jobData.jobType ? getSalaryType(jobData.jobType) : 'Annual';
+  const formattedJobType = jobData.jobType ? formatJobType(jobData.jobType) : 'Full-time';
+  
+  const company: Company = {
+    id: Number(id) || 0,
+    name: jobData.companyName || 'Unknown Company',
+    role: jobData.title || 'Position',
+    match: jobData.matchScore ? (jobData.matchScore > 1 ? Math.min(100, Math.round(jobData.matchScore)) : Math.min(100, Math.round(jobData.matchScore * 100))) : 0,
+    contract: formattedJobType,
+    location: jobData.location || 'Not specified',
+    wageType: salaryType,
+    wage: salaryRange === 'Not specified' ? 'Not specified' : salaryRange,
+    image: jobData.image || DEFAULT_JOB_IMAGE,
+    jobDesc: jobData.description || 'No description available.',
+    skills: jobData.requirements?.skills || [],
+  };
+
 
   return (
     <div className="flex items-center justify-center h-full lg:h-screen w-full font-inter">

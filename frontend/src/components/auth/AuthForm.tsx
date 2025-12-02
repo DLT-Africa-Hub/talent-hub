@@ -28,9 +28,9 @@ interface AuthFormProps {
   isButtonDisabled?: boolean; // Disable submit button
   isLoading?: boolean;
   loadingText?: string;
-  onGoogleClick: any;
-  onGoogleSuccess?: (data: any) => void;
-  onGoogleError?: (error: any) => void;
+  onGoogleClick: () => void;
+  onGoogleSuccess?: (data: { code: string }) => void;
+  onGoogleError?: (error: { message?: string }) => void;
 
   // NEW
   mode: 'login' | 'register';

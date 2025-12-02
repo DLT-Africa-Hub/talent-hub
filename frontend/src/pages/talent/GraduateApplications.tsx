@@ -109,7 +109,16 @@ const GraduateApplications = () => {
         contractString = 'Internship';
       }
 
-      const companyName = job.companyName || 'Company';
+      // Extract companyName from populated structure
+      const companyName =
+        job.companyName ||
+        (job.companyId &&
+        typeof job.companyId === 'object' &&
+        'companyName' in job.companyId
+          ? (job.companyId as { companyName?: string }).companyName
+          : null) ||
+        'Company';
+
       const cardId =
         parseInt(job.id?.slice(-8) || application.id.slice(-8), 16) ||
         index + 1;
@@ -127,6 +136,7 @@ const GraduateApplications = () => {
             ? '—'
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
+        description: (job as { description?: string }).description || '',
         status: application.status,
         applicationId: application.id,
       };
@@ -155,7 +165,16 @@ const GraduateApplications = () => {
         contractString = 'Internship';
       }
 
-      const companyName = job.companyName || 'Company';
+      // Extract companyName from populated structure
+      const companyName =
+        job.companyName ||
+        (job.companyId &&
+        typeof job.companyId === 'object' &&
+        'companyName' in job.companyId
+          ? (job.companyId as { companyName?: string }).companyName
+          : null) ||
+        'Company';
+
       const cardId =
         parseInt(job.id?.slice(-8) || match.id.slice(-8), 16) || index + 1;
 
@@ -172,6 +191,7 @@ const GraduateApplications = () => {
             ? '—'
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
+        description: (job as { description?: string }).description || '',
       };
     },
     []

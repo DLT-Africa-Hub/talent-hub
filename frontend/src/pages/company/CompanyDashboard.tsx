@@ -14,6 +14,7 @@ import {
   getCandidateRank,
   DEFAULT_PROFILE_IMAGE,
 } from '../../utils/job.utils';
+import { ApiMatch, ApiApplication } from '../../types/api';
 
 const CompanyDashboard = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
@@ -68,19 +69,21 @@ const CompanyDashboard = () => {
 
   // Transform matches to candidate profiles
   const transformMatch = useCallback(
-    (match: any, index: number): CandidateProfile => {
+    (match: ApiMatch, index: number): CandidateProfile => {
       const graduate = match.graduateId || {};
       const job = match.jobId || {};
 
       const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
 
-      const matchScore = match.score > 1
-        ? Math.min(100, Math.round(match.score))
-        : Math.min(100, Math.round(match.score * 100));
+      const matchScore = match.score
+        ? match.score > 1
+          ? Math.min(100, Math.round(match.score))
+          : Math.min(100, Math.round(match.score * 100))
+        : 0;
 
       return {
         id: match._id || `match-${index}`,
-        applicationId: match.applicationId || undefined,
+        applicationId: undefined,
         jobId: job._id?.toString?.() || job.id,
         jobTitle: job.title,
         companyName:
@@ -99,7 +102,7 @@ const CompanyDashboard = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: graduate.cv,
+        cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
         matchPercentage: matchScore,
         jobType: job.jobType,
         salary: job.salary,
@@ -111,14 +114,12 @@ const CompanyDashboard = () => {
 
   // Transform applications to candidate profiles
   const transformApplication = useCallback(
-    (app: any, index: number): CandidateProfile => {
+    (app: ApiApplication, index: number): CandidateProfile => {
       const graduate = app.graduateId || {};
       const job = app.jobId || {};
 
-      const hasMatch = !!app.matchId;
       const candidateStatus = mapApplicationStatusToCandidateStatus(
-        app.status,
-        hasMatch
+        app.status || ''
       );
 
       const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
@@ -145,7 +146,7 @@ const CompanyDashboard = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: graduate.cv,
+        cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
         matchPercentage: app.matchId?.score
           ? app.matchId.score > 1
             ? Math.min(100, Math.round(app.matchId.score))
@@ -154,7 +155,11 @@ const CompanyDashboard = () => {
         jobType: job.jobType,
         salary: job.salary,
         directContact: job.directContact !== false, // Default to true
-        interviewScheduledAt: app.interviewScheduledAt,
+        interviewScheduledAt: app.interviewScheduledAt 
+          ? typeof app.interviewScheduledAt === 'string' 
+            ? app.interviewScheduledAt 
+            : app.interviewScheduledAt.toISOString()
+          : undefined,
         interviewRoomSlug: app.interviewRoomSlug,
         interviewStatus: app.interviewScheduledAt ? 'scheduled' : undefined,
       };
@@ -176,7 +181,7 @@ const CompanyDashboard = () => {
 
   const matchedCandidates = useMemo(() => {
     if (!matchesData || !Array.isArray(matchesData)) return [];
-    return matchesData.map((match: any, index: number) =>
+    return matchesData.map((match: ApiMatch, index: number) =>
       transformMatch(match, index)
     );
   }, [matchesData, transformMatch]);
@@ -198,7 +203,7 @@ const CompanyDashboard = () => {
 
   const applicationCandidates = useMemo(() => {
     if (!applicationsData || !Array.isArray(applicationsData)) return [];
-    return applicationsData.map((app: any, index: number) =>
+    return applicationsData.map((app: ApiApplication, index: number) =>
       transformApplication(app, index)
     );
   }, [applicationsData, transformApplication]);

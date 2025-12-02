@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { notificationApi } from '../api/notification';
 import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../types/api';
 
 /**
  * Hook for real-time notification polling
@@ -24,9 +25,10 @@ export const useNotifications = (options?: { enabled?: boolean; fetchList?: bool
     enabled,
     refetchInterval: 60000, // Poll every 60 seconds (reduced from 30)
     staleTime: 30000, // Consider fresh for 30 seconds
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
+      const err = error as ApiError;
       // Don't retry on 429 (rate limit) errors
-      if (error?.response?.status === 429) {
+      if (err?.response?.status === 429) {
         return false;
       }
       // Retry up to 2 times for other errors

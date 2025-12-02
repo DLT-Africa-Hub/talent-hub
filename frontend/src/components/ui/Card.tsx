@@ -16,7 +16,6 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({
-  variant = 'default',
   image,
   title,
   subtitle,

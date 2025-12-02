@@ -4,6 +4,7 @@ import { Input, Select, Button } from '../../../../components/ui';
 import RichTextEditor from '../../../../components/ui/RichTextEditor';
 import { skills } from '../../../../utils/material.utils';
 import { HiChevronDown, HiXMark, HiPlus } from 'react-icons/hi2';
+import { CURRENCIES } from '../../../../utils/job.utils';
 
 interface ExtraRequirement {
   label: string;
@@ -17,6 +18,7 @@ interface JobFormData {
   jobType: 'Full time' | 'Part time' | 'Contract' | 'Internship' | '';
   location: string;
   salaryAmount: string;
+  salaryCurrency: string;
   description: string;
   skills: string[];
   extraRequirements: ExtraRequirement[];
@@ -35,6 +37,7 @@ const CompanyJobForm = () => {
     jobType: '',
     location: '',
     salaryAmount: '',
+    salaryCurrency: 'USD',
     description: '',
     skills: [],
     extraRequirements: [],
@@ -126,7 +129,7 @@ const CompanyJobForm = () => {
       salary: salaryAmount
         ? {
             amount: salaryAmount,
-            currency: 'USD',
+            currency: formData.salaryCurrency || 'USD',
           }
         : undefined,
       status: 'active' as const,
@@ -197,15 +200,28 @@ const CompanyJobForm = () => {
             <label className="text-[#1C1C1C] text-[16px] font-medium">
               Salary (Annual) <span className="text-red-500">*</span>
             </label>
-            <Input
-              name="salaryAmount"
-              type="number"
-              placeholder="e.g., 50 (in thousands)"
-              value={formData.salaryAmount}
-              onChange={handleChange}
-              min="0"
-              step="1"
-            />
+            <div className="flex gap-3">
+              <Input
+                name="salaryAmount"
+                type="number"
+                placeholder="e.g., 50 (in thousands)"
+                value={formData.salaryAmount}
+                onChange={handleChange}
+                min="0"
+                step="1"
+                className="flex-1"
+              />
+              <Select
+                name="salaryCurrency"
+                value={formData.salaryCurrency}
+                onChange={handleChange}
+                className="w-[140px]"
+                options={CURRENCIES.map((currency) => ({
+                  value: currency.code,
+                  label: `${currency.code} (${currency.symbol})`,
+                }))}
+              />
+            </div>
             <p className="text-[12px] text-[#1C1C1C80]">
               Enter salary in thousands (e.g., 50 for $50k)
             </p>

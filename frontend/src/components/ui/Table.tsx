@@ -1,19 +1,5 @@
 import React, { useMemo, useState } from 'react';
 
-/**
- * Reusable Table Component (TypeScript + Tailwind)
- * Features:
- * - Generic typing for rows
- * - Custom column renderers
- * - Sorting (client-side)
- * - Pagination (client-side)
- * - Row selection (checkboxes)
- * - Row actions column
- * - Loading and empty states
- *
- * Usage: see example at the bottom of this file.
- */
-
 export type Align = 'left' | 'center' | 'right';
 
 export type Column<T> = {
@@ -22,18 +8,18 @@ export type Column<T> = {
    * Either a key of the row object or a function that returns the cell value
    */
   accessor?: keyof T | ((row: T) => any);
-  render?: (value: any, row: T, rowIndex: number) => React.ReactNode;
+  render?: (value: unknown, row: T, rowIndex: number) => React.ReactNode;
   sortable?: boolean;
   width?: string; // tailwind width or style e.g. 'w-32' or '150px'
   align?: Align;
 };
 
-type SortState<T> = {
+export type SortState<T> = {
   column?: Column<T>;
   direction: 'asc' | 'desc' | null;
 };
 
-type Props<T> = {
+export type Props<T> = {
   data: T[];
   columns: Column<T>[];
   pageSize?: number; // 0 or undefined means no pagination
@@ -47,13 +33,17 @@ type Props<T> = {
   emptyState?: React.ReactNode;
 };
 
-function defaultGetRowKey<T extends Record<string, any>>(row: T, rowKey?: keyof T | ((row: T) => string), index = 0) {
+export function defaultGetRowKey<T extends Record<string, any>>(
+  row: T,
+  rowKey?: keyof T | ((row: T) => string),
+  index = 0
+) {
   if (!rowKey) return index.toString();
   if (typeof rowKey === 'function') return rowKey(row);
   return String(row[rowKey]);
 }
 
-function compareValues(a: any, b: any) {
+export function compareValues(a: unknown, b: unknown) {
   // handle null/undefined
   if (a == null && b == null) return 0;
   if (a == null) return -1;
@@ -66,13 +56,14 @@ function compareValues(a: any, b: any) {
   if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
 
   // boolean
-  if (typeof a === 'boolean' && typeof b === 'boolean') return (a === b) ? 0 : a ? 1 : -1;
+  if (typeof a === 'boolean' && typeof b === 'boolean')
+    return a === b ? 0 : a ? 1 : -1;
 
   // fallback to string comparison
   return String(a).localeCompare(String(b));
 }
 
-export default function Table<T extends Record<string, any>>({
+export default function Table<T extends Record<string, unknown>>({
   data,
   columns,
   pageSize = 10,
@@ -85,7 +76,10 @@ export default function Table<T extends Record<string, any>>({
   className = '',
   emptyState,
 }: Props<T>) {
-  const [sort, setSort] = useState<SortState<T>>({ direction: null, column: undefined });
+  const [sort, setSort] = useState<SortState<T>>({
+    direction: null,
+    column: undefined,
+  });
   const [page, setPage] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -96,8 +90,18 @@ export default function Table<T extends Record<string, any>>({
     const copy = [...data];
 
     copy.sort((r1, r2) => {
-      const v1 = typeof accessor === 'function' ? accessor(r1) : accessor ? r1[accessor as keyof T] : r1;
-      const v2 = typeof accessor === 'function' ? accessor(r2) : accessor ? r2[accessor as keyof T] : r2;
+      const v1 =
+        typeof accessor === 'function'
+          ? accessor(r1)
+          : accessor
+            ? r1[accessor as keyof T]
+            : r1;
+      const v2 =
+        typeof accessor === 'function'
+          ? accessor(r2)
+          : accessor
+            ? r2[accessor as keyof T]
+            : r2;
       const cmp = compareValues(v1, v2);
       return sort.direction === 'asc' ? cmp : -cmp;
     });
@@ -105,7 +109,10 @@ export default function Table<T extends Record<string, any>>({
     return copy;
   }, [data, sort]);
 
-  const totalPages = pageSize && pageSize > 0 ? Math.max(1, Math.ceil(resolvedData.length / pageSize)) : 1;
+  const totalPages =
+    pageSize && pageSize > 0
+      ? Math.max(1, Math.ceil(resolvedData.length / pageSize))
+      : 1;
 
   const pageData = useMemo(() => {
     if (!pageSize || pageSize <= 0) return resolvedData;
@@ -125,7 +132,9 @@ export default function Table<T extends Record<string, any>>({
 
   function toggleSelectAllOnPage() {
     const newSet = new Set(selectedKeys);
-    const keysOnPage = pageData.map((row, idx) => defaultGetRowKey(row, rowKey, (page - 1) * pageSize + idx));
+    const keysOnPage = pageData.map((row, idx) =>
+      defaultGetRowKey(row, rowKey, (page - 1) * pageSize + idx)
+    );
     const allSelected = keysOnPage.every((k) => newSet.has(k));
     if (allSelected) {
       keysOnPage.forEach((k) => newSet.delete(k));
@@ -133,15 +142,21 @@ export default function Table<T extends Record<string, any>>({
       keysOnPage.forEach((k) => newSet.add(k));
     }
     setSelectedKeys(newSet);
-    onSelectionChange && onSelectionChange(data.filter((r, i) => newSet.has(defaultGetRowKey(r, rowKey, i))));
+    onSelectionChange &&
+      onSelectionChange(
+        data.filter((r, i) => newSet.has(defaultGetRowKey(r, rowKey, i)))
+      );
   }
 
-  function toggleSelectRow(key: string, row: T, index: number) {
+  function toggleSelectRow(key: string) {
     const newSet = new Set(selectedKeys);
     if (newSet.has(key)) newSet.delete(key);
     else newSet.add(key);
     setSelectedKeys(newSet);
-    onSelectionChange && onSelectionChange(data.filter((r, i) => newSet.has(defaultGetRowKey(r, rowKey, i))));
+    onSelectionChange &&
+      onSelectionChange(
+        data.filter((r, i) => newSet.has(defaultGetRowKey(r, rowKey, i)))
+      );
   }
 
   function handleRowClick(row: T) {
@@ -149,7 +164,9 @@ export default function Table<T extends Record<string, any>>({
   }
 
   return (
-    <div className={`w-full overflow-hidden bg-white rounded-lg shadow ${className}`}>
+    <div
+      className={`w-full overflow-hidden bg-white rounded-lg shadow ${className}`}
+    >
       <div className="w-full overflow-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -159,14 +176,13 @@ export default function Table<T extends Record<string, any>>({
                   <input
                     type="checkbox"
                     checked={
-                        pageData.length > 0 &&
-                        pageData.every((r, i) =>
-                          selectedKeys.has(
-                            defaultGetRowKey(r, rowKey, (page - 1) * pageSize + i)
-                          )
+                      pageData.length > 0 &&
+                      pageData.every((r, i) =>
+                        selectedKeys.has(
+                          defaultGetRowKey(r, rowKey, (page - 1) * pageSize + i)
                         )
-                      }
-                      
+                      )
+                    }
                     onChange={toggleSelectAllOnPage}
                     aria-label="Select all rows"
                   />
@@ -185,31 +201,48 @@ export default function Table<T extends Record<string, any>>({
                   >
                     <span>{col.header}</span>
                     {col.sortable && sort.column === col && sort.direction && (
-                      <span className="text-xs text-gray-500">{sort.direction === 'asc' ? '▲' : '▼'}</span>
+                      <span className="text-xs text-gray-500">
+                        {sort.direction === 'asc' ? '▲' : '▼'}
+                      </span>
                     )}
                   </div>
                 </th>
               ))}
 
-              {actions && <th className="px-4 py-2 text-sm font-medium text-gray-700 text-right">Actions</th>}
+              {actions && (
+                <th className="px-4 py-2 text-sm font-medium text-gray-700 text-right">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white  divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)} className="px-6 py-10 text-center text-gray-500">
+                <td
+                  colSpan={
+                    columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)
+                  }
+                  className="px-6 py-10 text-center text-gray-500"
+                >
                   Loading...
                 </td>
               </tr>
             ) : pageData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)} className="px-6 py-10 text-center text-gray-500">
+                <td
+                  colSpan={
+                    columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)
+                  }
+                  className="px-6 py-10 text-center text-gray-500"
+                >
                   {emptyState ?? 'No data found.'}
                 </td>
               </tr>
             ) : (
               pageData.map((row, rIdx) => {
-                const globalIndex = (page - 1) * (pageSize || resolvedData.length) + rIdx;
+                const globalIndex =
+                  (page - 1) * (pageSize || resolvedData.length) + rIdx;
                 const key = defaultGetRowKey(row, rowKey, globalIndex);
                 return (
                   <tr
@@ -224,7 +257,7 @@ export default function Table<T extends Record<string, any>>({
                           checked={selectedKeys.has(key)}
                           onChange={(e) => {
                             e.stopPropagation();
-                            toggleSelectRow(key, row, globalIndex);
+                            toggleSelectRow(key);
                           }}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -233,16 +266,30 @@ export default function Table<T extends Record<string, any>>({
 
                     {columns.map((col, cIdx) => {
                       const accessor = col.accessor;
-                      const rawValue = typeof accessor === 'function' ? accessor(row) : accessor ? row[accessor as keyof T] : undefined;
-                      const content = col.render ? col.render(rawValue, row, globalIndex) : String(rawValue ?? '');
+                      const rawValue =
+                        typeof accessor === 'function'
+                          ? accessor(row)
+                          : accessor
+                            ? row[accessor as keyof T]
+                            : undefined;
+                      const content = col.render
+                        ? col.render(rawValue, row, globalIndex)
+                        : String(rawValue ?? '');
                       return (
-                        <td key={cIdx} className={`px-4 py-3 text-sm ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}`}>
+                        <td
+                          key={cIdx}
+                          className={`px-4 py-3 text-sm ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}`}
+                        >
                           {content}
                         </td>
                       );
                     })}
 
-                    {actions && <td className="px-4 py-3 text-sm text-right">{actions(row)}</td>}
+                    {actions && (
+                      <td className="px-4 py-3 text-sm text-right">
+                        {actions(row)}
+                      </td>
+                    )}
                   </tr>
                 );
               })
@@ -255,8 +302,16 @@ export default function Table<T extends Record<string, any>>({
       {pageSize && pageSize > 0 && (
         <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{Math.min((page - 1) * pageSize + 1, resolvedData.length)}</span> to{' '}
-            <span className="font-medium">{Math.min(page * pageSize, resolvedData.length)}</span> of <span className="font-medium">{resolvedData.length}</span> results
+            Showing{' '}
+            <span className="font-medium">
+              {Math.min((page - 1) * pageSize + 1, resolvedData.length)}
+            </span>{' '}
+            to{' '}
+            <span className="font-medium">
+              {Math.min(page * pageSize, resolvedData.length)}
+            </span>{' '}
+            of <span className="font-medium">{resolvedData.length}</span>{' '}
+            results
           </div>
 
           <div className="flex items-center gap-2">
@@ -280,7 +335,11 @@ export default function Table<T extends Record<string, any>>({
               min={1}
               max={totalPages}
               value={page}
-              onChange={(e) => setPage(Math.min(Math.max(1, Number(e.target.value || 1)), totalPages))}
+              onChange={(e) =>
+                setPage(
+                  Math.min(Math.max(1, Number(e.target.value || 1)), totalPages)
+                )
+              }
               className="w-16 px-2 py-1 border rounded text-sm"
             />
             <span className="text-sm">of {totalPages}</span>

@@ -17,7 +17,7 @@ const Register = () => {
 
   const google = useGoogleLogin({
     flow: 'auth-code',
-    onSuccess: async (codeResponse: any) => {
+    onSuccess: async (codeResponse: { code: string }) => {
       try {
         const res = await axios.post(
           `${import.meta.env.VITE_APP_API_URL}/auth/google/authcode`,
@@ -37,12 +37,13 @@ const Register = () => {
         } else {
           navigate('/company/onboarding');
         }
-      } catch (err: any) {
-        console.error(err);
+      } catch (err: unknown) {
+        const error = err as { message?: string; response?: { data?: { message?: string } } };
+        console.error(error);
         setError('Google login failed');
       }
     },
-    onError: (err: any) => {
+    onError: (err: { message?: string }) => {
       console.error('Google login error', err);
       setError('Google login failed');
     },
@@ -71,9 +72,10 @@ const Register = () => {
 
       setEmail('');
       setPassword('');
-    } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      console.error(error);
+      setError(error.response?.data?.message || error.message || 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -104,7 +106,7 @@ const Register = () => {
             placeholder:
               role === 'company' ? 'company@example.com' : 'john@example.com',
             value: email,
-            onChange: (e: any) => setEmail(e.target.value),
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
           },
           {
             label: 'Password',
@@ -112,7 +114,7 @@ const Register = () => {
             type: 'password',
             placeholder: 'password',
             value: password,
-            onChange: (e: any) => setPassword(e.target.value),
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value),
           },
         ]}
         error={error}

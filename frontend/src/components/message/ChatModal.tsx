@@ -42,14 +42,11 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
 
-  // Your Cloudinary config - replace with your actual values
-  const CLOUDINARY_UPLOAD_PRESET = 'your_upload_preset'; // Replace this
-  const CLOUDINARY_CLOUD_NAME = 'your_cloud_name'; // Replace this
+  const CLOUDINARY_UPLOAD_PRESET = import.meta.env
+    .VITE_CLOUDINARY_UPLOAD_PRESET;
+  const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
-  const {
-    data: messages,
-    isLoading,
-  } = useQuery({
+  const { data: messages, isLoading } = useQuery({
     queryKey: ['conversation', company?.id],
     queryFn: async () => {
       if (!company?.id) return [];
@@ -94,7 +91,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', company?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['conversation', company?.id],
+      });
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
   });
@@ -106,7 +105,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   }, [messages]);
 
   // Upload file to Cloudinary
-  const uploadToCloudinary = async (file: File): Promise<{ url: string; fileName: string }> => {
+  const uploadToCloudinary = async (
+    file: File
+  ): Promise<{ url: string; fileName: string }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -129,7 +130,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
 
       const data = await response.json();
       setUploadProgress(100);
-      
+
       return {
         url: data.secure_url,
         fileName: file.name,
@@ -157,8 +158,12 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
-    
-    if ((!input.trim() && !selectedFile) || sendMessageMutation.isPending || isUploading) {
+
+    if (
+      (!input.trim() && !selectedFile) ||
+      sendMessageMutation.isPending ||
+      isUploading
+    ) {
       return;
     }
 
@@ -209,7 +214,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
 
   const isMyMessage = (msg: Message) => {
     const myId = user?.id;
-    return msg.senderId === myId || msg.senderId.toString() === myId?.toString();
+    return (
+      msg.senderId === myId || msg.senderId.toString() === myId?.toString()
+    );
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -222,7 +229,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
     const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
     const docExts = ['pdf', 'doc', 'docx', 'txt'];
-    
+
     if (imageExts.includes(ext || '')) return '🖼️';
     if (docExts.includes(ext || '')) return '📄';
     return '📎';
@@ -300,7 +307,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
             </div>
           ) : !messages || messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-[#1C1C1C80]">No messages yet. Start the conversation!</p>
+              <p className="text-[#1C1C1C80]">
+                No messages yet. Start the conversation!
+              </p>
             </div>
           ) : (
             messages.map((msg: Message) => {
@@ -329,7 +338,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 text-[#0066CC] hover:underline"
                           >
-                            <span className="text-[16px]">{getFileIcon(msg.fileName)}</span>
+                            <span className="text-[16px]">
+                              {getFileIcon(msg.fileName)}
+                            </span>
                             <span className="text-[13px] truncate max-w-[200px]">
                               {msg.fileName}
                             </span>
@@ -363,7 +374,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
           <div className="px-4 py-2 bg-[#F5F5F5] border-t border-fade">
             <div className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-[20px]">{getFileIcon(selectedFile.name)}</span>
+                <span className="text-[20px]">
+                  {getFileIcon(selectedFile.name)}
+                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-[#1C1C1C] truncate">
                     {selectedFile.name}
@@ -394,7 +407,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
-              <span className="text-[12px] text-[#1C1C1C80]">{uploadProgress}%</span>
+              <span className="text-[12px] text-[#1C1C1C80]">
+                {uploadProgress}%
+              </span>
             </div>
           </div>
         )}

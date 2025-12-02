@@ -13,6 +13,7 @@ import {
   mapApplicationStatusToCandidateStatus,
 } from '../../utils/job.utils';
 import { InlineLoader, EmptyState, ImageWithFallback } from '../ui';
+import { ApiMatch, ApiApplication } from '../../types/api';
 
 export type CandidatesListType = 'matches' | 'applicants';
 
@@ -31,18 +32,21 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   type,
   onClose,
 }) => {
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateProfile | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Determine query key and fetch function based on type
   const queryKey = useMemo(() => {
-    return type === 'matches' ? ['jobMatches', jobId] : ['jobApplicants', jobId];
+    return type === 'matches'
+      ? ['jobMatches', jobId]
+      : ['jobApplicants', jobId];
   }, [type, jobId]);
 
   const fetchFunction = useMemo(() => {
     return async () => {
       if (!jobId) return null;
-      
+
       if (type === 'matches') {
         const response = await companyApi.getJobMatches(jobId, {
           page: 1,
@@ -72,7 +76,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   });
 
   // Transform match to CandidateProfile
-  const transformMatch = (match: any, index: number): CandidateProfile => {
+  const transformMatch = (match: ApiMatch, index: number): CandidateProfile => {
     const graduate = match.graduateId || {};
     const job = match.jobId || {};
 
@@ -80,9 +84,11 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
       graduate.lastName || ''
     }`.trim();
 
-    const matchScore = match.score > 1
-      ? Math.min(100, Math.round(match.score))
-      : Math.min(100, Math.round(match.score * 100));
+    const matchScore = match.score
+      ? match.score > 1
+        ? Math.min(100, Math.round(match.score))
+        : Math.min(100, Math.round(match.score * 100))
+      : 0;
 
     return {
       id: match._id || `match-${index}`,
@@ -96,7 +102,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
       skills: (graduate.skills || []).slice(0, 3),
       image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
       summary: graduate.summary,
-      cv: graduate.cv,
+      cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
       matchPercentage: matchScore,
       jobType: job.jobType,
       salary: job.salary,
@@ -104,7 +110,10 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   };
 
   // Transform application to CandidateProfile
-  const transformApplication = (application: any, index: number): CandidateProfile => {
+  const transformApplication = (
+    application: ApiApplication,
+    index: number
+  ): CandidateProfile => {
     const graduate = application.graduateId || {};
     const job = application.jobId || {};
     const company = job.companyId || {};
@@ -113,10 +122,8 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
       graduate.lastName || ''
     }`.trim();
 
-    const hasMatch = !!application.matchId;
     const candidateStatus = mapApplicationStatusToCandidateStatus(
-      application.status,
-      hasMatch
+      application.status || ''
     );
 
     const matchScore = application.matchId?.score
@@ -128,7 +135,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
     // Get CV from graduate or application resume
     let cvUrl: string | undefined;
     if (graduate.cv && Array.isArray(graduate.cv) && graduate.cv.length > 0) {
-      const displayCV = graduate.cv.find((cv: any) => cv.onDisplay);
+      const displayCV = graduate.cv.find((cv: { onDisplay?: boolean; fileUrl?: string }) => cv.onDisplay);
       cvUrl = displayCV?.fileUrl || graduate.cv[0]?.fileUrl;
     }
     if (!cvUrl && application.resume?.fileUrl) {
@@ -145,7 +152,9 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
       role: graduate.position || 'Developer',
       status: candidateStatus,
       rank: getCandidateRank(graduate.rank),
-      statusLabel: application.status.charAt(0).toUpperCase() + application.status.slice(1),
+      statusLabel:
+        (application.status || '').charAt(0).toUpperCase() +
+        (application.status || '').slice(1),
       experience: formatExperience(graduate.expYears || 0),
       location: formatLocation(job.location || graduate.location),
       skills: (graduate.skills || []).slice(0, 3),
@@ -162,15 +171,19 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   // Get candidates based on type
   const candidates = useMemo(() => {
     if (!responseData) return [];
-    
+
     if (type === 'matches') {
       const matches = responseData.matches || [];
-      return matches.map((match: any, index: number) => transformMatch(match, index));
+      return matches.map((match: ApiMatch, index: number) =>
+        transformMatch(match, index)
+      );
     } else {
       const applications = responseData.applications || [];
-      return applications.map((application: any, index: number) => transformApplication(application, index));
+      return applications.map((application: ApiApplication, index: number) =>
+        transformApplication(application, index)
+      );
     }
-  }, [responseData, type, jobId]);
+  }, [responseData, type, jobId, transformMatch, transformApplication]);
 
   // Modal configuration based on type
   const modalConfig = useMemo(() => {
@@ -180,7 +193,8 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         loadingMessage: 'Loading matches...',
         errorTitle: 'Failed to load matches',
         emptyTitle: 'No matches yet',
-        emptyDescription: "Candidates will appear here once they're matched with this job posting.",
+        emptyDescription:
+          "Candidates will appear here once they're matched with this job posting.",
       };
     } else {
       return {
@@ -188,7 +202,8 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         loadingMessage: 'Loading applicants...',
         errorTitle: 'Failed to load applicants',
         emptyTitle: 'No applicants yet',
-        emptyDescription: "Candidates will appear here once they apply to this job posting.",
+        emptyDescription:
+          'Candidates will appear here once they apply to this job posting.',
       };
     }
   }, [type]);
@@ -223,9 +238,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
               {modalConfig.title}
             </h2>
             {jobTitle && (
-              <p className="text-[16px] text-[#1C1C1CBF]">
-                {jobTitle}
-              </p>
+              <p className="text-[16px] text-[#1C1C1CBF]">{jobTitle}</p>
             )}
           </div>
 
@@ -284,64 +297,66 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {candidates.map((candidate: CandidateProfile, index: number) => (
-                        <tr
-                          key={candidate.id}
-                          className="border-b border-fade hover:bg-[#F8F8F8] transition-colors"
-                        >
-                          <td className="px-[16px] py-[12px] text-[14px] text-[#1C1C1C]">
-                            {index + 1}
-                          </td>
-                          <td className="px-[16px] py-[12px]">
-                            <div className="w-[48px] h-[48px] rounded-[8px] overflow-hidden">
-                              <ImageWithFallback
-                                src={candidate.image}
-                                alt={candidate.name}
-                                className="w-full h-full object-cover"
-                                fallback={DEFAULT_PROFILE_IMAGE}
-                              />
-                            </div>
-                          </td>
-                          <td className="px-[16px] py-[12px]">
-                            <p className="text-[14px] font-medium text-[#1C1C1C]">
-                              {candidate.name}
-                            </p>
-                          </td>
-                          <td className="px-[16px] py-[12px]">
-                            <p className="text-[14px] text-[#1C1C1CBF]">
-                              {candidate.role}
-                            </p>
-                          </td>
-                          <td className="px-[16px] py-[12px]">
-                            <span className="inline-flex items-center justify-center w-[32px] h-[32px] rounded-full bg-button text-white text-[14px] font-semibold">
-                              {candidate.rank}
-                            </span>
-                          </td>
-                          {/* Status cell only for applicants */}
-                          {type === 'applicants' && (
+                      {candidates.map(
+                        (candidate: CandidateProfile, index: number) => (
+                          <tr
+                            key={candidate.id}
+                            className="border-b border-fade hover:bg-[#F8F8F8] transition-colors"
+                          >
+                            <td className="px-[16px] py-[12px] text-[14px] text-[#1C1C1C]">
+                              {index + 1}
+                            </td>
                             <td className="px-[16px] py-[12px]">
-                              <span className="inline-block px-3 py-1 rounded-[20px] text-[12px] font-medium capitalize bg-[#F8F8F8] text-[#1C1C1C]">
-                                {candidate.statusLabel}
+                              <div className="w-[48px] h-[48px] rounded-[8px] overflow-hidden">
+                                <ImageWithFallback
+                                  src={candidate.image}
+                                  alt={candidate.name}
+                                  className="w-full h-full object-cover"
+                                  fallback={DEFAULT_PROFILE_IMAGE}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-[16px] py-[12px]">
+                              <p className="text-[14px] font-medium text-[#1C1C1C]">
+                                {candidate.name}
+                              </p>
+                            </td>
+                            <td className="px-[16px] py-[12px]">
+                              <p className="text-[14px] text-[#1C1C1CBF]">
+                                {candidate.role}
+                              </p>
+                            </td>
+                            <td className="px-[16px] py-[12px]">
+                              <span className="inline-flex items-center justify-center w-[32px] h-[32px] rounded-full bg-button text-white text-[14px] font-semibold">
+                                {candidate.rank}
                               </span>
                             </td>
-                          )}
-                          <td className="px-[16px] py-[12px]">
-                            <p className="text-[14px] text-[#1C1C1CBF]">
-                              {candidate.location}
-                            </p>
-                          </td>
-                          <td className="px-[16px] py-[12px]">
-                            <button
-                              type="button"
-                              onClick={() => handlePreview(candidate)}
-                              className="flex items-center justify-center gap-[8px] px-[16px] py-[8px] rounded-[8px] bg-button text-white text-[14px] font-medium hover:bg-[#176300] transition-colors"
-                            >
-                              <HiOutlineEye className="text-[16px]" />
-                              <p className="text-[14px] font-medium">View</p>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            {/* Status cell only for applicants */}
+                            {type === 'applicants' && (
+                              <td className="px-[16px] py-[12px]">
+                                <span className="inline-block px-3 py-1 rounded-[20px] text-[12px] font-medium capitalize bg-[#F8F8F8] text-[#1C1C1C]">
+                                  {candidate.statusLabel}
+                                </span>
+                              </td>
+                            )}
+                            <td className="px-[16px] py-[12px]">
+                              <p className="text-[14px] text-[#1C1C1CBF]">
+                                {candidate.location}
+                              </p>
+                            </td>
+                            <td className="px-[16px] py-[12px]">
+                              <button
+                                type="button"
+                                onClick={() => handlePreview(candidate)}
+                                className="flex items-center justify-center gap-[8px] px-[16px] py-[8px] rounded-[8px] bg-button text-white text-[14px] font-medium hover:bg-[#176300] transition-colors"
+                              >
+                                <HiOutlineEye className="text-[16px]" />
+                                <p className="text-[14px] font-medium">View</p>
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -369,4 +384,3 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
 };
 
 export default CandidatesListModal;
-

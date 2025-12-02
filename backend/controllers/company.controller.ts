@@ -1119,7 +1119,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
     Match.find(query)
       .populate({
         path: 'graduateId',
-        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location',
+        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location salaryPerAnnum',
         populate: {
           path: 'userId',
           select: 'email',
@@ -1219,7 +1219,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
     Application.find(query)
       .populate({
         path: 'graduateId',
-        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location',
+        select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location salaryPerAnnum',
         populate: {
           path: 'userId',
           select: 'email',
@@ -1227,7 +1227,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
       })
       .populate({
         path: 'jobId',
-        select: 'title companyId directContact',
+        select: 'title companyId directContact jobType salary location description',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -1778,7 +1778,7 @@ export const getAvailableGraduates = async (
     // Get graduates with pagination
     const graduates = await Graduate.find(query)
       .select(
-        'firstName lastName position location skills education rank profilePictureUrl summary expLevel expYears workExperiences cv'
+        'firstName lastName position location skills education rank profilePictureUrl summary expLevel expYears workExperiences cv salaryPerAnnum'
       )
       .sort(sort)
       .skip((pagination.page - 1) * pagination.limit)
@@ -1888,6 +1888,7 @@ export const getAvailableGraduates = async (
             fileUrl: displayCV.fileUrl,
             fileName: displayCV.fileName,
           } : null,
+          salaryPerAnnum: g.salaryPerAnnum,
           hasUpcomingInterview,
           interviewScheduledAt,
         };

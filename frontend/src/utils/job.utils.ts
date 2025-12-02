@@ -30,17 +30,48 @@ export const jobStatusLabels: Record<JobStatus, string> = {
   closed: 'Closed',
 };
 
+// Common currencies with symbols
+export const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling' },
+  { code: 'GHS', symbol: '₵', name: 'Ghanaian Cedi' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+  { code: 'UGX', symbol: 'USh', name: 'Ugandan Shilling' },
+  { code: 'TZS', symbol: 'TSh', name: 'Tanzanian Shilling' },
+  { code: 'ETB', symbol: 'Br', name: 'Ethiopian Birr' },
+  { code: 'RWF', symbol: 'RF', name: 'Rwandan Franc' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+] as const;
+
+// Get currency symbol
+export const getCurrencySymbol = (currencyCode?: string): string => {
+  if (!currencyCode) return '$';
+  const currency = CURRENCIES.find((c) => c.code === currencyCode);
+  return currency?.symbol || currencyCode;
+};
+
 // Format salary range
 export const formatSalaryRange = (salary?: {
   amount?: number;
   currency?: string;
 }): string => {
   if (!salary || !salary.amount) return 'Not specified';
-  const currency = salary.currency || 'USD';
-  const symbol = currency === 'USD' ? '$' : currency;
+  const symbol = getCurrencySymbol(salary.currency);
   // Format as thousands (e.g., 50000 -> 50k)
   const amountInK = Math.round(salary.amount / 1000);
   return `${symbol}${amountInK.toLocaleString()}k`;
+};
+
+// Format salary per annum
+export const formatSalaryPerAnnum = (salaryPerAnnum?: number, currency: string = 'USD'): string => {
+  if (!salaryPerAnnum || salaryPerAnnum <= 0) return 'Not specified';
+  const symbol = currency === 'USD' ? '$' : currency === 'NGN' ? '₦' : currency;
+  // Format with commas (e.g., 50000 -> $50,000)
+  return `${symbol}${salaryPerAnnum.toLocaleString()}/year`;
 };
 
 // Format job type to duration-like string
@@ -92,8 +123,7 @@ export const candidateStatusFilters: {
 
 // Map API application status to candidate status
 export const mapApplicationStatusToCandidateStatus = (
-  appStatus: string,
-  hasMatch: boolean
+  appStatus: string
 ): CandidateStatus => {
   // Hired status
   if (appStatus === 'accepted' || appStatus === 'hired') return 'hired';

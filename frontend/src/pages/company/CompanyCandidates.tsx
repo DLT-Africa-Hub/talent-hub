@@ -17,6 +17,7 @@ import {
 import { LoadingSpinner } from '../../index';
 import { EmptyState } from '../../components/ui';
 import { MdFilterList } from 'react-icons/md';
+import { ApiApplication, ApiMatch } from '../../types/api';
 
 const CompanyCandidates = () => {
   const { id } = useParams<{ id?: string }>();
@@ -32,15 +33,13 @@ const CompanyCandidates = () => {
 
   // Transform API application to CandidateProfile using useCallback
   const transformApplication = useCallback(
-    (app: any, index: number): CandidateProfile => {
+    (app: ApiApplication, index: number): CandidateProfile => {
       const graduate = app.graduateId || {};
       const job = app.jobId || {};
     
 
-      const hasMatch = !!app.matchId;
       const candidateStatus = mapApplicationStatusToCandidateStatus(
-        app.status,
-        hasMatch
+        app.status || ''
       );
 
       const fullName = `${graduate.firstName || ''} ${
@@ -63,7 +62,7 @@ const CompanyCandidates = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: app.resume,
+        cv: typeof app.resume === 'string' ? app.resume : app.resume?.fileUrl,
         matchPercentage: app.matchId?.score
           ? app.matchId.score > 1
             ? Math.min(100, Math.round(app.matchId.score))
@@ -71,6 +70,7 @@ const CompanyCandidates = () => {
           : undefined,
         jobType: job.jobType,
         salary: job.salary,
+        salaryPerAnnum: graduate.salaryPerAnnum,
         directContact: job.directContact !== false, // Default to true
       };
     },
@@ -81,7 +81,7 @@ const CompanyCandidates = () => {
 
   // Transform API match to CandidateProfile using useCallback
   const transformMatch = useCallback(
-    (match: any, index: number): CandidateProfile => {
+    (match: ApiMatch, index: number): CandidateProfile => {
       const graduate = match.graduateId || {};
       const job = match.jobId || {};
 
@@ -89,9 +89,11 @@ const CompanyCandidates = () => {
         graduate.lastName || ''
       }`.trim();
 
-      const matchScore = match.score > 1
-        ? Math.min(100, Math.round(match.score))
-        : Math.min(100, Math.round(match.score * 100));
+      const matchScore = match.score
+        ? match.score > 1
+          ? Math.min(100, Math.round(match.score))
+          : Math.min(100, Math.round(match.score * 100))
+        : 0;
 
       return {
         id: match._id || `match-${index}`,
@@ -107,10 +109,11 @@ const CompanyCandidates = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: graduate.cv,
+        cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
         matchPercentage: matchScore,
         jobType: job.jobType,
         salary: job.salary,
+        salaryPerAnnum: graduate.salaryPerAnnum,
         directContact: job.directContact !== false, // Default to true
       };
     },
@@ -184,7 +187,7 @@ const CompanyCandidates = () => {
   const applicationCandidates = useMemo(() => {
     if (!applicationsData || !Array.isArray(applicationsData)) return [];
     console.log(applicationsData)
-    return applicationsData.map((app: any, index: number) =>
+    return applicationsData.map((app: ApiApplication, index: number) =>
       transformApplication(app, index)
     );
   }, [applicationsData, transformApplication]);
@@ -192,7 +195,7 @@ const CompanyCandidates = () => {
   // Transform matches to candidates using useMemo
   const matchCandidates = useMemo(() => {
     if (!matchesData || !Array.isArray(matchesData)) return [];
-    return matchesData.map((match: any, index: number) =>
+    return matchesData.map((match: ApiMatch, index: number) =>
       transformMatch(match, index)
     );
   }, [matchesData, transformMatch]);
@@ -638,7 +641,6 @@ const CompanyCandidates = () => {
         )}
       </div>
 
-      {/* Candidate Preview Modal */}
       <CandidatePreviewModal
         isOpen={isModalOpen}
         candidate={selectedCandidate}
@@ -648,6 +650,23 @@ const CompanyCandidates = () => {
         onScheduleInterview={handleScheduleInterview}
         onAccept={handleAccept}
         onReject={handleReject}
+        isAccepting={!!(
+          updateApplicationStatusMutation.isPending &&
+          selectedCandidate?.applicationId &&
+          updateApplicationStatusMutation.variables?.status === 'accepted' &&
+          updateApplicationStatusMutation.variables?.applicationId === selectedCandidate.applicationId
+        )}
+        isRejecting={!!(
+          updateApplicationStatusMutation.isPending &&
+          selectedCandidate?.applicationId &&
+          updateApplicationStatusMutation.variables?.status === 'rejected' &&
+          updateApplicationStatusMutation.variables?.applicationId === selectedCandidate.applicationId
+        )}
+        isSchedulingInterview={!!(
+          scheduleInterviewMutation.isPending &&
+          selectedCandidate?.applicationId &&
+          scheduleInterviewMutation.variables?.applicationId === selectedCandidate.applicationId
+        )}
       />
     </div>
   );

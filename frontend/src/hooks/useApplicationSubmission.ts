@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { graduateApi } from '../api/graduate';
+import { ApiResume, ApiError } from '../types/api';
 
 interface ApplicationData {
-  resume?: any;
+  resume?: ApiResume | File | string;
   coverLetter?: string;
   extraAnswers?: Record<string, string>;
 }
@@ -11,7 +12,7 @@ interface ApplicationData {
 interface UseApplicationSubmissionOptions {
   jobId: string;
   onSuccess?: () => void;
-  onError?: (error: any) => void;
+  onError?: (error: ApiError) => void;
 }
 
 export const useApplicationSubmission = ({
@@ -40,7 +41,7 @@ export const useApplicationSubmission = ({
       setIsSubmitting(false);
       onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       const errorMessage = error?.response?.data?.message || 
         'Failed to submit application. Please try again.';
       setSubmitError(errorMessage);

@@ -46,7 +46,7 @@ export default function ProfilePictureEditor({ imageUrl, size = 150, onUpload }:
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         initialImage={fileSrc}
-        onImageSaved={(url) => setFileSrc(url)}
+        onImageSaved={(url: string) => setFileSrc(url)}
         onUpload={onUpload}
         inputRef={inputRef}
         previewSize={size}
@@ -69,7 +69,7 @@ function ImageCropModal({
   const [imageSrc, setImageSrc] = useState<string | null>(initialImage)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
   const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
@@ -87,11 +87,11 @@ function ImageCropModal({
     onClose()
   }
 
-  const onCropComplete = useCallback((_: any, areaPixels: any) => {
+  const onCropComplete = useCallback((_: unknown, areaPixels: { x: number; y: number; width: number; height: number }) => {
     setCroppedAreaPixels(areaPixels)
   }, [])
 
-  const onSelectFile = async (e: any) => {
+  const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       const file = e.target.files[0]
       const url = await readFile(file)

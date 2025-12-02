@@ -12,6 +12,7 @@ import {
   getUserActivityLogs,
   getHealthStatus,
   getDatabaseStats,
+  getRankStatistics,
 } from '../controllers/admin.controller';
 import {
   authenticate,
@@ -38,5 +39,6 @@ router.get('/system-stats', getSystemStats);
 router.get('/user-activity', getUserActivityLogs);
 router.get('/health', getHealthStatus);
 router.get('/db-stats', getDatabaseStats);
+router.get('/rank-statistics', getRankStatistics);
 
 export default router;

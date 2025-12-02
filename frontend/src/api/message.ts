@@ -1,4 +1,5 @@
 import api from './client';
+import { ApiError } from '../types/api';
 
 export const messageApi = {
   // Get unread message count
@@ -6,8 +7,9 @@ export const messageApi = {
     try {
       const response = await api.get('/messages/unread-count');
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const err = error as ApiError;
+      if (err.response?.status === 404) {
         return { totalUnread: 0, unreadBySender: [] };
       }
       throw error;
@@ -19,8 +21,9 @@ export const messageApi = {
     try {
       const response = await api.get('/messages/conversations', { params });
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const err = error as ApiError;
+      if (err.response?.status === 404) {
         return { messages: [] };
       }
       throw error;
@@ -32,8 +35,9 @@ export const messageApi = {
     try {
       const response = await api.get(`/messages/conversations/${otherUserId}`);
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const err = error as ApiError;
+      if (err.response?.status === 404) {
         return [];
       }
       throw error;

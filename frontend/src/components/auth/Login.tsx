@@ -37,13 +37,14 @@ const Login = () => {
           navigate('/graduate', { replace: true });
           return;
         }
-      } catch (profileError: any) {
-        if (profileError.response?.status === 404) {
+      } catch (profileError: unknown) {
+        const err = profileError as { response?: { status?: number } };
+        if (err.response?.status === 404) {
           navigate('/onboarding', { replace: true });
           return;
         }
 
-        if (profileError.response?.status === 401) {
+        if (err.response?.status === 401) {
           setError('Session expired. Please log in again.');
           return;
         }
@@ -59,13 +60,14 @@ const Login = () => {
         await companyApi.getProfile();
         navigate('/company', { replace: true });
         return;
-      } catch (profileError: any) {
-        if (profileError.response?.status === 404) {
+      } catch (profileError: unknown) {
+        const err = profileError as { response?: { status?: number } };
+        if (err.response?.status === 404) {
           navigate('/company/onboarding', { replace: true });
           return;
         }
 
-        if (profileError.response?.status === 401) {
+        if (err.response?.status === 401) {
           setError('Session expired. Please log in again.');
           return;
         }
@@ -100,7 +102,7 @@ const Login = () => {
 
   const googleSubmit = useGoogleLogin({
     flow: 'auth-code',
-    onSuccess: async (codeResponse: any) => {
+    onSuccess: async (codeResponse: { code: string }) => {
       try {
         const res = await axios.post(
           `${import.meta.env.VITE_APP_API_URL}/auth/google/authcode`,
@@ -124,10 +126,11 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       await handlePasswordLogin();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
       setError(
-        err.response?.data?.message || 'Login failed. Please try again.'
+        error.response?.data?.message || 'Login failed. Please try again.'
       );
     } finally {
       setIsSubmitting(false);

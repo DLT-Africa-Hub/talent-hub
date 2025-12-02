@@ -17,7 +17,7 @@ export const adminApi = {
     return response.data;
   },
 
-  updateUser: async (userId: string, userData: any) => {
+  updateUser: async (userId: string, userData: Record<string, unknown>) => {
     const response = await api.put(`/admin/users/${userId}`, userData);
     return response.data;
   },

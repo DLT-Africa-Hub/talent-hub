@@ -48,7 +48,7 @@ const GraduateProfile = () => {
   const getGitHubUsername = (url?: string): string | null => {
     if (!url) return null;
     try {
-      const match = url.match(/github\.com\/([^\/\?]+)/);
+      const match = url.match(/github\.com\/([^/?]+)/);
       return match ? match[1] : null;
     } catch {
       return null;
@@ -59,7 +59,7 @@ const GraduateProfile = () => {
   const getLinkedInUsername = (url?: string): string | null => {
     if (!url) return null;
     try {
-      const match = url.match(/linkedin\.com\/in\/([^\/\?]+)/);
+      const match = url.match(/linkedin\.com\/in\/([^/?]+)/);
       return match ? match[1] : null;
     } catch {
       return null;

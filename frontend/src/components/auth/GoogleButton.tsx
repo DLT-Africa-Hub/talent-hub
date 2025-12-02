@@ -3,8 +3,8 @@ import { FcGoogle } from 'react-icons/fc';
 
 type Props = {
   login: () => void;
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
+  onSuccess?: (data: { code: string }) => void;
+  onError?: (error: { message?: string }) => void;
   role?: 'graduate' | 'company' | 'admin';
 };
 

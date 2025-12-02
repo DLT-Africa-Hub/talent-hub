@@ -43,29 +43,29 @@ const Messages: React.FC = () => {
   const conversations = useMemo(() => {
     if (!messagesResponse) return [];
 
-    let conversationsData: any[] = [];
+    let conversationsData: Record<string, unknown>[] = [];
     if (Array.isArray(messagesResponse)) {
-      conversationsData = messagesResponse;
+      conversationsData = messagesResponse as Record<string, unknown>[];
     } else if (messagesResponse?.conversations && Array.isArray(messagesResponse.conversations)) {
-      conversationsData = messagesResponse.conversations;
+      conversationsData = messagesResponse.conversations as Record<string, unknown>[];
     } else if (messagesResponse?.messages && Array.isArray(messagesResponse.messages)) {
-      conversationsData = messagesResponse.messages;
+      conversationsData = messagesResponse.messages as Record<string, unknown>[];
     }
 
-    return conversationsData.map((conv: any): Conversation => {
+    return conversationsData.map((conv: Record<string, unknown>): Conversation => {
       let name = 'Unknown';
       let role = '';
       let image = DEFAULT_COMPANY_IMAGE;
 
       if (user?.role === 'graduate') {
         // User is graduate, so show company info
-        const company = conv.company || {};
+        const company = (conv.company || {}) as { companyName?: string; industry?: string };
         name = company.companyName || 'Company';
         role = company.industry || '';
         image = DEFAULT_COMPANY_IMAGE; // Use default since no logo field
       } else if (user?.role === 'company') {
         // User is company, so show graduate info
-        const graduate = conv.graduate || {};
+        const graduate = (conv.graduate || {}) as { firstName?: string; lastName?: string; position?: string; profilePictureUrl?: string };
         const firstName = graduate.firstName || '';
         const lastName = graduate.lastName || '';
         name = `${firstName} ${lastName}`.trim() || 'Graduate';
@@ -73,21 +73,22 @@ const Messages: React.FC = () => {
         image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
       }
 
-      const lastMessage = conv.lastMessage?.text || conv.lastMessage?.message || '';
-      const lastMessageTime = conv.lastMessage?.createdAt
-        ? new Date(conv.lastMessage.createdAt)
-        : conv.updatedAt
-          ? new Date(conv.updatedAt)
-          : undefined;
+      const lastMessageObj = (conv.lastMessage || {}) as { text?: string; message?: string; createdAt?: string | Date };
+      const lastMessage = lastMessageObj.text || lastMessageObj.message || '';
+      const lastMessageTime = lastMessageObj.createdAt
+        ? new Date(lastMessageObj.createdAt)
+        : (conv.updatedAt as string | Date | undefined)
+        ? new Date(conv.updatedAt as string | Date)
+        : undefined;
 
       return {
-        id: conv._id || conv.id || '',
+        id: (conv._id || conv.id || '') as string,
         name,
         role,
         image,
         lastMessage,
         lastMessageTime,
-        unreadCount: conv.unreadCount || 0,
+        unreadCount: (conv.unreadCount || 0) as number,
       };
     });
   }, [messagesResponse, user?.role]);
@@ -228,9 +229,9 @@ const Messages: React.FC = () => {
                         {formatTime(conversation.lastMessageTime)}
                       </p>
                     )}
-                    {conversation.unreadCount > 0 && (
+                    {(conversation.unreadCount || 0) > 0 && (
                       <span className="flex items-center justify-center min-w-[20px] h-[20px] px-[6px] rounded-full bg-button text-white text-[10px] font-semibold">
-                        {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                        {(conversation.unreadCount || 0) > 99 ? '99+' : conversation.unreadCount || 0}
                       </span>
                     )}
                   </div>

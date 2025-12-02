@@ -24,6 +24,7 @@ export interface CandidateProfile {
     max?: number;
     currency?: string;
   };
+  salaryPerAnnum?: number;
   directContact?: boolean; 
   interviewScheduledAt?: string;
   interviewRoomSlug?: string;

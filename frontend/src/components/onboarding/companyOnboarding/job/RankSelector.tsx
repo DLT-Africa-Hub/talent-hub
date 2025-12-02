@@ -1,12 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import companyApi from '../../../../api/company';
-
 export type RankOption = 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
 
 interface RankSelectorProps {
   selectedRank: RankOption | '';
   onRankSelect: (rank: RankOption) => void;
 }
+
+// Rank score ranges based on assessment scoring
+const RANK_SCORE_RANGES: Record<string, string> = {
+  'A': '85-100%',
+  'B': '75-84%',
+  'C': '60-74%',
+  'D': '< 60%',
+};
 
 const RankSelector = ({ selectedRank, onRankSelect }: RankSelectorProps) => {
   const rankOptions: RankOption[] = [
@@ -19,35 +24,23 @@ const RankSelector = ({ selectedRank, onRankSelect }: RankSelectorProps) => {
     'C and D',
   ];
 
-  // Fetch rank statistics
-  const { data: rankStatsData } = useQuery({
-    queryKey: ['rankStatistics'],
-    queryFn: async () => {
-      const response = await companyApi.getAvailableGraduates({ limit: 1 });
-      return response.rankStatistics || {};
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-
-  const rankStats = rankStatsData || {};
-
-  // Helper function to get percentage for a rank
-  const getRankPercentage = (rank: RankOption): number => {
+  // Helper function to get score range for a rank
+  const getRankScoreRange = (rank: RankOption): string => {
     if (rank.includes(' and ')) {
-      // For combined ranks, show the average or sum of individual ranks
+      // For combined ranks, show both ranges
       const ranks = rank.split(' and ');
-      const rank1 = rankStats[ranks[0]]?.percentage || 0;
-      const rank2 = rankStats[ranks[1]]?.percentage || 0;
-      return Math.round((rank1 + rank2) / 2);
+      const range1 = RANK_SCORE_RANGES[ranks[0]] || '';
+      const range2 = RANK_SCORE_RANGES[ranks[1]] || '';
+      return `${range1} / ${range2}`;
     }
-    return rankStats[rank]?.percentage || 0;
+    return RANK_SCORE_RANGES[rank] || '';
   };
 
   return (
     <div className="flex flex-col gap-[12px] rounded-[20px] border border-[#1B77001A] bg-white p-[18px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)]">
       {rankOptions.map((rank) => {
         const isSelected = selectedRank === rank;
-        const percentage = getRankPercentage(rank);
+        const scoreRange = getRankScoreRange(rank);
         return (
           <label
             key={rank}
@@ -70,9 +63,9 @@ const RankSelector = ({ selectedRank, onRankSelect }: RankSelectorProps) => {
                 {rank} Rank
               </span>
             </div>
-            {percentage > 0 && (
+            {scoreRange && (
               <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                {percentage}%
+                {scoreRange}
               </span>
             )}
           </label>

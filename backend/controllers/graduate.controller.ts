@@ -1912,7 +1912,14 @@ export const getApplications = async (
     }
 
     const applications = await Application.find({ graduateId: graduate._id })
-      .populate('jobId', 'title companyId location status')
+      .populate({
+        path: 'jobId',
+        select: 'title companyId location status jobType salary description',
+        populate: {
+          path: 'companyId',
+          select: 'companyName',
+        },
+      })
       .sort({ appliedAt: -1 })
       .lean();
 

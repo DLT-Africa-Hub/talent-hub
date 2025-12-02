@@ -4,9 +4,7 @@ import { CandidateProfile } from '../../data/candidates';
 import BaseModal from '../ui/BaseModal';
 import { Input, Button } from '../ui';
 import {
-  formatJobType,
-  formatSalaryRange,
-  getSalaryType,
+  formatSalaryPerAnnum,
 } from '../../utils/job.utils';
 
 interface CandidatePreviewModalProps {
@@ -22,6 +20,9 @@ interface CandidatePreviewModalProps {
     scheduledAt: string,
     durationMinutes?: number
   ) => Promise<void> | void;
+  isAccepting?: boolean;
+  isRejecting?: boolean;
+  isSchedulingInterview?: boolean;
 }
 
 const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
@@ -33,6 +34,9 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   onAccept,
   onReject,
   onScheduleInterview,
+  isAccepting = false,
+  isRejecting = false,
+  isSchedulingInterview = false,
 }) => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
@@ -84,14 +88,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
     !!candidate.applicationId &&
     typeof onScheduleInterview === 'function';
 
-  // Format job details
-  const jobType = candidate.jobType
-    ? formatJobType(candidate.jobType)
-    : 'Not specified';
-  const salaryRange = formatSalaryRange(candidate.salary);
-  const salaryType = candidate.jobType
-    ? getSalaryType(candidate.jobType)
-    : 'Annual';
+  // Format location details
   const locationParts = candidate.location
     ? candidate.location.split(' • ')
     : [];
@@ -109,10 +106,12 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   };
 
   const handleAccept = () => {
+    if (isAccepting || isRejecting) return;
     onAccept?.(candidate);
   };
 
   const handleReject = () => {
+    if (isAccepting || isRejecting) return;
     onReject?.(candidate);
   };
 
@@ -142,16 +141,20 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
       setShowScheduleForm(false);
       setScheduledAt('');
       setDurationMinutes(30);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       const message =
-        error?.response?.data?.message ||
-        error?.message ||
+        err?.response?.data?.message ||
+        err?.message ||
         'Failed to schedule interview. Please try again.';
       setScheduleError(message);
     } finally {
       setIsScheduling(false);
     }
   };
+
+  // Use external loading state if provided, otherwise use internal state
+  const isSchedulingLoading = isSchedulingInterview || isScheduling;
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
@@ -246,17 +249,19 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
               Location (City)
             </span>
           </div>
-          <div className="h-[40px] w-px bg-[#E0E0E0]" />
-          <div className="flex flex-col">
-            <span className="text-[18px] font-semibold text-[#1C1C1C]">
-              {salaryRange === 'Not specified'
-                ? '—'
-                : salaryRange.replace(/[k$]/g, '')}
-            </span>
-            <span className="text-[14px] text-[#1C1C1CBF]">
-              Salary (Annual)
-            </span>
-          </div>
+          {candidate.salaryPerAnnum && (
+            <>
+              <div className="h-[40px] w-px bg-[#E0E0E0]" />
+              <div className="flex flex-col">
+                <span className="text-[18px] font-semibold text-[#1C1C1C]">
+                  {formatSalaryPerAnnum(candidate.salaryPerAnnum).replace('/year', '')}
+                </span>
+                <span className="text-[14px] text-[#1C1C1CBF]">
+                  Expected Salary
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -292,19 +297,39 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                       <Button
                         variant="primary"
                         onClick={handleAccept}
-                        disabled={isOfferSent}
-                        className="flex-1 bg-button text-white hover:bg-[#176300] font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isOfferSent || isAccepting || isRejecting}
+                        className="flex-1 bg-button text-white hover:bg-[#176300] font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        Accept
+                        {isAccepting ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Processing...
+                          </>
+                        ) : (
+                          'Accept'
+                        )}
                       </Button>
                     )}
                     {onReject && (
                       <Button
                         onClick={handleReject}
-                        disabled={isOfferSent}
-                        className="flex-1 bg-red-600 text-white hover:bg-red-700 font-semibold py-3 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isOfferSent || isAccepting || isRejecting}
+                        className="flex-1 bg-red-600 text-white hover:bg-red-700 font-semibold py-3 border-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        Reject
+                        {isRejecting ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Processing...
+                          </>
+                        ) : (
+                          'Reject'
+                        )}
                       </Button>
                     )}
                   </div>
@@ -319,7 +344,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                     }}
                     variant="secondary"
                     className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={!canScheduleInterview}
+                    disabled={!canScheduleInterview || isSchedulingLoading}
                   >
                     <HiVideoCamera className="text-[18px] mr-2" />
                     {hasActiveInterview
@@ -390,10 +415,20 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                 <Button
                   type="submit"
                   variant="primary"
-                  className="flex-1"
-                  disabled={isScheduling}
+                  className="flex-1 flex items-center justify-center gap-2"
+                  disabled={isSchedulingLoading}
                 >
-                  {isScheduling ? 'Scheduling...' : 'Schedule Interview'}
+                  {isSchedulingLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Scheduling...
+                    </>
+                  ) : (
+                    'Schedule Interview'
+                  )}
                 </Button>
                 <Button
                   type="button"

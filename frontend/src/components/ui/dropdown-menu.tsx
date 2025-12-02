@@ -22,12 +22,12 @@ export const DropdownMenuTrigger = ({ children }: TriggerProps) => {
 
   // Wrap children so we can toggle the menu
   return cloneElement(children, {
-    onClick: (e: any) => {
+    onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
       setOpen((prev: boolean) => !prev);
 
       // Save state globally for content
-      (window as any).__dropdown_open = !open;
+      (window as Window & { __dropdown_open?: boolean }).__dropdown_open = !open;
       document.dispatchEvent(new Event("dropdown-toggle"));
     },
   });
@@ -37,13 +37,13 @@ export const DropdownMenuContent = ({
   children,
   className = "",
 }: ContentProps) => {
-  const [open, setOpen] = useState((window as any).__dropdown_open || false);
+  const [open, setOpen] = useState((window as Window & { __dropdown_open?: boolean }).__dropdown_open || false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Listen for trigger toggle
   useEffect(() => {
     const listener = () => {
-      setOpen((window as any).__dropdown_open);
+      setOpen((window as Window & { __dropdown_open?: boolean }).__dropdown_open || false);
     };
     document.addEventListener("dropdown-toggle", listener);
 
@@ -52,7 +52,7 @@ export const DropdownMenuContent = ({
 
   // Close on click outside
   useEffect(() => {
-    const clickHandler = (e: any) => {
+    const clickHandler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target)) {
         setOpen(false);
         (window as any).__dropdown_open = false;

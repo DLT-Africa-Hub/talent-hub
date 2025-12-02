@@ -48,10 +48,15 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
         try {
           const cloudinaryResult = await cloudinaryApi.deleteCV(cv.fileUrl);
           console.log('Cloudinary deletion result:', cloudinaryResult);
-        } catch (cloudinaryError: any) {
-          console.error('Cloudinary deletion error:', cloudinaryError);
-          // Log but don't throw - we still want to delete from database
-          console.warn('Continuing with database deletion despite Cloudinary error');
+        } catch (cloudinaryError: unknown) {
+          const error = cloudinaryError as {
+            response?: { data?: { message?: string } };
+            message?: string;
+          };
+          console.error('Cloudinary deletion error:', error);
+          console.warn(
+            'Continuing with database deletion despite Cloudinary error'
+          );
         }
       }
 
@@ -66,9 +71,13 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
       queryClient.invalidateQueries({ queryKey: ['graduateCVs'] });
       console.log(`Successfully deleted CV: ${cv.fileName}`);
     },
-    onError: (error: any, cv) => {
-      alert(error?.response?.data?.message || 'Failed to delete CV');
-      console.error('Delete mutation error:', error);
+    onError: (error: unknown) => {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      alert(err?.response?.data?.message || 'Failed to delete CV');
+      console.error('Delete mutation error:', err);
     },
     onSettled: (_, __, cv) => {
       // Remove from deleting set
@@ -88,8 +97,12 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['graduateCVs'] });
     },
-    onError: (error: any) => {
-      alert(error?.response?.data?.message || 'Failed to update display CV');
+    onError: (error: unknown) => {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      alert(err?.response?.data?.message || 'Failed to update display CV');
     },
   });
 
@@ -104,7 +117,10 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
-    if (!allowedMime.includes(file.type) && !/\.(pdf|docx?|PDF|DOCX?)$/.test(file.name)) {
+    if (
+      !allowedMime.includes(file.type) &&
+      !/\.(pdf|docx?|PDF|DOCX?)$/.test(file.name)
+    ) {
       setUploadError('Only PDF, DOC, and DOCX files are allowed');
       return;
     }
@@ -147,7 +163,11 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
     xhr.onload = async () => {
       try {
         const resp = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300 && (resp.secure_url || resp.url)) {
+        if (
+          xhr.status >= 200 &&
+          xhr.status < 300 &&
+          (resp.secure_url || resp.url)
+        ) {
           const secureUrl = resp.secure_url || resp.url;
           const publicId = resp.public_id || resp.publicId;
 
@@ -193,7 +213,11 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
   };
 
   const handleDeleteCV = (cv: CV) => {
-    if (window.confirm(`Are you sure you want to delete "${cv.fileName}"? This will remove it from both Cloudinary and the database.`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${cv.fileName}"? This will remove it from both Cloudinary and the database.`
+      )
+    ) {
       deleteMutation.mutate(cv);
     }
   };
@@ -203,7 +227,7 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   if (!isOpen) return null;
@@ -262,9 +286,7 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
               />
             </label>
             {uploadError && (
-              <p className="text-[12px] text-red-500 mt-[8px]">
-                {uploadError}
-              </p>
+              <p className="text-[12px] text-red-500 mt-[8px]">{uploadError}</p>
             )}
           </div>
 
@@ -287,7 +309,7 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
             <div className="space-y-[12px]">
               {cvs.map((cv) => {
                 const isDeleting = deletingIds.has(cv._id);
-                
+
                 return (
                   <div
                     key={cv._id}
@@ -326,7 +348,9 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
                         {!cv.onDisplay && (
                           <button
                             onClick={() => updateDisplayMutation.mutate(cv._id)}
-                            disabled={updateDisplayMutation.isPending || isDeleting}
+                            disabled={
+                              updateDisplayMutation.isPending || isDeleting
+                            }
                             className="p-[10px] rounded-[10px] border border-fade hover:border-button hover:bg-[#F8F8F8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Set as display CV"
                           >

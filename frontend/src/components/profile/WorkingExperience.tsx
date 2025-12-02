@@ -77,20 +77,21 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
     mutationFn: async (exp: WorkExperienceItem) => {
       if (editingExp?._id) {
        
-        return await graduateApi.updateWorkExperience(editingExp._id, exp);
+        return await graduateApi.updateWorkExperience(editingExp._id, exp as unknown as Record<string, unknown>);
       } else {
-        return await graduateApi.addWorkExperience(exp);
+        return await graduateApi.addWorkExperience(exp as unknown as Record<string, unknown>);
       }
     },
-    onSuccess: (data: any) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'header'] });
       setBannerMessage(editingExp ? 'Work experience updated successfully' : 'Work experience added successfully');
       setBannerType('success');
       setEditingExp(null);
       setIsModalOpen(false);
     },
-    onError: (err: any) => {
-      setBannerMessage(err?.response?.data?.message || err?.message || 'Failed to save experience');
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      setBannerMessage(error?.response?.data?.message || error?.message || 'Failed to save experience');
       setBannerType('error');
     },
   });
@@ -103,8 +104,9 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
       setBannerMessage('Work experience deleted');
       setBannerType('success');
     },
-    onError: (err: any) => {
-      setBannerMessage(err?.response?.data?.message || err?.message || 'Failed to delete experience');
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      setBannerMessage(error?.response?.data?.message || error?.message || 'Failed to delete experience');
       setBannerType('error');
     },
   });
@@ -191,8 +193,8 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
         <AddExperienceModal
           onClose={() => setIsModalOpen(false)}
           onSubmit={(exp) => addExpMutation.mutate(exp)}
-          submitting={addExpMutation.isLoading}
-          defaultErrorMessage={addExpMutation.isError ? String(addExpMutation.error?.message || 'Error') : undefined}
+          submitting={addExpMutation.isPending}
+          defaultErrorMessage={addExpMutation.isError ? String((addExpMutation.error as { message?: string })?.message || 'Error') : undefined}
           defaultValues={editingExp || undefined}
         />
       )}

@@ -491,6 +491,55 @@ export const getHealthStatus = async (
   }
 };
 
+/**
+ * Get rank statistics for all graduates
+ * GET /api/admin/rank-statistics
+ */
+export const getRankStatistics = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // Get rank distribution for statistics
+    const rankDistribution = await Graduate.aggregate([
+      { $match: { rank: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: '$rank',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const totalWithRank = rankDistribution.reduce(
+      (sum, item) => sum + item.count,
+      0
+    );
+
+    const rankStats = rankDistribution.reduce(
+      (acc, item) => {
+        acc[item._id] = {
+          count: item.count,
+          percentage: totalWithRank > 0 
+            ? Math.round((item.count / totalWithRank) * 100) 
+            : 0,
+        };
+        return acc;
+      },
+      {} as Record<string, { count: number; percentage: number }>
+    );
+
+    res.json({
+      rankStatistics: rankStats,
+      total: totalWithRank,
+    });
+  } catch (error) {
+    console.error('Error fetching rank statistics:', error);
+    res.status(500).json({ message: 'Failed to fetch rank statistics' });
+  }
+};
+
 export const getDatabaseStats = async (
   _req: Request,
   res: Response

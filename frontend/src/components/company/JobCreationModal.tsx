@@ -5,7 +5,6 @@ import {
   Button,
   Input,
   Select,
-  Textarea,
 } from '../ui';
 import RichTextEditor from '../ui/RichTextEditor';
 import RankSelector, {
@@ -13,6 +12,7 @@ import RankSelector, {
 } from '../onboarding/companyOnboarding/job/RankSelector';
 import { skills } from '../../utils/material.utils';
 import { companyApi } from '../../api/company';
+import { CURRENCIES } from '../../utils/job.utils';
 
 type JobCreationStep = 'details' | 'rank' | 'success';
 
@@ -21,6 +21,7 @@ interface JobFormData {
   jobType: 'Full time' | 'Part time' | 'Contract' | 'Internship' | '';
   location: string;
   salaryAmount: string;
+  salaryCurrency: string;
   description: string;
   skills: string[];
   directContact: boolean;
@@ -54,6 +55,7 @@ const defaultFormData: JobFormData = {
   jobType: '',
   location: '',
   salaryAmount: '',
+  salaryCurrency: 'USD',
   description: '',
   skills: [],
   directContact: true, // Default to direct contact
@@ -147,7 +149,7 @@ const JobCreationModal = ({
       salary: salaryAmount
         ? {
             amount: salaryAmount * 1000, // Convert from k to actual amount
-            currency: 'USD',
+            currency: formData.salaryCurrency || 'USD',
           }
         : undefined,
       status: 'active',
@@ -178,19 +180,20 @@ const JobCreationModal = ({
 
       onJobCreated?.();
       setStep('success');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string }; status?: number }; message?: string };
       let errorMessage = 'Failed to create job. Please try again.';
 
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       if (
         errorMessage.toLowerCase().includes('quota') ||
         errorMessage.toLowerCase().includes('billing') ||
-        err.response?.status === 402
+        error.response?.status === 402
       ) {
         errorMessage =
           'Unable to create job: AI matching quota exceeded. Please contact support.';
@@ -268,15 +271,28 @@ const JobCreationModal = ({
           <label className="text-[#1C1C1C] text-[16px] font-medium">
             Salary (Annual)
           </label>
-          <Input
-            name="salaryAmount"
-            type="number"
-            placeholder="e.g., 50 (in thousands)"
-            value={formData.salaryAmount}
-            onChange={handleFormChange}
-            min="0"
-            step="1"
-          />
+          <div className="flex gap-3">
+            <Input
+              name="salaryAmount"
+              type="number"
+              placeholder="e.g., 50 (in thousands)"
+              value={formData.salaryAmount}
+              onChange={handleFormChange}
+              min="0"
+              step="1"
+              className="flex-1"
+            />
+            <Select
+              name="salaryCurrency"
+              value={formData.salaryCurrency}
+              onChange={handleFormChange}
+              className="w-[140px]"
+              options={CURRENCIES.map((currency) => ({
+                value: currency.code,
+                label: `${currency.code} (${currency.symbol})`,
+              }))}
+            />
+          </div>
           <p className="text-[12px] text-[#1C1C1C80]">
             Enter salary in thousands (e.g., 50 for $50k)
           </p>

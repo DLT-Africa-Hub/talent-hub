@@ -10,13 +10,13 @@ export const graduateApi = {
   },
 
   // Create graduate profile
-  createProfile: async (profileData: any) => {
+  createProfile: async (profileData: Record<string, unknown>) => {
     const response = await api.post('/graduates/profile', profileData);
     return response.data;
   },
 
   // Update graduate profile
-  updateProfile: async (profileData: any) => {
+  updateProfile: async (profileData: Record<string, unknown>) => {
     const response = await api.put('/graduates/profile', profileData);
     return response.data;
   },
@@ -44,18 +44,18 @@ export const graduateApi = {
   },
 
   // Education Management
-  updateEducation: async (education: any) => {
+  updateEducation: async (education: Record<string, unknown>) => {
     const response = await api.put('/graduates/profile/education', education);
     return response.data;
   },
 
   // Work Experience Management
-  addWorkExperience: async (experience: any) => {
+  addWorkExperience: async (experience: Record<string, unknown>) => {
     const response = await api.post('/graduates/profile/work-experiences', experience);
     return response.data;
   },
 
-  updateWorkExperience: async (experienceId: string, experience: any) => {
+  updateWorkExperience: async (experienceId: string, experience: Record<string, unknown>) => {
     const response = await api.put(`/graduates/profile/work-experiences/${experienceId}`, experience);
     return response.data;
   },
@@ -107,7 +107,7 @@ export const graduateApi = {
         fileName: string;
         fileUrl: string;
         size: number;
-        publicId?: any;
+        publicId?: string;
         onDisplay?: boolean;
       };
       extraAnswers?: Record<string, string>;

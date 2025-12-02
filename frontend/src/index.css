@@ -9,6 +9,8 @@
   --font-sf:  Rubik, "sans-serif";
   --background-image-form: url('/formBg.png');
   --background-image-onBoard: url('/group.png');
+  --background-image-xImage: url('/bgX.png');
+  
 }
 
 @layer utilities {
@@ -19,6 +21,10 @@
   .bg-onBoard{
     background-image:var( --background-image-onBoard);
     background-size: 150%;
+  }
+
+  .bg-hero{
+    background-image:var(--background-image-xImage);
   }
 }
 

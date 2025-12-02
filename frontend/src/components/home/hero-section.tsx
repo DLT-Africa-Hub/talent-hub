@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom'
 
 const HeroSection = () => {
   return (
-    <div className='pt-[150px] w-full relative h-screen overflow-hidden font-inter'>
-        <img src="droplight.png" alt="" className='absolute top-[-310px] right-[250px]' />
+    <div className='pt-[150px] w-full relative h-auto lg:h-screen overflow-hidden font-inter'>
+        <img src="droplight.png" alt="" className='absolute top-[-180px] right-[-100px] lg:top-[-310px] lg:right-[250px]' />
           
           <div className='flex flex-col w-full items-center gap-[69px]'>
            <div className='flex flex-col items-center gap-[55px] text-center'>
@@ -30,7 +30,7 @@ const HeroSection = () => {
 
           
            </div>
-           <div className='w-full relative flex items-center justify-center  bg-top'>
+           <div className='w-full relative lg:flex items-center justify-center  bg-top hidden'>
             <img src="bgX.png" alt="" className='absolute w-[95%] top-[-300px]' />
 
                 

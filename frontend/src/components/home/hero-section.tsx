@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom'
 
 const HeroSection = () => {
   return (
-    <div className='pt-[150px] w-full relative h-auto lg:h-screen overflow-hidden font-inter'>
-        <img src="droplight.png" loading='lazy' alt="" className='absolute top-[-180px] right-[-100px] lg:top-[-310px] lg:right-[250px]' />
+    <div className='pt-[150px] w-full relative h-auto lg:h-[106vh] overflow-hidden font-inter'>
+        <img src="droplight.png" loading='lazy' alt="" className='absolute top-[-180px] right-[-100px] lg:top-[-310px] lg:right-[200px]' />
           
           <div className='flex flex-col w-full items-center gap-[69px]'>
            <div className='flex flex-col items-center gap-[55px] text-center'>
@@ -30,11 +30,11 @@ const HeroSection = () => {
           
            </div>
            <div className='w-full relative lg:flex items-center justify-center  bg-top hidden'>
-            <img src="bgX.png" loading='lazy' alt="" className='absolute w-[95%] top-[-300px]' />
+            <img src="bgX.png" loading='lazy'  alt="" className='absolute  w-[2510px] h-[970px] top-[-350px]' />
 
                 
 
-                <img src="heropageimg.png" loading='lazy' className='w-[1033px] rounded-[22px] h-[668px] z-10'   alt="heroImage" />
+                <img src="hero.png" loading='lazy' className='w-[1280px] rounded-[22px] h-[828px] z-10'   alt="heroImage" />
 
             </div>
             

@@ -1,5 +1,4 @@
 import { ArrowRight } from 'lucide-react'
-import React from 'react'
 import { PiStarFourBold } from 'react-icons/pi'
 import { Link } from 'react-router-dom'
 

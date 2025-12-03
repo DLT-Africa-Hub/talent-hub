@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Input, Button } from '../ui';
 import { GoogleLoginButton } from './GoogleButton';
 
+
 interface AuthFormProps {
   title: string;
   subtitle: string;

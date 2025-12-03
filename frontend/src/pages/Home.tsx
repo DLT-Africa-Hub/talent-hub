@@ -11,7 +11,7 @@ const Home = () => {
     <div className='relative'>
       <FloatingNavbar />
       <HeroSection />
-       <Features/>
+      <Features/>
       <Opportunities />
       <SimpleProcess />
       <TryItNow />

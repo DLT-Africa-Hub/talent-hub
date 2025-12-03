@@ -22,7 +22,7 @@ import NotificationDetailsModal from '../components/notifications/NotificationDe
 import CandidatePreviewModal from '../components/company/CandidatePreviewModal';
 import JobPreviewModal from '../components/ui/JobPreviewModal';
 import { NotificationItem } from '../types/notification';
-import { CandidateProfile } from '../data/candidates';
+import { CandidateProfile } from '../types/candidates';
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();

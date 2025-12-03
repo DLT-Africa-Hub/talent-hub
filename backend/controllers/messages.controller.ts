@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import MessageModel from '../models/Message.model';
 import UserModel from '../models/User.model';
@@ -8,7 +8,7 @@ import CompanyModel from '../models/Company.model';
 /**
  * Send a message
  */
-export const sendMessage = async (req: any, res: Response) => {
+export const sendMessage = async (req: Request, res: Response) => {
   try {
     const senderId = req.user?.userId;
     if (!senderId) {
@@ -56,7 +56,7 @@ export const sendMessage = async (req: any, res: Response) => {
 /**
  * Get conversation between two users
  */
-export const getConversation = async (req: any, res: Response) => {
+export const getConversation = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { otherUserId } = req.params;
@@ -94,7 +94,7 @@ export const getConversation = async (req: any, res: Response) => {
 /**
  * Get list of conversations with user details and unread counts
  */
-export const getChatList = async (req: any, res: Response) => {
+export const getChatList = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -157,7 +157,23 @@ export const getChatList = async (req: any, res: Response) => {
           return null;
         }
 
-        let userData: any = {};
+        type UserProfileData = {
+          _id: mongoose.Types.ObjectId;
+        } & (
+          | {
+              firstName?: string;
+              lastName?: string;
+              profilePictureUrl?: string;
+              position?: string;
+            }
+          | {
+              companyName?: string;
+              industry?: string;
+              website?: string;
+            }
+        );
+
+        let userData: UserProfileData | null = null;
 
        
         if (otherUser.role === 'graduate') {
@@ -181,7 +197,7 @@ export const getChatList = async (req: any, res: Response) => {
 
         return {
           _id: otherUserId,
-          [otherUser.role === 'graduate' ? 'graduate' : 'company']: userData,
+          [otherUser.role === 'graduate' ? 'graduate' : 'company']: userData || { _id: otherUserId },
           lastMessage: {
             text: conv.lastMessage.message,
             message: conv.lastMessage.message, 
@@ -206,7 +222,7 @@ export const getChatList = async (req: any, res: Response) => {
 /**
  * Mark messages from a user as read
  */
-export const markAsRead = async (req: any, res: Response) => {
+export const markAsRead = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     const { otherUserId } = req.params;
@@ -234,7 +250,7 @@ export const markAsRead = async (req: any, res: Response) => {
 /**
  * Get all messages for logged-in user (flat list)
  */
-export const getAllMessages = async (req: any, res: Response) => {
+export const getAllMessages = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -257,7 +273,7 @@ export const getAllMessages = async (req: any, res: Response) => {
 /**
  * Get unread counts for logged-in user
  */
-export const getUnreadCount = async (req: any, res: Response) => {
+export const getUnreadCount = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });

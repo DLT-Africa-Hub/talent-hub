@@ -1,6 +1,6 @@
 import { CiMail } from 'react-icons/ci';
 import { HiOutlineBriefcase } from 'react-icons/hi';
-import { CandidateProfile } from '../../data/candidates';
+import { CandidateProfile } from '../../types/candidates';
 import {
   candidateStatusStyles,
   candidateRankBadgeStyles,

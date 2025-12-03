@@ -502,9 +502,16 @@ class AIServiceClient {
     }
 
     const status = error.response.status;
-    const responseData = error.response.data as any;
+    interface ErrorResponseData {
+      detail?: string;
+      error?: {
+        message?: string;
+        code?: string;
+      };
+      message?: string;
+    }
+    const responseData = error.response.data as ErrorResponseData;
     
-    // FastAPI returns errors in 'detail' field, OpenAI errors may be in 'error.message'
     const errorMessage = 
       responseData?.detail || 
       responseData?.error?.message || 

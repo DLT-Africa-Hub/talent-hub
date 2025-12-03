@@ -81,6 +81,8 @@ const ForgotPassword = () => {
       error={error}
       showGoogleButton={false}
       isButtonDisabled={!isFormValid || loading}
+      onGoogleClick={() => {}}
+      mode="login"
     />
   );
 };

@@ -496,7 +496,7 @@ export const getHealthStatus = async (
  * GET /api/admin/rank-statistics
  */
 export const getRankStatistics = async (
-  req: Request,
+  _req: Request,
   res: Response
 ): Promise<void> => {
   try {

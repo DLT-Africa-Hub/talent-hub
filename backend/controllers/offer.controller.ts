@@ -182,12 +182,20 @@ export const uploadSignedOffer = async (
         })
         .lean();
 
+      interface PopulatedApplication {
+        jobId?: { title?: string } | mongoose.Types.ObjectId;
+      }
+      const populatedJob = job as PopulatedApplication | null;
+      const jobTitle = (populatedJob?.jobId && typeof populatedJob.jobId === 'object' && 'title' in populatedJob.jobId)
+        ? populatedJob.jobId.title
+        : undefined;
+
       if (company?.userId) {
         await createNotification({
           userId: company.userId.toString(),
           type: 'application',
           title: 'Offer Signed',
-          message: `${graduate.firstName} ${graduate.lastName} has signed the offer for ${(job as any)?.jobId?.title || 'the position'}.`,
+          message: `${graduate.firstName} ${graduate.lastName} has signed the offer for ${jobTitle || 'the position'}.`,
           relatedId: offer.id as mongoose.Types.ObjectId,
           relatedType: 'application',
         });
@@ -202,10 +210,11 @@ export const uploadSignedOffer = async (
           signedAt: offer.signedAt,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload signed offer error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload signed offer';
       res.status(500).json({ 
-        message: error.message || 'Failed to upload signed offer' 
+        message: errorMessage
       });
     }
   });
@@ -282,16 +291,24 @@ export const acceptOffer = async (req: Request, res: Response): Promise<void> =>
     })
     .lean();
 
+  interface PopulatedApplication {
+    jobId?: { title?: string } | mongoose.Types.ObjectId;
+  }
+  const populatedApp = populatedApplication as PopulatedApplication | null;
+  const jobTitle = (populatedApp?.jobId && typeof populatedApp.jobId === 'object' && 'title' in populatedApp.jobId)
+    ? populatedApp.jobId.title
+    : undefined;
+
   if (company?.userId) {
     await createNotification({
       userId: company.userId.toString(),
       type: 'application',
       title: 'Offer Accepted',
-      message: `Congratulations! ${graduate.firstName} ${graduate.lastName} has accepted the offer for ${(populatedApplication as any)?.jobId?.title || 'the position'}. The job posting has been closed.`,
+      message: `Congratulations! ${graduate.firstName} ${graduate.lastName} has accepted the offer for ${jobTitle || 'the position'}. The job posting has been closed.`,
       relatedId: offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id)),
       relatedType: 'application',
       email: {
-        subject: `Offer Accepted: ${(populatedApplication as any)?.jobId?.title || 'Position'}`,
+        subject: `Offer Accepted: ${jobTitle || 'Position'}`,
         text: `${graduate.firstName} ${graduate.lastName} has accepted your offer.`,
       },
     });
@@ -375,12 +392,20 @@ export const rejectOffer = async (req: Request, res: Response): Promise<void> =>
     })
     .lean();
 
+  interface PopulatedApplication {
+    jobId?: { title?: string } | mongoose.Types.ObjectId;
+  }
+  const populatedJob = job as PopulatedApplication | null;
+  const jobTitle = (populatedJob?.jobId && typeof populatedJob.jobId === 'object' && 'title' in populatedJob.jobId)
+    ? populatedJob.jobId.title
+    : undefined;
+
   if (company?.userId) {
     await createNotification({
       userId: company.userId.toString(),
       type: 'application',
       title: 'Offer Rejected',
-      message: `${graduate.firstName} ${graduate.lastName} has rejected the offer for ${(job as any)?.jobId?.title || 'the position'}.`,
+      message: `${graduate.firstName} ${graduate.lastName} has rejected the offer for ${jobTitle || 'the position'}.`,
       relatedId: offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id)),
       relatedType: 'application',
     });

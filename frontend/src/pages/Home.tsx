@@ -1,4 +1,3 @@
-import React from 'react'
 import FloatingNavbar from '../components/home/floating-nav'
 import HeroSection from '../components/home/hero-section'
 

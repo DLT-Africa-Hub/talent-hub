@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import Graduate, { GraduateDocument } from '../models/Graduate.model';
+import Graduate, { GraduateDocument, ICv } from '../models/Graduate.model';
 import Match from '../models/Match.model';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
@@ -1749,7 +1749,7 @@ export const applyToJob = async (
         fileName: string;
         fileUrl: string;
         size: number;
-        publicId: any;
+        publicId: string;
         onDisplay: boolean;
       } | null;
       extraAnswers?: Record<string, string>;
@@ -2262,7 +2262,7 @@ export const addCV = async (
     if (!graduate.cv) {
       graduate.cv = [];
     }
-    graduate.cv.push(newCV);
+    graduate.cv.push(newCV as ICv);
 
     graduate.markModified('cv');
     await graduate.save();

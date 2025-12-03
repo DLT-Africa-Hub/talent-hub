@@ -102,25 +102,32 @@ class EmailService {
 
       const info = await this.transporter.sendMail(mailOptions);
       console.log(`[Email Service] ✅ Email sent: ${info.messageId}`);
-    } catch (error: any) {
+    } catch (error) {
       const isLastAttempt = attempt >= emailConfig.retry.maxAttempts;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       console.error(
         `[Email Service] ❌ Email send failed (attempt ${attempt}/${emailConfig.retry.maxAttempts}):`,
-        error.message
+        errorMessage
       );
 
       if (isLastAttempt) {
         // Log error details for monitoring
+        interface NodemailerError extends Error {
+          code?: string;
+          command?: string;
+          response?: string;
+        }
+        const nodemailerError = error as NodemailerError;
         console.error('[Email Service] Final error details:', {
-          code: error.code,
-          command: error.command,
-          response: error.response,
+          code: nodemailerError.code,
+          command: nodemailerError.command,
+          response: nodemailerError.response,
           to: message.to,
           subject: message.subject,
         });
         throw new Error(
-          `Failed to send email after ${emailConfig.retry.maxAttempts} attempts: ${error.message}`
+          `Failed to send email after ${emailConfig.retry.maxAttempts} attempts: ${errorMessage}`
         );
       }
 

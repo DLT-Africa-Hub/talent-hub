@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BsSearch } from 'react-icons/bs';
 import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
-import { CandidateProfile, CandidateStatus } from '../../data/candidates';
+import { CandidateProfile, CandidateStatus } from '../../types/candidates';
 import { companyApi } from '../../api/company';
 import {
   candidateStatusFilters,

@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../../index';
 import { EmptyState, SectionHeader } from '../../components/ui';
 import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
-import { CandidateProfile } from '../../data/candidates';
+import { CandidateProfile } from '../../types/candidates';
 import {
   mapApplicationStatusToCandidateStatus,
   formatExperience,

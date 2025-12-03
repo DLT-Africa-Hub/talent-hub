@@ -44,7 +44,7 @@ const MobileNav = () => {
         graduate: ["graduate", "explore", "applications"],
     };
 
-    const allowed = rolePagesMap[user?.role] || rolePagesMap["graduate"];
+    const allowed = (user?.role && rolePagesMap[user.role]) || rolePagesMap["graduate"];
     const pages = allPages.filter(p => allowed.includes(p.link));
 
     const isActive = (link: string) => {

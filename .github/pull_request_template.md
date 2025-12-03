@@ -21,7 +21,7 @@
 
 ## Related Issues
 <!-- Link related issues using #issue_number -->
-Closes #
+Close #
 Related to #
 
 ## Testing

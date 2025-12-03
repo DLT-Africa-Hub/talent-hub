@@ -43,7 +43,7 @@ const extractPublicId = (url: string, resourceType: ResourceType = 'image'): str
     const pathname = urlObj.pathname;
     
 
-    let pathWithoutVersion = pathname.replace(/\/v\d+\//, '/');
+    const pathWithoutVersion = pathname.replace(/\/v\d+\//, '/');
     
 
     const uploadIndex = pathWithoutVersion.indexOf('/upload/');
@@ -89,7 +89,7 @@ const detectResourceType = (url: string): ResourceType => {
 };
 
 
-export const deleteFile = async (req: Request<{}, {}, DeleteFileRequest>, res: Response): Promise<Response> => {
+export const deleteFile = async (req: Request<Record<string, never>, Record<string, never>, DeleteFileRequest>, res: Response): Promise<Response> => {
   try {
     const { url, resourceType } = req.body;
 
@@ -107,7 +107,7 @@ export const deleteFile = async (req: Request<{}, {}, DeleteFileRequest>, res: R
 
   
 
-    let result: any;
+    let result: { result?: string; deleted?: Record<string, string> };
 
   
     if (detectedType === 'raw') {
@@ -193,7 +193,7 @@ export const deleteFile = async (req: Request<{}, {}, DeleteFileRequest>, res: R
 
 
 export const deleteMultipleFiles = async (
-  req: Request<{}, {}, DeleteMultipleRequest>, 
+  req: Request<Record<string, never>, Record<string, never>, DeleteMultipleRequest>, 
   res: Response
 ): Promise<Response> => {
   try {
@@ -363,7 +363,7 @@ export const deleteMultipleFiles = async (
 
 
 export const deleteFolder = async (
-  req: Request<{}, {}, DeleteFolderRequest>, 
+  req: Request<Record<string, never>, Record<string, never>, DeleteFolderRequest>, 
   res: Response
 ): Promise<Response> => {
   try {

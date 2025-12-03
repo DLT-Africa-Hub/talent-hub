@@ -6,7 +6,7 @@ import { Pagination } from '../../components/ui';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
-import { CandidateProfile } from '../../data/candidates';
+import { CandidateProfile } from '../../types/candidates';
 import { formatExperience, DEFAULT_PROFILE_IMAGE, formatSalaryPerAnnum } from '../../utils/job.utils';
 import { WorkExperience } from '../../types/api';
 

@@ -8,25 +8,25 @@ export interface IApplication extends Document {
   matchId?: mongoose.Types.ObjectId;
   interviewId?: mongoose.Types.ObjectId;
   status:
-    | 'pending'
-    | 'reviewed'
-    | 'shortlisted'
-    | 'interviewed'
-    | 'accepted'
-    | 'offer_sent'
-    | 'hired'
-    | 'rejected'
-    | 'withdrawn';
+  | 'pending'
+  | 'reviewed'
+  | 'shortlisted'
+  | 'interviewed'
+  | 'accepted'
+  | 'offer_sent'
+  | 'hired'
+  | 'rejected'
+  | 'withdrawn';
   coverLetter?: string;
   resume?: {
     _id?: Types.ObjectId;
     fileName: string;
     fileUrl: string;
-    size:number;
-    publicId:any;
-    onDisplay:boolean;
+    size: number;
+    publicId: string;
+    onDisplay: boolean;
   };
-  extraAnswers?: Record<string, string>; // Map of requirement label to answer
+  extraAnswers?: Record<string, string>;
   interviewScheduledAt?: Date;
   interviewLink?: string;
   interviewRoomSlug?: string;
@@ -97,7 +97,7 @@ const ApplicationSchema: Schema = new Schema(
         required: false,
       },
       publicId: {
-        type: Schema.Types.Mixed, 
+        type: Schema.Types.Mixed,
         required: false,
       },
       onDisplay: {

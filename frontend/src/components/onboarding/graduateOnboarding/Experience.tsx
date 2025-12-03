@@ -24,6 +24,10 @@ const Experience: React.FC<Props>  = ({ form, onChange, onNext }) => {
     const handleInputChange = (name: string, value: string) => {
       onChange({ [name]: value });
     };
+    
+    const handleNumberInputChange = (name: string, value: number | undefined) => {
+      onChange({ [name]: value });
+    };
   
     const isFormComplete = useMemo(() => {
       // If you want to require a CV, add: form.cv && form.cv.length > 0
@@ -112,7 +116,7 @@ const Experience: React.FC<Props>  = ({ form, onChange, onNext }) => {
               name="salaryPerAnnum"
               value={form.salaryPerAnnum || ''}
               onChange={(e) =>
-                handleInputChange('salaryPerAnnum', e.target.value ? Number(e.target.value) : undefined)
+                handleNumberInputChange('salaryPerAnnum', e.target.value ? Number(e.target.value) : undefined)
               }
               placeholder="e.g., 50000"
               min="0"

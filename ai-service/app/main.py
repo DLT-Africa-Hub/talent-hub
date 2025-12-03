@@ -167,6 +167,26 @@ class FeedbackResponse(BaseModel):
     recommendations: List[str]
 
 
+# Root endpoint
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "service": "Talent Hub AI Service",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "embed": "/embed",
+            "embed_batch": "/embed/batch",
+            "match": "/match",
+            "match_batch": "/match/batch",
+            "feedback": "/feedback",
+            "assessment_questions": "/assessment/questions"
+        }
+    }
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():

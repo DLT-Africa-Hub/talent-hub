@@ -118,6 +118,8 @@ const ResetPassword = () => {
       ]}
       error={error}
       isButtonDisabled={!isFormValid || loading}
+      onGoogleClick={() => {}}
+      mode="login"
     />
   );
 };

@@ -42,7 +42,7 @@ const FloatingNavbar = () => {
                   className="relative group px-4 py-2 text-gray-700 font-medium transition-all duration-300"
                 >
                   <span className="relative z-10">{item.name}</span>
-                  <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-fade to-button group-hover:w-full group-hover:left-0 transition-all"></div>
+                  <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-linear-to-r from-fade to-button group-hover:w-full group-hover:left-0 transition-all"></div>
                   <div className="absolute -top-1 left-1/2 w-1 h-1 bg-button rounded-full opacity-0 group-hover:opacity-100 transform -translate-x-1/2 transition-all"></div>
                 </Link>
               ))}
@@ -50,9 +50,12 @@ const FloatingNavbar = () => {
 
             {/* Icons / Mobile Menu Trigger */}
             <div className="flex items-center space-x-3">
+              <Link to="/register">
               <button className="hidden py-[13px] px-[54px] text-[#1C1C1C] bg-[#ADED9A] lg:flex rounded-xl">
-                Login
+                Register
               </button>
+              </Link>
+            
 
               {/* Mobile: Dropdown trigger */}
               <div className="lg:hidden">

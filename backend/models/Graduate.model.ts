@@ -30,7 +30,7 @@ export interface ICv{
   fileName: string;
   fileUrl: string;
   size:number;
-  publicId:any;
+  publicId: string;
   onDisplay:boolean;
 }
 

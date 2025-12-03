@@ -7,14 +7,22 @@ export const notFoundHandler = (req: Request, res: Response): void => {
   });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+interface ErrorWithStatus extends Error {
+  status?: number;
+  statusCode?: number;
+  code?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const errorHandler = (
-  err: any,
+  err: unknown,
   _req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  if (err.code === 'EBADCSRFTOKEN') {
+  const error = err as ErrorWithStatus;
+  
+  if (error.code === 'EBADCSRFTOKEN') {
     res.status(403).json({
       success: false,
       message: 'Invalid or missing CSRF token',
@@ -22,8 +30,7 @@ export const errorHandler = (
     return;
   }
 
-  const status = err.status || err.statusCode || 500;
-
+  const status = error.status || error.statusCode || 500;
   const isServerError = status >= 500;
 
   if (isServerError) {
@@ -34,10 +41,10 @@ export const errorHandler = (
     success: false,
     message: isServerError
       ? 'Internal server error'
-      : err.message || 'Internal server error',
+      : error.message || 'Internal server error',
     ...(process.env.NODE_ENV !== 'production' &&
       !isServerError && {
-        stack: err.stack,
+        stack: error.stack,
       }),
   });
 };

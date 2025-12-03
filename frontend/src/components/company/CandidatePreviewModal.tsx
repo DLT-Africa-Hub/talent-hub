@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HiOutlineBriefcase, HiVideoCamera } from 'react-icons/hi';
-import { CandidateProfile } from '../../data/candidates';
+import { CandidateProfile } from '../../types/candidates';
 import BaseModal from '../ui/BaseModal';
 import { Input, Button } from '../ui';
 import {

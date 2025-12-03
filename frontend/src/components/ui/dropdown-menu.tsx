@@ -53,7 +53,7 @@ export const DropdownMenuContent = ({
   // Close on click outside
   useEffect(() => {
     const clickHandler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target)) {
+      if (ref.current && e.target && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         (window as any).__dropdown_open = false;
       }

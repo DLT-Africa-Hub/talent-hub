@@ -40,14 +40,45 @@ const INTERVIEW_STATUS_VALUES: readonly InterviewStatus[] = [
   'cancelled',
 ] as const;
 
-const serializeCompanyInterview = (interview: any) => {
-  const interviewData = interview as Record<string, any>;
-  const graduate = interviewData.graduateId || {};
-  const job = interviewData.jobId || {};
+interface PopulatedInterview {
+  _id?: mongoose.Types.ObjectId;
+  applicationId?: mongoose.Types.ObjectId;
+  scheduledAt: Date;
+  status: InterviewStatus;
+  durationMinutes: number;
+  roomSlug: string;
+  roomUrl: string;
+  graduateId?: {
+    firstName?: string;
+    lastName?: string;
+    position?: string;
+    rank?: string;
+    profilePictureUrl?: string;
+  } | mongoose.Types.ObjectId;
+  jobId?: {
+    _id?: mongoose.Types.ObjectId;
+    title?: string;
+    location?: string;
+    jobType?: string;
+    companyId?: {
+      companyName?: string;
+    } | mongoose.Types.ObjectId;
+  } | mongoose.Types.ObjectId;
+}
+
+const serializeCompanyInterview = (interview: PopulatedInterview | Record<string, unknown>) => {
+  const interviewData = interview as PopulatedInterview;
+  const graduate = (typeof interviewData.graduateId === 'object' && interviewData.graduateId && !(interviewData.graduateId instanceof mongoose.Types.ObjectId))
+    ? interviewData.graduateId
+    : {};
+  const job = (typeof interviewData.jobId === 'object' && interviewData.jobId && !(interviewData.jobId instanceof mongoose.Types.ObjectId))
+    ? interviewData.jobId
+    : {};
   const companyInfo =
     job.companyId &&
-    typeof job.companyId === 'object' &&
-    'companyName' in job.companyId
+      typeof job.companyId === 'object' &&
+      !(job.companyId instanceof mongoose.Types.ObjectId) &&
+      'companyName' in job.companyId
       ? job.companyId
       : null;
 
@@ -406,17 +437,17 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   if (!validatedSkills) return;
 
   // Validate extra requirements if provided
-  let validatedExtraRequirements: any[] | undefined;
+  let validatedExtraRequirements: Array<{ label: string; type: 'text' | 'url' | 'textarea'; required: boolean; placeholder?: string }> | undefined;
   if (requirements.extraRequirements && Array.isArray(requirements.extraRequirements)) {
     validatedExtraRequirements = requirements.extraRequirements
-      .filter((req: any) => req && typeof req === 'object')
-      .map((req: any) => ({
+      .filter((req: unknown): req is Record<string, unknown> => req !== null && typeof req === 'object')
+      .map((req: Record<string, unknown>) => ({
         label: typeof req.label === 'string' && req.label.trim() ? req.label.trim() : null,
-        type: ['text', 'url', 'textarea'].includes(req.type) ? req.type : 'text',
+        type: (['text', 'url', 'textarea'].includes(req.type as string) ? req.type : 'text') as 'text' | 'url' | 'textarea',
         required: Boolean(req.required),
         placeholder: typeof req.placeholder === 'string' ? req.placeholder.trim() : undefined,
       }))
-      .filter((req: any) => req.label !== null);
+      .filter((req: { label: string | null; type: 'text' | 'url' | 'textarea'; required: boolean; placeholder?: string }): req is { label: string; type: 'text' | 'url' | 'textarea'; required: boolean; placeholder?: string } => req.label !== null);
 
     if (requirements.extraRequirements.length > 0 && validatedExtraRequirements && validatedExtraRequirements.length === 0) {
       res.status(400).json({ message: 'Invalid extra requirements format' });
@@ -554,7 +585,7 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
     : null;
   if (status && validatedStatus === null) return;
 
-  const query: any = { companyId: company._id };
+  const query: Record<string, unknown> = { companyId: company._id };
   if (validatedStatus) {
     query.status = validatedStatus;
   }
@@ -914,7 +945,7 @@ export const getJobMatches = async (req: Request, res: Response): Promise<void> 
     : null;
   if (minScore !== undefined && validatedMinScore === null) return;
 
-  const query: any = { jobId: new mongoose.Types.ObjectId(validatedJobId) };
+  const query: Record<string, unknown> = { jobId: new mongoose.Types.ObjectId(validatedJobId) };
   if (validatedStatus) {
     query.status = validatedStatus;
   }
@@ -1021,10 +1052,16 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
   });
 
   try {
-    const graduate = match.graduateId as any;
-    if (graduate?.userId) {
+    interface PopulatedGraduate {
+      firstName?: string;
+      lastName?: string;
+      userId?: mongoose.Types.ObjectId | { email?: string };
+    }
+    const graduate = match.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
+    const graduateData = (typeof graduate === 'object' && graduate && !(graduate instanceof mongoose.Types.ObjectId)) ? graduate : null;
+    if (graduateData?.userId) {
       await createNotification({
-        userId: graduate.userId,
+        userId: graduateData.userId instanceof mongoose.Types.ObjectId ? graduateData.userId.toString() : String(graduateData.userId),
         type: 'match',
         title: validatedStatus === 'accepted' ? 'Match accepted' : 'Match rejected',
         message: `${company.companyName} ${validatedStatus === 'accepted' ? 'accepted' : 'rejected'} your match for ${job.title}`,
@@ -1033,7 +1070,7 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
         email: {
           subject: `Your match for ${job.title} was ${validatedStatus}`,
           text: [
-            `Hi ${graduate.firstName ?? 'there'},`,
+            `Hi ${graduateData.firstName ?? 'there'},`,
             '',
             `${company.companyName} has ${validatedStatus} your match for "${job.title}".`,
             'Sign in to Talent Hub to review the details.',
@@ -1105,7 +1142,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const query: any = { jobId: { $in: companyJobIds } };
+  const query: Record<string, unknown> = { jobId: { $in: companyJobIds } };
   if (validatedStatus) {
     query.status = validatedStatus;
   }
@@ -1205,7 +1242,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
     return;
   }
 
-  const query: any = { jobId: { $in: companyJobIds } };
+  const query: Record<string, unknown> = { jobId: { $in: companyJobIds } };
   if (validatedStatus) {
     query.status = validatedStatus;
   }
@@ -1307,8 +1344,18 @@ export const updateApplicationStatus = async (req: Request, res: Response): Prom
     return;
   }
 
-  const job = application.jobId as any;
-  if (!job || job.companyId?._id?.toString() !== company._id.toString()) {
+  interface PopulatedJob {
+    _id?: mongoose.Types.ObjectId;
+    title?: string;
+    companyId?: {
+      _id?: mongoose.Types.ObjectId;
+      userId?: mongoose.Types.ObjectId;
+    } | mongoose.Types.ObjectId;
+  }
+  const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
+  const jobData = (typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)) ? job : null;
+  const companyIdData = (jobData?.companyId && typeof jobData.companyId === 'object' && !(jobData.companyId instanceof mongoose.Types.ObjectId)) ? jobData.companyId : null;
+  if (!jobData || !companyIdData || companyIdData._id?.toString() !== company._id.toString()) {
     res.status(403).json({ message: 'Application does not belong to your company' });
     return;
   }
@@ -1319,10 +1366,11 @@ export const updateApplicationStatus = async (req: Request, res: Response): Prom
       const { createAndSendOffer } = await import('../services/offer.service');
       await createAndSendOffer(applicationId, userId);
       // Status will be set to 'offer_sent' by the service
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to create offer:', error);
-      res.status(500).json({ 
-        message: error.message || 'Failed to create and send offer' 
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create and send offer';
+      res.status(500).json({
+        message: errorMessage
       });
       return;
     }
@@ -1338,23 +1386,27 @@ export const updateApplicationStatus = async (req: Request, res: Response): Prom
   // Send notifications (only if not already sent by offer service)
   if (validatedStatus !== 'accepted') {
     try {
-      const graduate = application.graduateId as any;
-      if (graduate?.userId) {
-        const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
-          ? graduate.userId.toString()
-          : String(graduate.userId);
+      interface PopulatedGraduate {
+        userId?: mongoose.Types.ObjectId;
+      }
+      const graduate = application.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
+      const graduateData = (typeof graduate === 'object' && graduate && !(graduate instanceof mongoose.Types.ObjectId)) ? graduate : null;
+      if (graduateData?.userId) {
+        const graduateUserId = graduateData.userId instanceof mongoose.Types.ObjectId
+          ? graduateData.userId.toString()
+          : String(graduateData.userId);
         await createNotification({
           userId: graduateUserId,
           type: 'application',
           title: `Application ${validatedStatus === 'rejected' ? 'Rejected' : 'Updated'}`,
-          message: `Your application for "${job.title}" has been ${validatedStatus}.`,
+          message: `Your application for "${jobData?.title || 'the position'}" has been ${validatedStatus}.`,
           relatedId: application._id instanceof mongoose.Types.ObjectId
             ? application._id.toString()
             : String(application._id),
           relatedType: 'application',
           email: {
-            subject: `Application Update: ${job.title}`,
-            text: `Your application for "${job.title}" at ${company.companyName} has been ${validatedStatus}.`,
+            subject: `Application Update: ${jobData?.title || 'Position'}`,
+            text: `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been ${validatedStatus}.`,
           },
         });
       }
@@ -1367,8 +1419,8 @@ export const updateApplicationStatus = async (req: Request, res: Response): Prom
   const updatedApplication = await Application.findById(applicationId).lean();
 
   res.json({
-    message: validatedStatus === 'accepted' 
-      ? 'Application accepted and offer sent successfully' 
+    message: validatedStatus === 'accepted'
+      ? 'Application accepted and offer sent successfully'
       : 'Application status updated successfully',
     application: updatedApplication || application.toObject({ versionKey: false }),
   });
@@ -1437,14 +1489,31 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
     return;
   }
 
-  const job = application.jobId as any;
-  if (!job || job.companyId?._id?.toString() !== company._id.toString()) {
+  interface PopulatedJob {
+    _id?: mongoose.Types.ObjectId;
+    title?: string;
+    companyId?: {
+      _id?: mongoose.Types.ObjectId;
+    } | mongoose.Types.ObjectId;
+  }
+  interface PopulatedGraduate {
+    _id?: mongoose.Types.ObjectId;
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    userId?: mongoose.Types.ObjectId;
+  }
+  const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
+  const jobData = (typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)) ? job : null;
+  const companyIdData = (jobData?.companyId && typeof jobData.companyId === 'object' && !(jobData.companyId instanceof mongoose.Types.ObjectId)) ? jobData.companyId : null;
+  if (!jobData || !companyIdData || companyIdData._id?.toString() !== company._id.toString()) {
     res.status(403).json({ message: 'Application does not belong to your company' });
     return;
   }
 
-  const graduate = application.graduateId as any;
-  if (!graduate?.userId) {
+  const graduate = application.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
+  const graduateData = (typeof graduate === 'object' && graduate && !(graduate instanceof mongoose.Types.ObjectId)) ? graduate : null;
+  if (!graduateData?.userId) {
     res.status(400).json({
       message: 'Graduate profile is missing a linked user account',
     });
@@ -1452,9 +1521,9 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
   }
 
   const graduateUserId =
-    graduate.userId instanceof mongoose.Types.ObjectId
-      ? graduate.userId
-      : new mongoose.Types.ObjectId(graduate.userId);
+    graduateData.userId instanceof mongoose.Types.ObjectId
+      ? graduateData.userId
+      : new mongoose.Types.ObjectId(String(graduateData.userId));
 
   // Check if this graduate has an active interview that has already started
   const now = new Date();
@@ -1470,8 +1539,8 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
   });
 
   if (activeStartedInterview) {
-    res.status(400).json({ 
-      message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.' 
+    res.status(400).json({
+      message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.'
     });
     return;
   }
@@ -1483,16 +1552,16 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       : typeof durationRaw === 'string'
         ? Number(durationRaw)
         : NaN;
-  
+
   // Only allow 15, 30, 45, or 60 minutes
   const allowedDurations = [15, 30, 45, 60];
   const durationMinutes = Number.isFinite(durationNumber) && allowedDurations.includes(Math.floor(durationNumber))
     ? Math.floor(durationNumber)
     : 30;
-  
+
   if (!allowedDurations.includes(durationMinutes)) {
-    res.status(400).json({ 
-      message: 'Invalid duration. Allowed values are: 15, 30, 45, or 60 minutes.' 
+    res.status(400).json({
+      message: 'Invalid duration. Allowed values are: 15, 30, 45, or 60 minutes.'
     });
     return;
   }
@@ -1504,17 +1573,17 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
   if (!interview) {
     interview = new Interview({
       applicationId: application._id,
-      jobId: job._id,
+      jobId: jobData._id || (job instanceof mongoose.Types.ObjectId ? job : new mongoose.Types.ObjectId()),
       companyId: company._id,
       companyUserId: new mongoose.Types.ObjectId(userId),
-      graduateId: graduate._id ?? new mongoose.Types.ObjectId(graduate.id),
+      graduateId: graduateData?._id ?? (graduateData?.id ? new mongoose.Types.ObjectId(graduateData.id) : new mongoose.Types.ObjectId()),
       graduateUserId,
       scheduledAt: scheduledDate,
       durationMinutes,
       status: 'scheduled',
       roomSlug,
       roomUrl,
-      provider: 'jitsi',
+      provider: 'stream',
       createdBy: new mongoose.Types.ObjectId(userId),
     });
   } else {
@@ -1542,15 +1611,15 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
 
   await application.save();
 
-      const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
-      const formattedDate = scheduledDate.toLocaleString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
+  const graduateName = `${graduateData?.firstName || ''} ${graduateData?.lastName || ''}`.trim();
+  const formattedDate = scheduledDate.toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 
   // Send notifications
   try {
@@ -1559,12 +1628,12 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
         userId: graduateUserId,
         type: 'interview',
         title: 'Interview Scheduled',
-        message: `Your interview for "${job.title}" at ${company.companyName} is set for ${formattedDate}.`,
+        message: `Your interview for "${jobData?.title || 'the position'}" at ${company.companyName} is set for ${formattedDate}.`,
         relatedId: interviewId,
         relatedType: 'interview',
         email: {
-          subject: `Interview Scheduled: ${job.title} at ${company.companyName}`,
-          text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${job.title}" at ${company.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+          subject: `Interview Scheduled: ${jobData?.title || 'Position'} at ${company.companyName}`,
+          text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData?.title || 'the position'}" at ${company.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
         },
       }),
       createNotification({
@@ -1620,11 +1689,11 @@ export const getCompanyInterviews = async (req: Request, res: Response): Promise
 
   const validatedStatus = status
     ? validateOptionalEnum(
-        status as string,
-        INTERVIEW_STATUS_VALUES,
-        'Status',
-        res
-      )
+      status as string,
+      INTERVIEW_STATUS_VALUES,
+      'Status',
+      res
+    )
     : null;
   if (status && validatedStatus === null) return;
 
@@ -1737,7 +1806,7 @@ export const getAvailableGraduates = async (
     }
 
     // Build query
-    const query: any = {
+    const query: Record<string, unknown> = {
       rank: { $exists: true, $ne: null }, // Only graduates with a rank
     };
 
@@ -1762,7 +1831,7 @@ export const getAvailableGraduates = async (
     }
 
     // Build sort
-    const sort: any = {};
+    const sort: Record<string, 1 | -1> = {};
     if (sortBy === 'name') {
       sort.firstName = 1;
       sort.lastName = 1;
@@ -1806,8 +1875,8 @@ export const getAvailableGraduates = async (
       (acc, item) => {
         acc[item._id] = {
           count: item.count,
-          percentage: totalWithRank > 0 
-            ? Math.round((item.count / totalWithRank) * 100) 
+          percentage: totalWithRank > 0
+            ? Math.round((item.count / totalWithRank) * 100)
             : 0,
         };
         return acc;
@@ -1847,10 +1916,10 @@ export const getAvailableGraduates = async (
       graduates: graduates.map((g) => {
         // Find the CV that's on display, or get the first CV if available
         const displayCV = g.cv?.find((cv) => cv.onDisplay) || g.cv?.[0];
-        
+
         const graduateId = g._id.toString();
         const interview = interviewMap.get(graduateId);
-        
+
         // Check if there's a scheduled interview that hasn't passed yet
         let hasUpcomingInterview = false;
         let interviewScheduledAt: string | undefined;
@@ -1868,7 +1937,7 @@ export const getAvailableGraduates = async (
           hasUpcomingInterview = interview.status !== 'cancelled' && endTime > now;
           interviewScheduledAt = interview.scheduledAt.toISOString();
         }
-        
+
         return {
           id: graduateId,
           firstName: g.firstName,

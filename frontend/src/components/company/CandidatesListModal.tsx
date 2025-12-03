@@ -4,7 +4,7 @@ import { HiOutlineEye } from 'react-icons/hi2';
 import BaseModal from '../ui/BaseModal';
 import CandidatePreviewModal from './CandidatePreviewModal';
 import { companyApi } from '../../api/company';
-import { CandidateProfile } from '../../data/candidates';
+import { CandidateProfile } from '../../types/candidates';
 import {
   formatExperience,
   formatLocation,

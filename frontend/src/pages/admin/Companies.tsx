@@ -101,16 +101,16 @@ const Companies = () => {
     {
       header: 'Status',
       accessor: 'status',
-      render: (v: CompanyRow['status']) => <StatusBadge status={v} />,
+      render: (v: unknown) => <StatusBadge status={v as CompanyRow['status']} />,
       sortable: true,
       align: 'left',
     },
     {
       header: 'Join Date',
       accessor: 'joined',
-      render: (v: string) => (
+      render: (v: unknown) => (
         <span className="text-sm text-gray-600">
-          {new Date(v).toLocaleDateString()}
+          {new Date(v as string).toLocaleDateString()}
         </span>
       ),
       sortable: true,

@@ -1,5 +1,5 @@
 import { JobStatus } from '../data/jobs';
-import { CandidateStatus } from '../data/candidates';
+import { CandidateStatus } from '../types/candidates';
 import { PiPlugsConnectedDuotone } from 'react-icons/pi';
 import { MdCheckCircleOutline } from 'react-icons/md';
 import { FaRegHand } from 'react-icons/fa6';

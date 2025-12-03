@@ -1,6 +1,7 @@
 import React from 'react'
 import FloatingNavbar from '../components/home/floating-nav'
 import HeroSection from '../components/home/hero-section'
+import Features from '../components/home/features'
 
 
 const Home = () => {
@@ -8,6 +9,7 @@ const Home = () => {
     <div className='relative'>
       <FloatingNavbar/>
       <HeroSection/>
+      <Features/>
     </div>
   )
 }

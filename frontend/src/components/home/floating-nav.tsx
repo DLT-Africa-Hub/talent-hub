@@ -51,9 +51,12 @@ const FloatingNavbar = () => {
 
             {/* Icons / Mobile Menu Trigger */}
             <div className="flex items-center space-x-3">
+              <Link to="/register">
               <button className="hidden py-[13px] px-[54px] text-[#1C1C1C] bg-[#ADED9A] lg:flex rounded-xl">
-                Login
+                Register
               </button>
+              </Link>
+            
 
               {/* Mobile: Dropdown trigger */}
               <div className="lg:hidden">

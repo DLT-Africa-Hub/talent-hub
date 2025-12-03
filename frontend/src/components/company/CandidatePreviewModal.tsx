@@ -20,6 +20,7 @@ interface CandidatePreviewModalProps {
     scheduledAt: string,
     durationMinutes?: number
   ) => Promise<void> | void;
+  onSuggestTimeSlots?: (candidate: CandidateProfile) => void;
   isAccepting?: boolean;
   isRejecting?: boolean;
   isSchedulingInterview?: boolean;
@@ -34,6 +35,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   onAccept,
   onReject,
   onScheduleInterview,
+  onSuggestTimeSlots,
   isAccepting = false,
   isRejecting = false,
   isSchedulingInterview = false,
@@ -335,24 +337,39 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                   </div>
                 )}
                 {/* Only show Schedule Interview if direct contact is enabled and handler is provided */}
-                {onScheduleInterview && candidate.directContact !== false && (
-                  <Button
-                    onClick={() => {
-                      setScheduleError('');
-                      setScheduleSuccess('');
-                      setShowScheduleForm(true);
-                    }}
-                    variant="secondary"
-                    className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={!canScheduleInterview || isSchedulingLoading}
-                  >
-                    <HiVideoCamera className="text-[18px] mr-2" />
-                    {hasActiveInterview
-                      ? 'Interview Already Scheduled'
-                      : canScheduleInterview
-                        ? 'Schedule Interview'
-                        : 'Interview scheduling unavailable'}
-                  </Button>
+                {candidate.directContact !== false && (onScheduleInterview || onSuggestTimeSlots) && (
+                  <div className="flex flex-col gap-2">
+                    {onScheduleInterview && (
+                      <Button
+                        onClick={() => {
+                          setScheduleError('');
+                          setScheduleSuccess('');
+                          setShowScheduleForm(true);
+                        }}
+                        variant="secondary"
+                        className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!canScheduleInterview || isSchedulingLoading}
+                      >
+                        <HiVideoCamera className="text-[18px] mr-2" />
+                        {hasActiveInterview
+                          ? 'Interview Already Scheduled'
+                          : canScheduleInterview
+                            ? 'Quick Schedule (Single Time)'
+                            : 'Interview scheduling unavailable'}
+                      </Button>
+                    )}
+                    {onSuggestTimeSlots && canScheduleInterview && (
+                      <Button
+                        onClick={() => onSuggestTimeSlots(candidate)}
+                        variant="secondary"
+                        className="w-full border-2 border-[#6B9B5A] text-[#6B9B5A] hover:bg-[#6B9B5A]/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!canScheduleInterview || isSchedulingLoading || hasActiveInterview}
+                      >
+                        <HiVideoCamera className="text-[18px] mr-2" />
+                        Suggest Multiple Time Slots
+                      </Button>
+                    )}
+                  </div>
                 )}
                 {candidate.directContact === false && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">

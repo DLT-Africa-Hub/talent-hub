@@ -17,6 +17,7 @@ import {
   getCompanyInterviews,
   getAvailableGraduates,
 } from '../controllers/company.controller';
+import { suggestTimeSlots } from '../controllers/interview.controller';
 import {
   authenticate,
   authorize,
@@ -54,6 +55,9 @@ router.get('/graduates', strictLimiter, getAvailableGraduates);
 // Application management
 router.put('/applications/:applicationId/status', veryStrictLimiter, updateApplicationStatus);
 router.post('/applications/:applicationId/schedule-interview', veryStrictLimiter, scheduleInterview);
+
+// Interview scheduling with multiple time slots
+router.post('/interviews/suggest-slots', veryStrictLimiter, suggestTimeSlots);
 
 // Write operations (POST/PUT/DELETE) - very strict limiter
 router.post('/jobs', veryStrictLimiter, createJob);

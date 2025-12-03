@@ -86,6 +86,17 @@ export const companyApi = {
     return response.data;
   },
 
+  // Multiple time slot scheduling
+  suggestTimeSlots: async (payload: {
+    applicationId: string;
+    timeSlots: Array<{ date: string; duration: number }>;
+    companyTimezone: string;
+    selectionDeadline?: string;
+  }) => {
+    const response = await api.post('/companies/interviews/suggest-slots', payload);
+    return response.data;
+  },
+
   // Graduates
   getAvailableGraduates: async (params?: {
     page?: number;

@@ -1,10 +1,25 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type InterviewStatus =
+  | 'pending_selection'
   | 'scheduled'
   | 'in_progress'
   | 'completed'
   | 'cancelled';
+
+export interface ISuggestedTimeSlot {
+  _id?: mongoose.Types.ObjectId;
+  date: Date;
+  duration: number; // 15, 30, 45, or 60 minutes
+  timezone: string; // e.g., 'America/New_York', 'UTC'
+}
+
+export interface ISelectedTimeSlot {
+  date: Date;
+  duration: number;
+  timezone: string;
+  selectedAt: Date;
+}
 
 export interface IInterview extends Document {
   applicationId: mongoose.Types.ObjectId;
@@ -13,6 +28,7 @@ export interface IInterview extends Document {
   companyUserId: mongoose.Types.ObjectId;
   graduateId: mongoose.Types.ObjectId;
   graduateUserId: mongoose.Types.ObjectId;
+  // For backwards compatibility - used when time is confirmed
   scheduledAt: Date;
   durationMinutes: number;
   status: InterviewStatus;
@@ -24,9 +40,51 @@ export interface IInterview extends Document {
   startedAt?: Date;
   endedAt?: Date;
   notes?: string;
+  // Multiple time slot support
+  suggestedTimeSlots?: ISuggestedTimeSlot[];
+  selectedTimeSlot?: ISelectedTimeSlot;
+  companyTimezone?: string;
+  graduateTimezone?: string;
+  selectionDeadline?: Date; // Optional deadline for graduate to select a slot
   createdAt: Date;
   updatedAt: Date;
 }
+
+const SuggestedTimeSlotSchema = new Schema({
+  date: {
+    type: Date,
+    required: true,
+  },
+  duration: {
+    type: Number,
+    required: true,
+    enum: [15, 30, 45, 60],
+  },
+  timezone: {
+    type: String,
+    required: true,
+  },
+}, { _id: true });
+
+const SelectedTimeSlotSchema = new Schema({
+  date: {
+    type: Date,
+    required: true,
+  },
+  duration: {
+    type: Number,
+    required: true,
+    enum: [15, 30, 45, 60],
+  },
+  timezone: {
+    type: String,
+    required: true,
+  },
+  selectedAt: {
+    type: Date,
+    required: true,
+  },
+}, { _id: false });
 
 const InterviewSchema = new Schema<IInterview>(
   {
@@ -63,7 +121,10 @@ const InterviewSchema = new Schema<IInterview>(
     },
     scheduledAt: {
       type: Date,
-      required: true,
+      required: function(this: IInterview) {
+        // Only required when status is not pending_selection
+        return this.status !== 'pending_selection';
+      },
     },
     durationMinutes: {
       type: Number,
@@ -73,7 +134,7 @@ const InterviewSchema = new Schema<IInterview>(
     },
     status: {
       type: String,
-      enum: ['scheduled', 'in_progress', 'completed', 'cancelled'],
+      enum: ['pending_selection', 'scheduled', 'in_progress', 'completed', 'cancelled'],
       default: 'scheduled',
       required: true,
     },
@@ -104,6 +165,24 @@ const InterviewSchema = new Schema<IInterview>(
     startedAt: Date,
     endedAt: Date,
     notes: String,
+    // Multiple time slot support
+    suggestedTimeSlots: {
+      type: [SuggestedTimeSlotSchema],
+      default: undefined,
+    },
+    selectedTimeSlot: {
+      type: SelectedTimeSlotSchema,
+      default: undefined,
+    },
+    companyTimezone: {
+      type: String,
+    },
+    graduateTimezone: {
+      type: String,
+    },
+    selectionDeadline: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -113,6 +192,8 @@ const InterviewSchema = new Schema<IInterview>(
 InterviewSchema.index({ companyId: 1, scheduledAt: 1 });
 InterviewSchema.index({ graduateId: 1, scheduledAt: 1 });
 InterviewSchema.index({ status: 1, scheduledAt: 1 });
+InterviewSchema.index({ graduateId: 1, status: 1 }); // For pending_selection queries
+InterviewSchema.index({ selectionDeadline: 1, status: 1 }); // For deadline monitoring
 
 export default mongoose.model<IInterview>('Interview', InterviewSchema);
 

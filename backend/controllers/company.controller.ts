@@ -1583,7 +1583,7 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       status: 'scheduled',
       roomSlug,
       roomUrl,
-      provider: 'stream',
+      provider: 'jitsi',
       createdBy: new mongoose.Types.ObjectId(userId),
     });
   } else {

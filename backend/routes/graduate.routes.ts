@@ -27,6 +27,10 @@ import {
   getInterviews,
 } from '../controllers/graduate.controller';
 import {
+  getPendingSelectionInterviews,
+  selectTimeSlot,
+} from '../controllers/interview.controller';
+import {
   getOffer,
   uploadSignedOffer,
   acceptOffer,
@@ -80,6 +84,8 @@ router.post('/apply/:jobId', applyToJob);
 
 router.get('/applications', getApplications);
 router.get('/interviews', getInterviews);
+router.get('/interviews/pending-selection', getPendingSelectionInterviews);
+router.post('/interviews/:interviewId/select-slot', selectTimeSlot);
 router.put('/applications/:applicationId', updateApplicationStatus);
 
 // Offer management

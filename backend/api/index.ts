@@ -11,13 +11,43 @@ let cachedConnection: typeof mongoose | null = null;
 
 // Lazy load app to catch initialization errors
 let appInstance: any = null;
+let appLoadError: Error | null = null;
 
 function getApp() {
+  if (appLoadError) {
+    throw appLoadError;
+  }
+  
   if (!appInstance) {
     try {
       appInstance = require('../app').default;
     } catch (error) {
-      console.error('Failed to load Express app:', error);
+      // Log full error details
+      console.error('Failed to load Express app - Full error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
+      
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
+      // Check if it's a Zod validation error
+      if (error && typeof error === 'object') {
+        const errorObj = error as any;
+        if ('issues' in errorObj) {
+          console.error('Zod validation issues:', JSON.stringify(errorObj.issues, null, 2));
+        }
+        if ('format' in errorObj) {
+          console.error('Zod formatted error:', errorObj.format());
+        }
+        // Log all error properties
+        console.error('Error properties:', Object.keys(errorObj));
+        console.error('Full error object:', JSON.stringify(errorObj, Object.getOwnPropertyNames(errorObj), 2));
+      }
+      
+      appLoadError = error as Error;
       throw error;
     }
   }
@@ -101,13 +131,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     });
   } catch (error) {
-    console.error('Fatal handler error:', error);
+    // Log full error details for debugging
+    console.error('Fatal handler error - Full details:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
+    // Extract error information
+    let errorMessage = 'Unknown error';
+    let errorStack: string | undefined;
+    let errorName: string | undefined;
+    let validationIssues: any = undefined;
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorStack = error.stack;
+      errorName = error.name;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object') {
+      const errorObj = error as any;
+      
+      // Handle Zod validation errors (ZodError has 'issues' property)
+      if ('issues' in errorObj && Array.isArray(errorObj.issues)) {
+        validationIssues = errorObj.issues;
+        errorMessage = 'Configuration validation failed';
+        
+        // Format validation errors for better readability
+        if (validationIssues.length > 0) {
+          const formattedIssues = validationIssues.map((issue: any) => {
+            const path = issue.path && issue.path.length > 0 
+              ? issue.path.join('.') 
+              : 'root';
+            return `${path}: ${issue.message}`;
+          });
+          errorMessage = formattedIssues.join('; ');
+        }
+      } 
+      // Handle other object errors
+      else if ('message' in errorObj) {
+        errorMessage = String(errorObj.message);
+        // If it's a ZodError but message is available, try to get more info
+        if (errorObj.name === 'ZodError' && errorObj.format) {
+          try {
+            const formatted = errorObj.format();
+            errorMessage = `Zod validation error: ${JSON.stringify(formatted, null, 2)}`;
+          } catch {
+            // If format fails, use the message
+          }
+        }
+      } else {
+        // Try to stringify, but handle circular references
+        try {
+          errorMessage = JSON.stringify(errorObj, null, 2);
+        } catch {
+          errorMessage = String(errorObj);
+        }
+      }
+    } else {
+      errorMessage = String(error);
+    }
+    
+    // Always show detailed error to help with debugging
     if (!res.headersSent) {
-      return res.status(500).json({
+      const errorResponse: any = {
         success: false,
         message: 'Failed to initialize application',
-        error: process.env.NODE_ENV !== 'production' ? String(error) : undefined
-      });
+        error: errorMessage,
+        errorName: errorName,
+        ...(validationIssues && { validationIssues }),
+        ...(errorStack && { stack: errorStack }),
+        hint: 'Check Vercel environment variables and function logs for details'
+      };
+      
+      return res.status(500).json(errorResponse);
     }
   }
 }

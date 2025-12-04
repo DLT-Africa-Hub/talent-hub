@@ -5,8 +5,16 @@ import type { AuthResponsePayload } from '../../types/auth';
 import { graduateApi } from '../../api/graduate';
 import { companyApi } from '../../api/company';
 import AuthForm from './AuthForm';
-import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+
+// Check if Google OAuth is available
+const isGoogleAuthEnabled = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// Safe Google login hook that only works when OAuth is configured
+const useSafeGoogleLogin = isGoogleAuthEnabled
+  // eslint-disable-next-line react-hooks/rules-of-hooks, @typescript-eslint/no-require-imports
+  ? require('@react-oauth/google').useGoogleLogin
+  : () => undefined;
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -100,7 +108,7 @@ const Login = () => {
     setError('Google login failed. Please try again.');
   };
 
-  const googleSubmit = useGoogleLogin({
+  const googleSubmit = useSafeGoogleLogin({
     flow: 'auth-code',
     onSuccess: async (codeResponse: { code: string }) => {
       try {

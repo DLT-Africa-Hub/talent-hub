@@ -84,11 +84,20 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   // If there's an upcoming interview, cannot schedule another one
   const hasActiveInterview = hasUpcomingInterview;
 
+  // Use external loading state if provided, otherwise use internal state
+  const isSchedulingLoading = isSchedulingInterview || isScheduling;
+
   const canScheduleInterview =
     !hasActiveInterview &&
     candidate.directContact !== false &&
     !!candidate.applicationId &&
     typeof onScheduleInterview === 'function';
+
+  // Extracted conditionals for better readability
+  const canShowScheduleControls = candidate.directContact !== false && (onScheduleInterview || onSuggestTimeSlots);
+  const canInteractWithScheduling = canScheduleInterview && !isSchedulingLoading && !hasActiveInterview;
+  const showDirectContactDisabled = candidate.directContact === false;
+  const showApplicationRequiredMessage = candidate.directContact !== false && !candidate.applicationId && onScheduleInterview;
 
   // Format location details
   const locationParts = candidate.location
@@ -154,9 +163,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
       setIsScheduling(false);
     }
   };
-
-  // Use external loading state if provided, otherwise use internal state
-  const isSchedulingLoading = isSchedulingInterview || isScheduling;
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
@@ -336,8 +342,8 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                     )}
                   </div>
                 )}
-                {/* Only show Schedule Interview if direct contact is enabled and handler is provided */}
-                {candidate.directContact !== false && (onScheduleInterview || onSuggestTimeSlots) && (
+                {/* Schedule Interview Controls */}
+                {canShowScheduleControls && (
                   <div className="flex flex-col gap-2">
                     {onScheduleInterview && (
                       <Button
@@ -348,7 +354,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                         }}
                         variant="secondary"
                         className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={!canScheduleInterview || isSchedulingLoading}
+                        disabled={!canInteractWithScheduling}
                       >
                         <HiVideoCamera className="text-[18px] mr-2" />
                         {hasActiveInterview
@@ -358,12 +364,12 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                             : 'Interview scheduling unavailable'}
                       </Button>
                     )}
-                    {onSuggestTimeSlots && canScheduleInterview && (
+                    {onSuggestTimeSlots && canInteractWithScheduling && (
                       <Button
                         onClick={() => onSuggestTimeSlots(candidate)}
                         variant="secondary"
                         className="w-full border-2 border-[#6B9B5A] text-[#6B9B5A] hover:bg-[#6B9B5A]/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={!canScheduleInterview || isSchedulingLoading || hasActiveInterview}
+                        disabled={!canInteractWithScheduling}
                       >
                         <HiVideoCamera className="text-[18px] mr-2" />
                         Suggest Multiple Time Slots
@@ -371,7 +377,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                     )}
                   </div>
                 )}
-                {candidate.directContact === false && (
+                {showDirectContactDisabled && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-[14px] text-blue-800">
                       This application is being handled by DLT Africa admin
@@ -380,14 +386,12 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                     </p>
                   </div>
                 )}
-                {candidate.directContact !== false &&
-                  !candidate.applicationId &&
-                  onScheduleInterview && (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
-                      Invite the candidate to apply or review their application
-                      before scheduling an interview.
-                    </div>
-                  )}
+                {showApplicationRequiredMessage && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
+                    Invite the candidate to apply or review their application
+                    before scheduling an interview.
+                  </div>
+                )}
               </div>
             )
           ) : (

@@ -121,6 +121,11 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
     ? new Date(interview.selectionDeadline) < new Date()
     : false;
 
+  // Extracted conditionals for better readability
+  const hasSelectedSlot = !!selectedSlotId;
+  const canConfirm = hasSelectedSlot && !isSelecting && !isDeadlinePassed;
+  const showConfirmButton = !success;
+
   return (
     <div className="border border-[#E5E7EB] rounded-2xl bg-white overflow-hidden">
       {/* Header */}
@@ -247,10 +252,10 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
         </div>
 
         {/* Confirm button */}
-        {!success && (
+        {showConfirmButton && (
           <Button
             onClick={handleConfirm}
-            disabled={!selectedSlotId || isSelecting || isDeadlinePassed}
+            disabled={!canConfirm}
             className="w-full mt-2"
             variant="primary"
           >

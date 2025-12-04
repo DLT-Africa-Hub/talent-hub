@@ -297,7 +297,7 @@ export const suggestTimeSlots = async (
     status: 'pending_selection',
     roomSlug,
     roomUrl,
-    provider: 'jitsi',
+    provider: 'stream',
     createdBy: new mongoose.Types.ObjectId(userId),
     suggestedTimeSlots: suggestedSlots,
     companyTimezone,

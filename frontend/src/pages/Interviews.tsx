@@ -35,6 +35,10 @@ type InterviewRecord = {
 const JOIN_WINDOW_MINUTES = 10;
 const JOIN_GRACE_MINUTES = 90;
 
+// User role constants
+const ROLE_COMPANY = 'company';
+const ROLE_GRADUATE = 'graduate';
+
 const formatDateTime = (value?: string) => {
   if (!value) return ' — ';
   const date = new Date(value);
@@ -54,8 +58,9 @@ const Interviews = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const role = user?.role;
-  const isCompany = role === 'company';
+  const userRole = user?.role;
+  const isCompany = userRole === ROLE_COMPANY;
+  const isGraduate = userRole === ROLE_GRADUATE;
   const [selectingInterviewId, setSelectingInterviewId] = useState<string | null>(null);
 
   // Fetch regular interviews
@@ -64,7 +69,7 @@ const Interviews = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['interviews', role],
+    queryKey: ['interviews', userRole],
     queryFn: async () => {
       if (isCompany) {
         return companyApi.getInterviews({ page: 1, limit: 100 });
@@ -80,7 +85,7 @@ const Interviews = () => {
   } = useQuery({
     queryKey: ['interviews', 'pending-selection'],
     queryFn: () => graduateApi.getPendingSelectionInterviews(),
-    enabled: !isCompany, // Only fetch for graduates
+    enabled: isGraduate,
   });
 
   // Mutation for selecting a time slot
@@ -253,7 +258,7 @@ const Interviews = () => {
 
       <div className="flex flex-col gap-6">
         {/* Pending Selection Section - Graduates Only */}
-        {!isCompany && pendingInterviews.length > 0 && (
+        {isGraduate && pendingInterviews.length > 0 && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <p className="text-lg font-semibold text-[#1C1C1C]">

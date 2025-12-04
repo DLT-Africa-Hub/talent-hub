@@ -1,7 +1,17 @@
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'placeholder-client-id';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// Wrapper to conditionally provide Google OAuth
+const GoogleAuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (!GOOGLE_CLIENT_ID) {
+    console.warn('VITE_GOOGLE_CLIENT_ID is not set. Google OAuth will be disabled.');
+    return <>{children}</>;
+  }
+  return <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{children}</GoogleOAuthProvider>;
+};
 import {
   Home,
   GraduateDashboard,
@@ -48,9 +58,9 @@ const ExplorePreviewRedirect = () => {
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-       <AuthProvider>
-      <div className="App">
+    <GoogleAuthWrapper>
+      <AuthProvider>
+        <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route
@@ -401,10 +411,9 @@ function App() {
             }
           />
         </Routes>
-      </div>
-    </AuthProvider>
-    </GoogleOAuthProvider>
-   
+        </div>
+      </AuthProvider>
+    </GoogleAuthWrapper>
   );
 }
 

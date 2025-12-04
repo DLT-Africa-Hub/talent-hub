@@ -34,29 +34,10 @@ if (securityConfig.https.trustProxy !== false) {
   app.set('trust proxy', securityConfig.https.trustProxy);
 }
 
-// CORS configuration - allow frontend origins
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:3000',
-];
-
-// Add any custom origin from env
-if (process.env.CORS_ORIGIN) {
-  process.env.CORS_ORIGIN.split(',').forEach(origin => {
-    const trimmed = origin.trim();
-    if (trimmed && !allowedOrigins.includes(trimmed)) {
-      allowedOrigins.push(trimmed);
-    }
-  });
-}
-
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
 

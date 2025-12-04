@@ -1,9 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import AuthForm from './AuthForm';
+
+// Check if Google OAuth is available
+const isGoogleAuthEnabled = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// Safe Google login hook that only works when OAuth is configured
+const useSafeGoogleLogin = isGoogleAuthEnabled
+  // eslint-disable-next-line react-hooks/rules-of-hooks, @typescript-eslint/no-require-imports
+  ? require('@react-oauth/google').useGoogleLogin
+  : () => undefined;
 
 const Register = () => {
   const [role, setRole] = useState<'graduate' | 'company'>('graduate');
@@ -15,7 +23,7 @@ const Register = () => {
   const navigate = useNavigate();
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
-  const google = useGoogleLogin({
+  const google = useSafeGoogleLogin({
     flow: 'auth-code',
     onSuccess: async (codeResponse: { code: string }) => {
       try {

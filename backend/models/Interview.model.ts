@@ -34,7 +34,7 @@ export interface IInterview extends Document {
   status: InterviewStatus;
   roomSlug: string;
   roomUrl: string;
-  provider: 'jitsi';
+  provider: 'stream';
   createdBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
   startedAt?: Date;
@@ -50,19 +50,42 @@ export interface IInterview extends Document {
   updatedAt: Date;
 }
 
+// Helper to validate timezone string
+const isValidTimezone = (tz: string): boolean => {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const SuggestedTimeSlotSchema = new Schema({
   date: {
     type: Date,
     required: true,
+    validate: {
+      validator: function(value: Date) {
+        return value > new Date();
+      },
+      message: 'Time slot date must be in the future',
+    },
   },
   duration: {
     type: Number,
     required: true,
-    enum: [15, 30, 45, 60],
+    enum: {
+      values: [15, 30, 45, 60],
+      message: 'Duration must be 15, 30, 45, or 60 minutes',
+    },
   },
   timezone: {
     type: String,
     required: true,
+    validate: {
+      validator: isValidTimezone,
+      message: 'Invalid timezone',
+    },
   },
 }, { _id: true });
 
@@ -74,11 +97,18 @@ const SelectedTimeSlotSchema = new Schema({
   duration: {
     type: Number,
     required: true,
-    enum: [15, 30, 45, 60],
+    enum: {
+      values: [15, 30, 45, 60],
+      message: 'Duration must be 15, 30, 45, or 60 minutes',
+    },
   },
   timezone: {
     type: String,
     required: true,
+    validate: {
+      validator: isValidTimezone,
+      message: 'Invalid timezone',
+    },
   },
   selectedAt: {
     type: Date,
@@ -150,8 +180,8 @@ const InterviewSchema = new Schema<IInterview>(
     },
     provider: {
       type: String,
-      enum: ['jitsi'],
-      default: 'jitsi',
+      enum: ['stream'],
+      default: 'stream',
     },
     createdBy: {
       type: Schema.Types.ObjectId,

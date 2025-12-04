@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BsSearch } from 'react-icons/bs';
 import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
+import ScheduleInterviewModal from '../../components/company/ScheduleInterviewModal';
 import { CandidateProfile, CandidateStatus } from '../../types/candidates';
 import { companyApi } from '../../api/company';
 import {
@@ -30,6 +31,8 @@ const CompanyCandidates = () => {
   const [selectedJobId, setSelectedJobId] = useState<string | 'all'>('all');
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMultiSlotModalOpen, setIsMultiSlotModalOpen] = useState(false);
+  const [multiSlotCandidate, setMultiSlotCandidate] = useState<CandidateProfile | null>(null);
 
   // Transform API application to CandidateProfile using useCallback
   const transformApplication = useCallback(
@@ -347,6 +350,35 @@ const CompanyCandidates = () => {
     },
   });
 
+  // Mutation for suggesting multiple time slots
+  const suggestTimeSlotsMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      timeSlots,
+      companyTimezone,
+      selectionDeadline,
+    }: {
+      applicationId: string;
+      timeSlots: Array<{ date: string; duration: number }>;
+      companyTimezone: string;
+      selectionDeadline?: string;
+    }) => {
+      return companyApi.suggestTimeSlots({
+        applicationId,
+        timeSlots,
+        companyTimezone,
+        selectionDeadline,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+      setIsMultiSlotModalOpen(false);
+      setMultiSlotCandidate(null);
+    },
+  });
+
   const updateApplicationStatusMutation = useMutation({
     mutationFn: async ({
       applicationId,
@@ -385,6 +417,34 @@ const CompanyCandidates = () => {
       });
     },
     [scheduleInterviewMutation]
+  );
+
+  // Handler to open multi-slot scheduling modal
+  const handleSuggestTimeSlots = useCallback((candidate: CandidateProfile) => {
+    setMultiSlotCandidate(candidate);
+    setIsMultiSlotModalOpen(true);
+    setIsModalOpen(false); // Close the preview modal
+  }, []);
+
+  // Handler for submitting multiple time slots
+  const handleSubmitTimeSlots = useCallback(
+    async (
+      candidate: CandidateProfile,
+      timeSlots: Array<{ date: string; duration: number }>,
+      companyTimezone: string,
+      selectionDeadline?: string
+    ) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      await suggestTimeSlotsMutation.mutateAsync({
+        applicationId: candidate.applicationId,
+        timeSlots,
+        companyTimezone,
+        selectionDeadline,
+      });
+    },
+    [suggestTimeSlotsMutation]
   );
 
   const handleAccept = useCallback(
@@ -647,9 +707,11 @@ const CompanyCandidates = () => {
         onClose={handleCloseModal}
         onChat={handleChat}
         onViewCV={handleViewCV}
-        onScheduleInterview={handleScheduleInterview}
-        onAccept={handleAccept}
-        onReject={handleReject}
+        // Only pass schedule/accept/reject handlers for candidates with applicationId
+        onScheduleInterview={selectedCandidate?.applicationId ? handleScheduleInterview : undefined}
+        onSuggestTimeSlots={selectedCandidate?.applicationId ? handleSuggestTimeSlots : undefined}
+        onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
+        onReject={selectedCandidate?.applicationId ? handleReject : undefined}
         isAccepting={!!(
           updateApplicationStatusMutation.isPending &&
           selectedCandidate?.applicationId &&
@@ -667,6 +729,18 @@ const CompanyCandidates = () => {
           selectedCandidate?.applicationId &&
           scheduleInterviewMutation.variables?.applicationId === selectedCandidate.applicationId
         )}
+      />
+
+      {/* Multi-Slot Scheduling Modal */}
+      <ScheduleInterviewModal
+        isOpen={isMultiSlotModalOpen}
+        candidate={multiSlotCandidate}
+        onClose={() => {
+          setIsMultiSlotModalOpen(false);
+          setMultiSlotCandidate(null);
+        }}
+        onSchedule={handleSubmitTimeSlots}
+        isScheduling={suggestTimeSlotsMutation.isPending}
       />
     </div>
   );

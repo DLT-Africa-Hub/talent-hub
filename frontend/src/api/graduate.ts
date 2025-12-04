@@ -132,6 +132,24 @@ export const graduateApi = {
     return response.data;
   },
 
+  // Get interviews pending time slot selection
+  getPendingSelectionInterviews: async () => {
+    const response = await api.get('/graduates/interviews/pending-selection');
+    return response.data;
+  },
+
+  // Select a time slot for an interview
+  selectTimeSlot: async (
+    interviewId: string,
+    payload: { slotId: string; graduateTimezone?: string }
+  ) => {
+    const response = await api.post(
+      `/graduates/interviews/${interviewId}/select-slot`,
+      payload
+    );
+    return response.data;
+  },
+
   
 
   getApplications: async (params?: { page?: number; limit?: number; status?: string }) => {

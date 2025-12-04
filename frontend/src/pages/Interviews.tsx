@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { companyApi } from '../api/company';
 import { graduateApi } from '../api/graduate';
 import { Button, EmptyState, PageLoader, SectionHeader } from '../components/ui';
+import InterviewTimeSlotSelector, {
+  PendingInterview,
+} from '../components/graduate/InterviewTimeSlotSelector';
 
 type InterviewRecord = {
   id: string;
@@ -31,6 +34,8 @@ type InterviewRecord = {
 
 const JOIN_WINDOW_MINUTES = 10;
 const JOIN_GRACE_MINUTES = 90;
+const ROLE_COMPANY = 'company';
+const ROLE_GRADUATE = 'graduate';
 
 const formatDateTime = (value?: string) => {
   if (!value) return ' — ';
@@ -50,15 +55,18 @@ const formatDateTime = (value?: string) => {
 const Interviews = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const role = user?.role;
-  const isCompany = role === 'company';
+  const queryClient = useQueryClient();
+  const userRole = user?.role;
+  const isCompany = userRole === ROLE_COMPANY;
+  const isGraduate = userRole === ROLE_GRADUATE;
+  const [selectingInterviewId, setSelectingInterviewId] = useState<string | null>(null);
 
   const {
     data,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['interviews', role],
+    queryKey: ['interviews', userRole],
     queryFn: async () => {
       if (isCompany) {
         return companyApi.getInterviews({ page: 1, limit: 100 });
@@ -66,6 +74,44 @@ const Interviews = () => {
       return graduateApi.getInterviews({ page: 1, limit: 100 });
     },
   });
+
+  const {
+    data: pendingData,
+    isLoading: pendingLoading,
+  } = useQuery({
+    queryKey: ['interviews', 'pending-selection'],
+    queryFn: () => graduateApi.getPendingSelectionInterviews(),
+    enabled: isGraduate,
+  });
+
+  const selectSlotMutation = useMutation({
+    mutationFn: async ({
+      interviewId,
+      slotId,
+      graduateTimezone,
+    }: {
+      interviewId: string;
+      slotId: string;
+      graduateTimezone: string;
+    }) => {
+      return graduateApi.selectTimeSlot(interviewId, { slotId, graduateTimezone });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      setSelectingInterviewId(null);
+    },
+  });
+
+  const handleSelectSlot = async (
+    interviewId: string,
+    slotId: string,
+    graduateTimezone: string
+  ) => {
+    setSelectingInterviewId(interviewId);
+    await selectSlotMutation.mutateAsync({ interviewId, slotId, graduateTimezone });
+  };
+
+  const pendingInterviews: PendingInterview[] = pendingData?.interviews ?? [];
 
   const interviews: InterviewRecord[] = data?.interviews ?? [];
 
@@ -82,10 +128,8 @@ const Interviews = () => {
         ? new Date(interview.scheduledAt).getTime()
         : 0;
       const duration = interview.durationMinutes || 30;
-      // Calculate end time: scheduledAt + durationMinutes
       const endTime = scheduledTime + duration * 60 * 1000;
-      
-      // If the interview end time has passed, it's in the past
+
       if (endTime < now) {
         completed.push(interview);
       } else {
@@ -183,7 +227,7 @@ const Interviews = () => {
     );
   };
 
-  if (isLoading) {
+  if (isLoading || pendingLoading) {
     return <PageLoader message="Loading interviews..." />;
   }
 
@@ -205,6 +249,33 @@ const Interviews = () => {
       )}
 
       <div className="flex flex-col gap-6">
+        {/* Pending Selection Section - Graduates Only */}
+        {isGraduate && pendingInterviews.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-semibold text-[#1C1C1C]">
+                Action Required
+              </p>
+              <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
+                {pendingInterviews.length} pending
+              </span>
+            </div>
+            <p className="text-sm text-[#1C1C1C80] mb-2">
+              Select your preferred time slot for these interviews
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {pendingInterviews.map((interview) => (
+                <InterviewTimeSlotSelector
+                  key={interview.id}
+                  interview={interview}
+                  onSelectSlot={handleSelectSlot}
+                  isSelecting={selectingInterviewId === interview.id}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3">
           <p className="text-lg font-semibold text-[#1C1C1C]">
             Upcoming

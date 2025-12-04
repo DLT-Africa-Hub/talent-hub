@@ -20,6 +20,7 @@ interface CandidatePreviewModalProps {
     scheduledAt: string,
     durationMinutes?: number
   ) => Promise<void> | void;
+  onSuggestTimeSlots?: (candidate: CandidateProfile) => void;
   isAccepting?: boolean;
   isRejecting?: boolean;
   isSchedulingInterview?: boolean;
@@ -34,6 +35,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   onAccept,
   onReject,
   onScheduleInterview,
+  onSuggestTimeSlots,
   isAccepting = false,
   isRejecting = false,
   isSchedulingInterview = false,
@@ -57,10 +59,8 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
   if (!candidate) return null;
 
-  // Disable accept/reject buttons if offer is already sent or candidate is hired
   const isOfferSent = candidate.status === 'pending' || candidate.status === 'hired';
   const canAcceptOrReject = !isOfferSent && (onAccept || onReject);
-
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
   const existingInterviewDate = candidate.interviewScheduledAt
@@ -75,20 +75,18 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
         minute: '2-digit',
       })
     : null;
-  // Check if there's an upcoming interview that hasn't ended yet
-  // Backend calculates this based on scheduledAt + durationMinutes
   const hasUpcomingInterview = candidate.hasUpcomingInterview || false;
-
-  // If there's an upcoming interview, cannot schedule another one
   const hasActiveInterview = hasUpcomingInterview;
-
+  const isSchedulingLoading = isSchedulingInterview || isScheduling;
   const canScheduleInterview =
     !hasActiveInterview &&
     candidate.directContact !== false &&
     !!candidate.applicationId &&
     typeof onScheduleInterview === 'function';
-
-  // Format location details
+  const canShowScheduleControls = candidate.directContact !== false && (onScheduleInterview || onSuggestTimeSlots);
+  const canInteractWithScheduling = canScheduleInterview && !isSchedulingLoading && !hasActiveInterview;
+  const showDirectContactDisabled = candidate.directContact === false;
+  const showApplicationRequiredMessage = candidate.directContact !== false && !candidate.applicationId && onScheduleInterview;
   const locationParts = candidate.location
     ? candidate.location.split(' • ')
     : [];
@@ -152,9 +150,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
       setIsScheduling(false);
     }
   };
-
-  // Use external loading state if provided, otherwise use internal state
-  const isSchedulingLoading = isSchedulingInterview || isScheduling;
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
@@ -288,7 +283,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
           </div>
 
           {!showScheduleForm ? (
-            // Only show Accept/Reject/Schedule buttons if handlers are provided
             (canAcceptOrReject || onScheduleInterview) && (
               <div className="flex flex-col gap-3">
                 {canAcceptOrReject && (
@@ -334,27 +328,42 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                     )}
                   </div>
                 )}
-                {/* Only show Schedule Interview if direct contact is enabled and handler is provided */}
-                {onScheduleInterview && candidate.directContact !== false && (
-                  <Button
-                    onClick={() => {
-                      setScheduleError('');
-                      setScheduleSuccess('');
-                      setShowScheduleForm(true);
-                    }}
-                    variant="secondary"
-                    className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={!canScheduleInterview || isSchedulingLoading}
-                  >
-                    <HiVideoCamera className="text-[18px] mr-2" />
-                    {hasActiveInterview
-                      ? 'Interview Already Scheduled'
-                      : canScheduleInterview
-                        ? 'Schedule Interview'
-                        : 'Interview scheduling unavailable'}
-                  </Button>
+                {/* Schedule Interview Controls */}
+                {canShowScheduleControls && (
+                  <div className="flex flex-col gap-2">
+                    {onScheduleInterview && (
+                      <Button
+                        onClick={() => {
+                          setScheduleError('');
+                          setScheduleSuccess('');
+                          setShowScheduleForm(true);
+                        }}
+                        variant="secondary"
+                        className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!canInteractWithScheduling}
+                      >
+                        <HiVideoCamera className="text-[18px] mr-2" />
+                        {hasActiveInterview
+                          ? 'Interview Already Scheduled'
+                          : canScheduleInterview
+                            ? 'Quick Schedule (Single Time)'
+                            : 'Interview scheduling unavailable'}
+                      </Button>
+                    )}
+                    {onSuggestTimeSlots && canInteractWithScheduling && (
+                      <Button
+                        onClick={() => onSuggestTimeSlots(candidate)}
+                        variant="secondary"
+                        className="w-full border-2 border-[#6B9B5A] text-[#6B9B5A] hover:bg-[#6B9B5A]/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!canInteractWithScheduling}
+                      >
+                        <HiVideoCamera className="text-[18px] mr-2" />
+                        Suggest Multiple Time Slots
+                      </Button>
+                    )}
+                  </div>
                 )}
-                {candidate.directContact === false && (
+                {showDirectContactDisabled && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-[14px] text-blue-800">
                       This application is being handled by DLT Africa admin
@@ -363,14 +372,12 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                     </p>
                   </div>
                 )}
-                {candidate.directContact !== false &&
-                  !candidate.applicationId &&
-                  onScheduleInterview && (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
-                      Invite the candidate to apply or review their application
-                      before scheduling an interview.
-                    </div>
-                  )}
+                {showApplicationRequiredMessage && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-[14px] text-yellow-800">
+                    Invite the candidate to apply or review their application
+                    before scheduling an interview.
+                  </div>
+                )}
               </div>
             )
           ) : (

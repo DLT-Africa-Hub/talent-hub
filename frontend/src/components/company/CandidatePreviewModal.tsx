@@ -59,10 +59,8 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
   if (!candidate) return null;
 
-  // Disable accept/reject buttons if offer is already sent or candidate is hired
   const isOfferSent = candidate.status === 'pending' || candidate.status === 'hired';
   const canAcceptOrReject = !isOfferSent && (onAccept || onReject);
-
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
   const existingInterviewDate = candidate.interviewScheduledAt
@@ -77,29 +75,18 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
         minute: '2-digit',
       })
     : null;
-  // Check if there's an upcoming interview that hasn't ended yet
-  // Backend calculates this based on scheduledAt + durationMinutes
   const hasUpcomingInterview = candidate.hasUpcomingInterview || false;
-
-  // If there's an upcoming interview, cannot schedule another one
   const hasActiveInterview = hasUpcomingInterview;
-
-  // Use external loading state if provided, otherwise use internal state
   const isSchedulingLoading = isSchedulingInterview || isScheduling;
-
   const canScheduleInterview =
     !hasActiveInterview &&
     candidate.directContact !== false &&
     !!candidate.applicationId &&
     typeof onScheduleInterview === 'function';
-
-  // Extracted conditionals for better readability
   const canShowScheduleControls = candidate.directContact !== false && (onScheduleInterview || onSuggestTimeSlots);
   const canInteractWithScheduling = canScheduleInterview && !isSchedulingLoading && !hasActiveInterview;
   const showDirectContactDisabled = candidate.directContact === false;
   const showApplicationRequiredMessage = candidate.directContact !== false && !candidate.applicationId && onScheduleInterview;
-
-  // Format location details
   const locationParts = candidate.location
     ? candidate.location.split(' • ')
     : [];
@@ -296,7 +283,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
           </div>
 
           {!showScheduleForm ? (
-            // Only show Accept/Reject/Schedule buttons if handlers are provided
             (canAcceptOrReject || onScheduleInterview) && (
               <div className="flex flex-col gap-3">
                 {canAcceptOrReject && (

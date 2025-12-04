@@ -34,8 +34,6 @@ type InterviewRecord = {
 
 const JOIN_WINDOW_MINUTES = 10;
 const JOIN_GRACE_MINUTES = 90;
-
-// User role constants
 const ROLE_COMPANY = 'company';
 const ROLE_GRADUATE = 'graduate';
 
@@ -63,7 +61,6 @@ const Interviews = () => {
   const isGraduate = userRole === ROLE_GRADUATE;
   const [selectingInterviewId, setSelectingInterviewId] = useState<string | null>(null);
 
-  // Fetch regular interviews
   const {
     data,
     isLoading,
@@ -78,7 +75,6 @@ const Interviews = () => {
     },
   });
 
-  // Fetch pending selection interviews (graduates only)
   const {
     data: pendingData,
     isLoading: pendingLoading,
@@ -88,7 +84,6 @@ const Interviews = () => {
     enabled: isGraduate,
   });
 
-  // Mutation for selecting a time slot
   const selectSlotMutation = useMutation({
     mutationFn: async ({
       interviewId,
@@ -102,7 +97,6 @@ const Interviews = () => {
       return graduateApi.selectTimeSlot(interviewId, { slotId, graduateTimezone });
     },
     onSuccess: () => {
-      // Refetch both queries after successful selection
       queryClient.invalidateQueries({ queryKey: ['interviews'] });
       setSelectingInterviewId(null);
     },
@@ -134,10 +128,8 @@ const Interviews = () => {
         ? new Date(interview.scheduledAt).getTime()
         : 0;
       const duration = interview.durationMinutes || 30;
-      // Calculate end time: scheduledAt + durationMinutes
       const endTime = scheduledTime + duration * 60 * 1000;
-      
-      // If the interview end time has passed, it's in the past
+
       if (endTime < now) {
         completed.push(interview);
       } else {

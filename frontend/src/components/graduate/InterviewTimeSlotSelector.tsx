@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { HiVideoCamera, HiClock, HiCalendar, HiGlobeAlt, HiCheck } from 'react-icons/hi';
 import { Button } from '../ui';
 
-// Common timezones
 const COMMON_TIMEZONES = [
   { value: 'UTC', label: 'UTC' },
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -121,7 +120,6 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
     ? new Date(interview.selectionDeadline) < new Date()
     : false;
 
-  // Extracted conditionals for better readability
   const hasSelectedSlot = !!selectedSlotId;
   const canConfirm = hasSelectedSlot && !isSelecting && !isDeadlinePassed;
   const showConfirmButton = !success;

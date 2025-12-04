@@ -39,7 +39,6 @@ import Graduates from './pages/admin/Graduates';
 import Jobs from './pages/admin/Jobs';
 import ApplicationStatus from './pages/admin/AppStatus';
 
-// Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/explore?preview=${id}`} replace />;
@@ -50,8 +49,8 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AuthProvider>
-        <div className="App">
+    <AuthProvider>
+      <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route
@@ -93,9 +92,9 @@ function App() {
               <ProtectedRoute allowedRoles={['graduate']}>
                 <EmailVerificationGuard>
                 <AssessmentGuard>
-                  <Layout>
-                    <GraduateDashboard />
-                  </Layout>
+              <Layout>
+                 <GraduateDashboard />
+              </Layout>
                 </AssessmentGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
@@ -120,13 +119,13 @@ function App() {
             element={<Navigate to="/graduate/profile" replace />}
           />
           <Route path="/talent/*" element={<Navigate to="/graduate" replace />} />
-          <Route 
+          <Route
             path="/company/*"
             element={
               <ProtectedRoute allowedRoles={['company']}>
                 <EmailVerificationGuard>
                   <CompanyRouteGuard>
-                    <CompanyDashboard />
+                <CompanyDashboard />
                   </CompanyRouteGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
@@ -402,8 +401,8 @@ function App() {
             }
           />
         </Routes>
-        </div>
-      </AuthProvider>
+      </div>
+    </AuthProvider>
     </GoogleOAuthProvider>
   );
 }

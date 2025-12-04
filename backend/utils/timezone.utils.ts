@@ -28,7 +28,6 @@ export const formatDateInTimezone = (
     throw new Error(`Invalid timezone: ${timezone}`);
   }
 
-  // Use date-fns-tz for formatting
   const formatStr = 'EEE, MMM d, yyyy h:mm a zzz';
   return formatInTimeZone(date, timezone, formatStr);
 };

@@ -4,7 +4,6 @@ import Interview, { ISuggestedTimeSlot } from '../models/Interview.model';
 import Application from '../models/Application.model';
 import Company from '../models/Company.model';
 import Graduate from '../models/Graduate.model';
-import Job from '../models/Job.model';
 import { createNotification } from '../services/notification.service';
 import {
   buildInterviewRoomUrl,

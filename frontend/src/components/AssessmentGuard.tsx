@@ -5,6 +5,17 @@ import { useAuth } from '../context/AuthContext';
 import { graduateApi } from '../api/graduate';
 import { ReactNode } from 'react';
 import { PageLoader } from './ui';
+import { ApiError } from '../types/api';
+
+interface GraduateProfileResponse {
+  graduate?: {
+    assessmentData?: {
+      submittedAt?: string | Date;
+      lastScore?: number;
+      needsRetake?: boolean;
+    };
+  };
+}
 
 interface AssessmentGuardProps {
   children: ReactNode;
@@ -40,13 +51,13 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
 
   const hasCompletedAssessment = useMemo(() => {
     if (!profileData) return false;
-    const assessmentData = (profileData as any)?.graduate?.assessmentData;
+    const assessmentData = (profileData as GraduateProfileResponse)?.graduate?.assessmentData;
     return assessmentData?.submittedAt != null;
   }, [profileData]);
 
   const hasPassedAssessment = useMemo(() => {
     if (!profileData) return false;
-    const assessmentData = (profileData as any)?.graduate?.assessmentData;
+    const assessmentData = (profileData as GraduateProfileResponse)?.graduate?.assessmentData;
     if (!assessmentData) return false;
 
     const lastScore = assessmentData.lastScore;
@@ -83,7 +94,7 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
 
   // For other routes: if error (except 404), redirect to assessment
   if (error) {
-    const is404 = (error as any)?.response?.status === 404;
+    const is404 = (error as ApiError)?.response?.status === 404;
     if (is404) {
       return <>{children}</>;
     }

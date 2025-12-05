@@ -13,14 +13,15 @@ let cachedConnection: typeof mongoose | null = null;
 let appInstance: any = null;
 let appLoadError: Error | null = null;
 
-function getApp() {
+async function getApp() {
   if (appLoadError) {
     throw appLoadError;
   }
   
   if (!appInstance) {
     try {
-      appInstance = require('../app').default;
+      const appModule = await import('../app');
+      appInstance = appModule.default;
     } catch (error) {
       // Log full error details
       console.error('Failed to load Express app - Full error:', error);
@@ -87,7 +88,7 @@ async function connectToDatabase() {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Get app instance (lazy load to catch initialization errors)
-    const app = getApp();
+    const app = await getApp();
 
     // Connect to MongoDB (skip for test endpoint)
     if (!req.url?.includes('/api/test') && !req.url?.includes('/health')) {

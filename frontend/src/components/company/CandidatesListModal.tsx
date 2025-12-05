@@ -183,7 +183,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         transformApplication(application, index)
       );
     }
-  }, [responseData, type, jobId, transformMatch, transformApplication]);
+  }, [responseData, type, transformMatch, transformApplication]);
 
   // Modal configuration based on type
   const modalConfig = useMemo(() => {

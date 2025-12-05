@@ -22,7 +22,7 @@ export const isValidTimezone = (timezone: string): boolean => {
 export const formatDateInTimezone = (
   date: Date,
   timezone: string,
-  options?: Intl.DateTimeFormatOptions
+  _options?: Intl.DateTimeFormatOptions
 ): string => {
   if (!isValidTimezone(timezone)) {
     throw new Error(`Invalid timezone: ${timezone}`);

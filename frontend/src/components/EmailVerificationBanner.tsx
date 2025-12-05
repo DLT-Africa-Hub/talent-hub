@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import { useState } from 'react';
+import { ApiError } from '../types/api';
 
 interface EmailVerificationBannerProps {
   onOpenModal: () => void;
@@ -27,9 +28,10 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
       // Show success for 3 seconds, then disable for 60 seconds to prevent spam
       setTimeout(() => setSuccess(false), 3000);
       setTimeout(() => setCooldown(false), 60000); // 60 second cooldown
-    } catch (err: any) {
+    } catch (err) {
       console.error('Request verification error:', err);
-      if (err.response?.status === 429) {
+      const error = err as ApiError;
+      if (error.response?.status === 429) {
         setError('Too many requests. Please wait a moment before trying again.');
         setCooldown(true);
         setTimeout(() => {
@@ -37,7 +39,7 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
           setError('');
         }, 60000); // 60 second cooldown on rate limit
       } else {
-        setError(err.response?.data?.message || 'Failed to send email. Please try again.');
+        setError(error.response?.data?.message || 'Failed to send email. Please try again.');
       }
     } finally {
       setLoading(false);

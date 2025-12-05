@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import AuthForm from '../components/auth/AuthForm';
+import { ApiError } from '@/types/api';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -55,10 +56,11 @@ const ResetPassword = () => {
       setTimeout(() => {
         navigate('/login');
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Password reset error:', err);
+      const error = err as ApiError;
       setError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to reset password. The token may be invalid or expired.'
       );
     } finally {

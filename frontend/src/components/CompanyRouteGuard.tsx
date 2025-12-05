@@ -5,6 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import { companyApi } from '../api/company';
 import { ReactNode } from 'react';
 import { PageLoader } from './ui';
+import { ApiError } from '../types/api';
+
+interface CompanyProfileResponse {
+  companyName?: string;
+  industry?: string;
+  companySize?: string;
+  description?: string;
+}
 
 interface CompanyRouteGuardProps {
   children: ReactNode;
@@ -40,7 +48,7 @@ const CompanyRouteGuard: React.FC<CompanyRouteGuardProps> = ({ children }) => {
 
   const hasCompletedProfile = useMemo(() => {
     if (!profileData) return false;
-    const company = profileData as any;
+    const company = profileData as CompanyProfileResponse;
     // Check if all required fields are present
     return (
       company?.companyName &&
@@ -74,7 +82,7 @@ const CompanyRouteGuard: React.FC<CompanyRouteGuardProps> = ({ children }) => {
 
   // For other routes: if error (except 404), allow access (might be first time)
   if (error) {
-    const is404 = (error as any)?.response?.status === 404;
+    const is404 = (error as ApiError)?.response?.status === 404;
     if (is404) {
       // Profile doesn't exist, redirect to onboarding
       return <Navigate to="/company/onboarding" replace />;

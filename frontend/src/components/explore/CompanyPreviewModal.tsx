@@ -15,6 +15,7 @@ import ConfirmationStep from './ConfirmationStep';
 import graduateApi from '../../api/graduate';
 import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
 import { stripHtml } from '../../utils/text.utils';
+import { ApiResume } from '../../types/api';
 
 interface CompanyPreviewModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ interface CompanyPreviewModalProps {
 type ApplicationStep = 'preview' | 'cv-selection' | 'cover-letter' | 'confirmation';
 
 interface ApplicationData {
-  cv?: any;
+  cv?: ApiResume | File;
   cvId?: string;
   cvFileName?: string;
   coverLetter?: string;
@@ -96,7 +97,7 @@ useEffect(() => {
     setCurrentStep('preview');
   };
 
-  const handleCVSelection = (selectedCV?: any, newFile?: File) => {
+  const handleCVSelection = (selectedCV?: ApiResume, newFile?: File) => {
     setApplicationData(prev => ({
       ...prev,
       cv: selectedCV || newFile,

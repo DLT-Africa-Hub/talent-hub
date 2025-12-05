@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { authApi } from '../api/auth';
 import { Input, Button } from './ui';
+import { ApiError } from '../types/api';
 
 const ChangePassword = () => {
   const [oldPassword, setOldPassword] = useState('');
@@ -53,10 +54,11 @@ const ChangePassword = () => {
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Change password error:', err);
+      const error = err as ApiError;
       setError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to change password. Please try again.'
       );
     } finally {

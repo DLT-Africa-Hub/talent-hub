@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { graduateApi } from '../../api/graduate';
 import { LoadingSpinner } from '../../index';
+import { ApiError } from '../../types/api';
+
+interface AssessmentQuestionResponse {
+  question: string;
+  options: string[];
+  answer: string;
+  skill?: string;
+}
 
 interface Question {
   question: string;
@@ -52,17 +60,70 @@ const Assessment: React.FC = () => {
         queryKey: ['graduateProfile', 'assessment'],
       });
       setShowResults(true);
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as ApiError;
       setError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to submit assessment. Please try again.'
       );
     }
-  }, [answers, questions]);
+  }, [answers, questions, queryClient]);
+
+  const fetchQuestions = useCallback(async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const token =
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem('token')
+          : null;
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      const response = await graduateApi.getAssessmentQuestions();
+      const transformedQuestions: Question[] = response.questions.map(
+        (q: AssessmentQuestionResponse) => ({
+          question: q.question,
+          options: q.options,
+          answer: q.answer,
+          skill: q.skill,
+        })
+      );
+      setQuestions(transformedQuestions);
+      setAnswers([]);
+      setStep(0);
+      setShowResults(false);
+        setTimeRemaining(60);
+      setTimerActive(true);
+    } catch (err) {
+      const error = err as ApiError;
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to load questions. Please try again.';
+      setError(errorMessage);
+
+      if (error.response?.status === 401) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+        }
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 2000);
+      }
+
+      setQuestions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [attempt, navigate]);
 
   useEffect(() => {
     fetchQuestions();
-  }, [attempt]);
+  }, [fetchQuestions]);
 
   useEffect(() => {
     if (!timerActive || showResults || questions.length === 0) return;
@@ -81,57 +142,6 @@ const Assessment: React.FC = () => {
 
     return () => clearInterval(timer);
   }, [timerActive, showResults, questions.length, handleSubmit]);
-
-  const fetchQuestions = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const token =
-        typeof window !== 'undefined'
-          ? sessionStorage.getItem('token')
-          : null;
-      if (!token) {
-        setError('Authentication required. Please log in again.');
-        navigate('/login', { replace: true });
-        return;
-      }
-
-      const response = await graduateApi.getAssessmentQuestions();
-      const transformedQuestions: Question[] = response.questions.map(
-        (q: any) => ({
-          question: q.question,
-          options: q.options,
-          answer: q.answer,
-          skill: q.skill,
-        })
-      );
-      setQuestions(transformedQuestions);
-      setAnswers([]);
-      setStep(0);
-      setShowResults(false);
-        setTimeRemaining(60);
-      setTimerActive(true);
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        'Failed to load questions. Please try again.';
-      setError(errorMessage);
-
-      if (err.response?.status === 401) {
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('token');
-          sessionStorage.removeItem('user');
-        }
-        setTimeout(() => {
-          navigate('/login', { replace: true });
-        }, 2000);
-      }
-
-      setQuestions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSelectOption = (option: string) => {
     const updatedAnswers = [...answers];

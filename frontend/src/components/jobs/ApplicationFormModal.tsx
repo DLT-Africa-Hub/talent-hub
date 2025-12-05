@@ -38,7 +38,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     fileName: string;
     fileUrl: string;
     size: number;
-    publicId?: any;
+    publicId?: string;
     onDisplay: boolean;
   } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PiGraduationCap, PiBuildingApartmentLight } from 'react-icons/pi';
 import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../types/api';
 
 
 interface Role {
@@ -73,9 +74,10 @@ const AccountType: React.FC = () => {
       } else {
         navigate('/company/onboarding');
       }
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as ApiError;
       setError(
-        err.response?.data?.message || 'Registration failed. Please try again.'
+        error.response?.data?.message || 'Registration failed. Please try again.'
       );
     } finally {
       setIsLoading(false);

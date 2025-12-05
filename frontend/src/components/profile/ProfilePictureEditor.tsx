@@ -57,6 +57,16 @@ export default function ProfilePictureEditor({ imageUrl, size = 150, onUpload }:
 
 /* ------------ MODAL ------------ */
 
+interface ImageCropModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialImage: string | null;
+  onImageSaved: (url: string) => void;
+  onUpload?: (file: Blob) => Promise<void> | void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  previewSize?: number;
+}
+
 function ImageCropModal({
   isOpen,
   onClose,
@@ -65,7 +75,7 @@ function ImageCropModal({
   onUpload,
   inputRef,
   previewSize = 150,
-}: any) {
+}: ImageCropModalProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(initialImage)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
@@ -219,7 +229,13 @@ function ImageCropModal({
 
 /* ------------ PREVIEW CANVAS ------------- */
 
-function PreviewCanvas({ imageSrc, cropPixels, size }: any) {
+interface PreviewCanvasProps {
+  imageSrc: string;
+  cropPixels: { x: number; y: number; width: number; height: number };
+  size: number;
+}
+
+function PreviewCanvas({ imageSrc, cropPixels, size }: PreviewCanvasProps) {
   const ref = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
@@ -246,7 +262,7 @@ function PreviewCanvas({ imageSrc, cropPixels, size }: any) {
         size
       )
     })()
-  }, [cropPixels, imageSrc])
+  }, [cropPixels, imageSrc, size])
 
   return <canvas ref={ref} className="w-full h-full" />
 }
@@ -271,7 +287,14 @@ function createImage(url: string) {
   })
 }
 
-async function getCroppedImg(src: string, crop: any): Promise<Blob> {
+interface CropArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+async function getCroppedImg(src: string, crop: CropArea): Promise<Blob> {
   const img = await createImage(src)
   const canvas = document.createElement("canvas")
   const ctx = canvas.getContext("2d")!

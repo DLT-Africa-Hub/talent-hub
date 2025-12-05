@@ -10,7 +10,7 @@ interface InstructionProps {
 interface Guide {
   guide: string;
   description: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const Instruction: React.FC<InstructionProps> = ({ onStart }) => {

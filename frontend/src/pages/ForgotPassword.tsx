@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import AuthForm from '../components/auth/AuthForm';
+import { ApiError } from '@/types/api';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -21,10 +22,11 @@ const ForgotPassword = () => {
     try {
       await authApi.requestPasswordReset(email);
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Password reset request error:', err);
+      const error = err as ApiError;
       setError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to send reset email. Please try again.'
       );
     } finally {

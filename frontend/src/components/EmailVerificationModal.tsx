@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import Modal from './auth/Modal';
+import { ApiError } from '../types/api';
 
 interface EmailVerificationModalProps {
   isOpen: boolean;
@@ -33,9 +34,10 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       setCooldown(true);
       // 60 second cooldown to prevent spam
       setTimeout(() => setCooldown(false), 60000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Request verification error:', err);
-      if (err.response?.status === 429) {
+      const error = err as ApiError;
+      if (error.response?.status === 429) {
         setError('Too many requests. Please wait a moment before trying again.');
         setCooldown(true);
         setTimeout(() => {
@@ -44,7 +46,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         }, 60000);
       } else {
         setError(
-          err.response?.data?.message ||
+          error.response?.data?.message ||
             'Failed to send verification email. Please try again.'
         );
       }

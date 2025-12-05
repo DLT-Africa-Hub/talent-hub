@@ -41,7 +41,7 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
       setError(null);
       const response = await graduateApi.getCVs();
       setExistingCVs(response.cvs || []);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching CVs:', err);
       setError('Failed to load your CVs. Please try again.');
     } finally {

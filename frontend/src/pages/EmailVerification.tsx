@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import { Button } from '../components/ui';
+import { ApiError } from '../types/api';
 
 const EmailVerification = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
@@ -58,10 +59,11 @@ const EmailVerification = () => {
           setSuccess('Email verified successfully! You can now sign in.');
           setShouldPromptLogin(true);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Email verification error:', err);
+        const error = err as ApiError;
         setError(
-          err.response?.data?.message ||
+          error.response?.data?.message ||
             'Failed to verify email. The link may be invalid or expired.'
         );
       } finally {
@@ -98,10 +100,11 @@ const EmailVerification = () => {
     try {
       await authApi.requestEmailVerification();
       setSuccess('Verification email sent! Please check your inbox.');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Resend verification error:', err);
+      const error = err as ApiError;
       setError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to send verification email. Please try again.'
       );
     } finally {

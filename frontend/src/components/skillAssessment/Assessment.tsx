@@ -26,7 +26,7 @@ const Assessment: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [attempt, setAttempt] = useState(1);
+  // const [attempt, setAttempt] = useState(1); // Reserved for future retake functionality
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [timerActive, setTimerActive] = useState(false);
   const navigate = useNavigate();
@@ -119,7 +119,7 @@ const Assessment: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [attempt, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     fetchQuestions();

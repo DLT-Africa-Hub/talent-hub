@@ -6,6 +6,7 @@ import { BsSend } from 'react-icons/bs';
 import { graduateApi } from '../api/graduate';
 import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../utils/job.utils';
 import { PageLoader, ErrorState } from '../components/ui';
+import { ApiError } from '../types/api';
 
 const ExplorePreview = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +40,7 @@ const ExplorePreview = () => {
       <div className="flex items-center justify-center h-screen w-full font-inter">
         <ErrorState
           message={
-            (error as any)?.response?.data?.message ||
+            (error as ApiError)?.response?.data?.message ||
             'Failed to load job details. Please try again.'
           }
           variant="inline"

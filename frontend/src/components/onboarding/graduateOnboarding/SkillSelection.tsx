@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduateForm } from '../../../constants/type';
+import { ApiError } from '../../../types/api';
 import {
   getSkillsForPositions,
   rolesToPosition,
@@ -71,10 +72,11 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
       await graduateApi.createProfile(profileData);
       // Profile created successfully, navigate to assessment
       navigate('/assessment');
-    } catch (err: any) {
-      console.error('Profile creation error:', err);
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Profile creation error:', error);
       setProfileError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to create profile. Please try again.'
       );
     } finally {

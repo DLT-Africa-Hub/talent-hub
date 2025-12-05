@@ -25,6 +25,7 @@ interface CompanyCardProps {
 }
 
 // Uses Badge component utilities for consistency
+// eslint-disable-next-line react-refresh/only-export-components
 export const getMatchBadgeConfig = (score: number) => {
   const variant = getMatchBadgeVariant(score);
   const label = getMatchBadgeLabel(score);

@@ -13,6 +13,7 @@ import {
   getSalaryType,
 } from '../../utils/job.utils';
 import { LoadingSpinner } from '../../index';
+import { ApiError } from '../../types/api';
 import JobCreationModal from '../../components/company/JobCreationModal';
 import { EmptyState } from '../../components/ui';
 
@@ -81,7 +82,7 @@ const CompanyJobs = () => {
   // Extract error message
   const error = useMemo(() => {
     if (!queryError) return null;
-    const err = queryError as any;
+    const err = queryError as ApiError;
     return (
       err.response?.data?.message || 'Failed to load jobs. Please try again.'
     );

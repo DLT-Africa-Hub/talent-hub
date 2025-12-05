@@ -10,6 +10,7 @@ import Experience from '../../components/onboarding/graduateOnboarding/Experienc
 import { useAuth } from '../../context/AuthContext';
 import { graduateApi } from '../../api/graduate';
 import { PageLoader } from '../../components/ui';
+import { ApiError } from '../../types/api';
 
 const GraduateOnboarding: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -83,14 +84,15 @@ const GraduateOnboarding: React.FC = () => {
         }
 
         setCanRenderForm(true);
-      } catch (err: any) {
-        if (err?.response?.status === 404) {
+      } catch (err) {
+        const error = err as ApiError;
+        if (error?.response?.status === 404) {
           setCanRenderForm(true);
-        } else if (err?.response?.status === 401) {
+        } else if (error?.response?.status === 401) {
           navigate('/login', { replace: true });
           return;
         } else {
-          console.error('Graduate onboarding access check failed:', err);
+          console.error('Graduate onboarding access check failed:', error);
           setAccessError(
             'We could not verify your onboarding status. Please try again.'
           );

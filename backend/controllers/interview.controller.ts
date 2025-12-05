@@ -14,6 +14,7 @@ import {
   formatDateInTimezone,
   formatTimeSlotForDisplay,
 } from '../utils/timezone.utils';
+import { generateStreamToken } from '../utils/stream.utils';
 
 export const getInterviewBySlug = async (
   req: Request,
@@ -671,6 +672,31 @@ export const selectTimeSlot = async (
     session.endSession();
     console.error('Error selecting time slot:', error);
     res.status(500).json({ message: 'Failed to select time slot. Please try again.' });
+  }
+};
+
+export const generateStreamTokenController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  try {
+    const token = generateStreamToken(userId);
+    res.success({ token });
+  } catch (error) {
+    console.error('Error generating Stream token:', error);
+    res.status(500).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate Stream token',
+    });
   }
 };
 

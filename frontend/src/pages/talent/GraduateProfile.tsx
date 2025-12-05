@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import WorkingExperience from '../../components/profile/WorkingExperience';
 import ResumeModal from '../../components/profile/ResumeModal';
 import cloudinaryApi from '../../api/cloudinary';
+import { ApiError } from '../../types/api';
 
 const GraduateProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -167,7 +168,7 @@ const GraduateProfile = () => {
           } else {
             console.warn('Failed to delete old profile picture:', deleteResult);
           }
-        } catch (deleteError: any) {
+        } catch (deleteError) {
           // Log error but don't throw - the new picture is already uploaded and saved
           console.error('Error deleting old profile picture:', deleteError);
           console.warn('Continuing despite deletion error - new picture is saved');
@@ -178,9 +179,10 @@ const GraduateProfile = () => {
       queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'profilePage'] });
 
       console.log('Profile picture update complete!');
-    } catch (err: any) {
-      console.error('Failed to upload profile picture', err);
-      alert(err?.message || 'Failed to upload profile picture');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to upload profile picture', error);
+      alert(error.response?.data?.message || 'Failed to upload profile picture');
     } finally {
       setIsUploading(false);
     }

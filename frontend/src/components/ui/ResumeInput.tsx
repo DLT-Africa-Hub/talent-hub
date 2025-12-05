@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Upload, X, File as FileIcon, Loader2 } from "lucide-react"
 import cloudinaryApi from "../../api/cloudinary"
+import { ApiError } from "../../types/api"
 
 export interface UploadedFile {
   fileName: string
@@ -49,14 +50,12 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
 
 
   const CLOUD_NAME =
-    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CLOUDINARY_CLOUD_NAME) ||
-    import.meta.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ||
+    import.meta.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
 
   const UPLOAD_PRESET =
-    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET) ||
-    import.meta.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
-    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ||
+    import.meta.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
   useEffect(() => {
     const uploaded: UploadedFile[] = localFiles
@@ -142,11 +141,11 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
         } else {
           console.warn(`Cloudinary deletion returned success:false for ${fileToRemove.name}:`, result)
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error deleting file from Cloudinary:", error)
-        
+        const apiError = error as ApiError;
       
-        if (error.response) {
+        if (apiError.response) {
           console.error("Error response:", error.response.data)
         }
         

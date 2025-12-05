@@ -9,6 +9,7 @@ import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
 import { Pagination } from '../../components/ui';
 import { graduateApi } from '../../api/graduate';
 import { LoadingSpinner } from '../../index';
+import { ApiError } from '../../types/api';
 import {
   DEFAULT_JOB_IMAGE,
   formatSalaryRange,
@@ -94,14 +95,6 @@ const ExploreCompany = () => {
     placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
   });
 
-  const jobsData = jobsResponse?.jobs || [];
-  const pagination = jobsResponse?.pagination || {
-    page: 1,
-    limit: pageSize,
-    total: 0,
-    totalPages: 0,
-  };
-
   // Transform job data to Company format
   const transformJobToCompany = useCallback(
     (job: AvailableJob, index: number): Company => {
@@ -146,6 +139,14 @@ const ExploreCompany = () => {
   );
  
 
+  const jobsData = useMemo(() => jobsResponse?.jobs || [], [jobsResponse?.jobs]);
+  const pagination = jobsResponse?.pagination || {
+    page: 1,
+    limit: pageSize,
+    total: 0,
+    totalPages: 0,
+  };
+
   // Transform all jobs to companies
   const companies = useMemo(() => {
     if (!jobsData || jobsData.length === 0) {
@@ -154,7 +155,7 @@ const ExploreCompany = () => {
     return jobsData.map((job: AvailableJob, index: number) =>
       transformJobToCompany(job, index)
     );
-  }, [jobsData, transformJobToCompany]);
+  }, [transformJobToCompany, jobsData]);
 
   const handlePreviewClick = (companyId: number) => {
     const company = companies.find((c: Company) => c.id === companyId);
@@ -316,7 +317,7 @@ const ExploreCompany = () => {
               Failed to load opportunities
             </h3>
             <p className="text-[16px] text-[#1C1C1C80] text-center max-w-md">
-              {(queryError as any)?.response?.data?.message ||
+              {(queryError as ApiError)?.response?.data?.message ||
                 'Unable to fetch job opportunities. Please try again later.'}
             </p>
           </div>

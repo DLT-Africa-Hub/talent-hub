@@ -55,7 +55,7 @@ export const DropdownMenuContent = ({
     const clickHandler = (e: MouseEvent) => {
       if (ref.current && e.target && !ref.current.contains(e.target as Node)) {
         setOpen(false);
-        (window as any).__dropdown_open = false;
+        // Track dropdown state if needed
       }
     };
     document.addEventListener("click", clickHandler);

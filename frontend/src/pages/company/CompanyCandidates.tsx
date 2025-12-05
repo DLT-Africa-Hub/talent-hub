@@ -7,6 +7,7 @@ import CandidatePreviewModal from '../../components/company/CandidatePreviewModa
 import ScheduleInterviewModal from '../../components/company/ScheduleInterviewModal';
 import { CandidateProfile, CandidateStatus } from '../../types/candidates';
 import { companyApi } from '../../api/company';
+import { ApiError } from '../../types/api';
 import {
   candidateStatusFilters,
   mapApplicationStatusToCandidateStatus,
@@ -228,7 +229,7 @@ const CompanyCandidates = () => {
   // Extract error message
   const error = useMemo(() => {
     if (applicationsError || matchesError) {
-      const err = (applicationsError || matchesError) as any;
+      const err = (applicationsError || matchesError) as ApiError;
       return (
         err.response?.data?.message ||
         'Failed to load candidates. Please try again.'
@@ -318,7 +319,7 @@ const CompanyCandidates = () => {
         navigate("/candidates", { replace: true });
       }, 300); 
     }
-  }, [id, candidates]);
+  }, [id, candidates, navigate]);
   
   
 

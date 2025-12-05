@@ -94,8 +94,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
         <ResumeInput
           value={form.cv as UploadedFile[]}
           onChange={(files) => {
-            // make sure your form.cv type accepts UploadedFile[] or convert as needed
-            onChange({ cv: files as any });
+            onChange({ cv: files });
           }}
         />
 

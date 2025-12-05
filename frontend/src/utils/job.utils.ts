@@ -202,7 +202,7 @@ export const formatNotificationDate = (dateInput: string | Date): string => {
 };
 
 // Get company name from notification (fallback logic)
-export const getCompanyName = (_notification: any, userRole?: string): string => {
+export const getCompanyName = (_notification: unknown, userRole?: string): string => {
   // For graduates: notifications might be about companies
   // For companies: notifications might be about candidates/applications
   if (userRole === 'graduate') {

@@ -6,6 +6,7 @@ import RankSelector, {
 } from '../../components/onboarding/companyOnboarding/job/RankSelector';
 import { companyApi } from '../../api/company';
 import { Button, Congratulations } from '../../components/ui';
+import { ApiError } from '../../types/api';
 
 interface LocationState {
   jobData: {
@@ -91,23 +92,24 @@ const JobRankSelector = () => {
         setWarning(response.warning);
       }
       setIsSuccess(true);
-    } catch (err: any) {
-      console.error('Error creating job:', err);
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Error creating job:', error);
 
       // Extract error message with better handling
       let errorMessage = 'Failed to create job. Please try again.';
 
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       // Provide more helpful messages for specific error types
       if (
         errorMessage.toLowerCase().includes('quota') ||
         errorMessage.toLowerCase().includes('billing') ||
-        err.response?.status === 402
+        error.response?.status === 402
       ) {
         errorMessage =
           'Unable to create job: OpenAI API quota exceeded. Please contact support or check your OpenAI account billing settings. The job cannot be created without AI matching capabilities.';

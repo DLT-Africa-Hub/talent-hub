@@ -7,6 +7,7 @@ import ChatModal from '../components/message/ChatModal';
 import { DEFAULT_COMPANY_IMAGE, DEFAULT_PROFILE_IMAGE } from '../utils/job.utils';
 import { LoadingSpinner } from '../index';
 import { SearchBar, EmptyState } from '../components/ui';
+import { ApiError } from '../types/api';
 
 interface Conversation {
   id: string;
@@ -153,7 +154,7 @@ const Messages: React.FC = () => {
 
   const error = useMemo(() => {
     if (!queryError) return null;
-    const err = queryError as any;
+    const err = queryError as ApiError;
     return err.response?.data?.message || 'Failed to load messages. Please try again.';
   }, [queryError]);
 

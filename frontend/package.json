@@ -13,6 +13,7 @@
     "@headlessui/react": "^2.2.9",
     "@radix-ui/react-dialog": "^1.1.15",
     "@react-oauth/google": "^0.12.2",
+    "@stream-io/video-react-sdk": "^1.27.2",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.9",
     "@tiptap/extension-placeholder": "^3.11.0",
@@ -29,6 +30,7 @@
     "react-icons": "^5.5.0",
     "react-intersection-observer": "^10.0.0",
     "react-router-dom": "^6.20.1",
+    "stream-chat": "^9.26.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17"
   },

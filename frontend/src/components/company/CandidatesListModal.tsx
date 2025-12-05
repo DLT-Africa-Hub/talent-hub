@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { HiOutlineEye } from 'react-icons/hi2';
 import BaseModal from '../ui/BaseModal';
 import CandidatePreviewModal from './CandidatePreviewModal';
@@ -76,7 +76,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   });
 
   // Transform match to CandidateProfile
-  const transformMatch = (match: ApiMatch, index: number): CandidateProfile => {
+  const transformMatch = useCallback((match: ApiMatch, index: number): CandidateProfile => {
     const graduate = match.graduateId || {};
     const job = match.jobId || {};
 
@@ -107,10 +107,10 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
       jobType: job.jobType,
       salary: job.salary,
     };
-  };
+  }, []);
 
   // Transform application to CandidateProfile
-  const transformApplication = (
+  const transformApplication = useCallback((
     application: ApiApplication,
     index: number
   ): CandidateProfile => {
@@ -166,7 +166,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
       salary: job.salary,
       directContact: job.directContact,
     };
-  };
+  }, [jobId]);
 
   // Get candidates based on type
   const candidates = useMemo(() => {

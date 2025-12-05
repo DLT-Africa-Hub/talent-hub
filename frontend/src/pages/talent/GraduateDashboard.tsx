@@ -5,6 +5,7 @@ import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
 import { graduateApi } from '../../api/graduate';
 import { PageLoader, ErrorState, SectionHeader, EmptyState } from '../../components/ui';
+import { ApiError } from '../../types/api';
 import {
   DEFAULT_JOB_IMAGE,
   formatSalaryRange,
@@ -134,7 +135,7 @@ const GraduateDashboard = () => {
 
   const error = useMemo(() => {
     if (!queryError) return null;
-    const err = queryError as any;
+    const err = queryError as ApiError;
     return (
       err.response?.data?.message || 'Failed to load matches. Please try again.'
     );

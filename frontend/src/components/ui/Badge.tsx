@@ -97,6 +97,7 @@ const Badge: React.FC<BadgeProps> = ({
 };
 
 // Helper function to get match badge variant from score
+// eslint-disable-next-line react-refresh/only-export-components
 export const getMatchBadgeVariant = (score: number): BadgeVariant => {
   const normalized = Math.min(100, Math.max(0, score));
 
@@ -107,6 +108,7 @@ export const getMatchBadgeVariant = (score: number): BadgeVariant => {
 };
 
 // Helper function to get match badge label from score
+// eslint-disable-next-line react-refresh/only-export-components
 export const getMatchBadgeLabel = (score: number): string => {
   const normalized = Math.min(100, Math.max(0, score));
 

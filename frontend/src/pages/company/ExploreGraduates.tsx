@@ -5,6 +5,7 @@ import { HiOutlineX } from 'react-icons/hi';
 import { Pagination } from '../../components/ui';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
+import { ApiError } from '../../types/api';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
 import { CandidateProfile } from '../../types/candidates';
 import { formatExperience, DEFAULT_PROFILE_IMAGE, formatSalaryPerAnnum } from '../../utils/job.utils';
@@ -331,7 +332,7 @@ const ExploreGraduates = () => {
               Failed to load graduates
             </h3>
             <p className="text-[16px] text-[#1C1C1C80] text-center max-w-md">
-              {(queryError as any)?.response?.data?.message ||
+              {(queryError as ApiError)?.response?.data?.message ||
                 'Unable to fetch graduates. Please try again later.'}
             </p>
           </div>

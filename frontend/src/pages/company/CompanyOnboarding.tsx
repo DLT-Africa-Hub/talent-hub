@@ -9,6 +9,7 @@ import RankSelector, {
   RankOption,
 } from '../../components/onboarding/companyOnboarding/job/RankSelector';
 import { companyApi } from '../../api/company';
+import { ApiError } from '../../types/api';
 
 const CompanyOnboarding = () => {
   const navigate = useNavigate();
@@ -112,10 +113,11 @@ const CompanyOnboarding = () => {
 
       // Navigate to company dashboard
       navigate('/company', { replace: true });
-    } catch (err: any) {
-      console.error('Error creating company profile:', err);
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Error creating company profile:', error);
       setError(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           'Failed to create company profile. Please try again.'
       );
     } finally {

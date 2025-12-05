@@ -8,6 +8,7 @@ import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
 import { graduateApi } from '../../api/graduate';
+import { ApiError } from '../../types/api';
 import {
   EmptyState,
   SectionHeader,
@@ -506,7 +507,7 @@ const GraduateApplications = () => {
               <ErrorState
                 title="Failed to load applications"
                 message={
-                  (applicationsError as any)?.response?.data?.message ||
+                  (applicationsError as ApiError)?.response?.data?.message ||
                   'Please try again later.'
                 }
                 variant="fullPage"

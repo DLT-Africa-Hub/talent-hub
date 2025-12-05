@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { companyApi } from '../api/company';
 import { graduateApi } from '../api/graduate';
 import { Button, EmptyState, PageLoader, SectionHeader } from '../components/ui';
+import { ApiError } from '../types/api';
 import InterviewTimeSlotSelector, {
   PendingInterview,
 } from '../components/graduate/InterviewTimeSlotSelector';
@@ -113,7 +114,7 @@ const Interviews = () => {
 
   const pendingInterviews: PendingInterview[] = pendingData?.interviews ?? [];
 
-  const interviews: InterviewRecord[] = data?.interviews ?? [];
+  const interviews = useMemo(() => (data?.interviews ?? []) as InterviewRecord[], [data?.interviews]);
 
   const { upcoming, past } = useMemo(() => {
     if (!interviews.length) {
@@ -232,7 +233,7 @@ const Interviews = () => {
   }
 
   const errorMessage =
-    (error as any)?.response?.data?.message ||
+    (error as ApiError)?.response?.data?.message ||
     (error as Error)?.message ||
     null;
 

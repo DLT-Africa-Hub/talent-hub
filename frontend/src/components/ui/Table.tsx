@@ -7,7 +7,7 @@ export type Column<T> = {
   /**
    * Either a key of the row object or a function that returns the cell value
    */
-  accessor?: keyof T | ((row: T) => any);
+  accessor?: keyof T | ((row: T) => unknown);
   render?: (value: unknown, row: T, rowIndex: number) => React.ReactNode;
   sortable?: boolean;
   width?: string; // tailwind width or style e.g. 'w-32' or '150px'
@@ -33,7 +33,8 @@ export type Props<T> = {
   emptyState?: React.ReactNode;
 };
 
-export function defaultGetRowKey<T extends Record<string, any>>(
+// eslint-disable-next-line react-refresh/only-export-components
+export function defaultGetRowKey<T extends Record<string, unknown>>(
   row: T,
   rowKey?: keyof T | ((row: T) => string),
   index = 0
@@ -43,6 +44,7 @@ export function defaultGetRowKey<T extends Record<string, any>>(
   return String(row[rowKey]);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function compareValues(a: unknown, b: unknown) {
   // handle null/undefined
   if (a == null && b == null) return 0;

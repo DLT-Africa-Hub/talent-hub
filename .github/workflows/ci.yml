@@ -248,7 +248,7 @@ jobs:
         run: pnpm run build
         env:
           MONGODB_URI: mongodb://admin:password@localhost:27017/talent-hub-test?authSource=admin
-          JWT_SECRET: test-jwt-secret-for-ci
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'test-jwt-secret-for-ci-testing-only-min-32-chars-required!!' }}
           NODE_ENV: test
 
       - name: Start backend server
@@ -259,7 +259,7 @@ jobs:
           curl -f http://localhost:3090/health || exit 1
         env:
           MONGODB_URI: mongodb://admin:password@localhost:27017/talent-hub-test?authSource=admin
-          JWT_SECRET: test-jwt-secret-for-ci
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'test-jwt-secret-for-ci-testing-only-min-32-chars-required!!' }}
           NODE_ENV: test
           PORT: 3090
           AI_SERVICE_URL: http://localhost:8000

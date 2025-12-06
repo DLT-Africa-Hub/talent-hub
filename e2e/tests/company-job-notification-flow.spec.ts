@@ -34,21 +34,32 @@ test.describe('Company Job Post to Notification Flow', () => {
     // This test verifies the job list functionality
     // Note: /jobs route is protected and requires authentication
     // Since we're not authenticated, we should be redirected to login
-    await page.goto('/jobs');
+    await page.goto('/jobs', { waitUntil: 'networkidle', timeout: 30000 });
     
     // Wait for redirect to login (since route is protected)
-    await page.waitForLoadState('networkidle', { timeout: 15000 });
     await page.waitForTimeout(2000); // Wait for React to hydrate
     
     // Verify we were redirected to login (expected behavior for protected route)
-    await expect(page).toHaveURL(/.*login/i, { timeout: 10000 });
+    await expect(page).toHaveURL(/.*login/i, { timeout: 15000 });
     
-    // Wait for the form container or any login-related element first
-    await page.waitForSelector('form, [role="form"], input, button[type="submit"]', { timeout: 10000 });
+    // Wait for login page content - look for "Login" title or "Welcome Back" subtitle
+    await page.waitForSelector('text=/Login|Welcome Back/i', { timeout: 15000 }).catch(async () => {
+      // If text selector fails, wait for form element
+      await page.waitForSelector('form', { timeout: 15000 });
+    });
+
+    await page.waitForTimeout(2000);
+
+    // Try to find email input - the form uses name="email" and type="email"
+    const emailInput = page.locator('input[name="email"]').first();
     
-    // Verify login form is present - try multiple selectors
-    const emailInput = page.locator('input[type="email"], input[name="email"], input[placeholder*="email" i], input[placeholder*="Email" i]').first();
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    // If not found, try alternative selectors
+    if (await emailInput.count() === 0) {
+      const altInput = page.locator('input[type="email"]').first();
+      await expect(altInput).toBeVisible({ timeout: 10000 });
+    } else {
+      await expect(emailInput).toBeVisible({ timeout: 10000 });
+    }
   });
 });
 

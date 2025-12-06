@@ -41,9 +41,13 @@ test.describe('Graduate Signup to Profile Completion Flow', () => {
     }
 
     // Step 2: Fill registration form
-    // Wait for the registration form to be ready
-    await page.waitForSelector('form, input[name="email"], input[type="email"]', { timeout: 15000 });
-    await page.waitForTimeout(1000); // Wait for React to hydrate
+    // Wait for registration page content - look for "Register" or "Create Account" text
+    await page.waitForSelector('text=/Register|Create Account|Sign Up/i', { timeout: 15000 }).catch(async () => {
+      // If text selector fails, wait for form element
+      await page.waitForSelector('form', { timeout: 15000 });
+    });
+    
+    await page.waitForTimeout(2000); // Wait for React to hydrate
     
     // Select graduate role by clicking the Graduate tab/button (should be selected by default)
     const graduateButton = page.locator('button:has-text("Graduate")');
@@ -51,15 +55,20 @@ test.describe('Graduate Signup to Profile Completion Flow', () => {
       // Wait for button to be stable before clicking
       await graduateButton.waitFor({ state: 'visible', timeout: 5000 });
       await page.waitForTimeout(500); // Small delay before click
-      await graduateButton.click({ force: true }); // Force click if needed
+      try {
+        await graduateButton.click({ timeout: 5000 });
+      } catch {
+        // If normal click fails, try force click
+        await graduateButton.click({ force: true });
+      }
       await page.waitForTimeout(1000); // Wait for role selection to register
     }
     
     // Fill registration form - only email and password are required
     // Wait for inputs to be ready
-    await page.waitForSelector('input[name="email"], input[type="email"]', { timeout: 10000 });
-    await page.fill('input[name="email"], input[type="email"]', testEmail);
-    await page.fill('input[name="password"], input[type="password"]', testPassword);
+    await page.waitForSelector('input[name="email"]', { timeout: 10000 });
+    await page.fill('input[name="email"]', testEmail);
+    await page.fill('input[name="password"]', testPassword);
     
     // No terms checkbox in current form
 

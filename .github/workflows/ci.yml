@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main,]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -104,7 +104,7 @@ jobs:
         run: pnpm run lint
 
       - name: Check code formatting
-        run: pnpm run format -- --check
+        run: pnpm exec prettier --check "**/*.ts" --ignore-path .gitignore
 
       - name: Type check
         run: pnpm run type-check
@@ -142,7 +142,7 @@ jobs:
         run: pnpm run lint
 
       - name: Check code formatting
-        run: pnpm run format -- --check
+        run: pnpm exec prettier --check "**/*.ts" --ignore-path .gitignore
 
       - name: Type check
         run: pnpm exec tsc --noEmit

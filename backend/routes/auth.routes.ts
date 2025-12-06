@@ -72,9 +72,9 @@ router.post(
   changePassword
 );
 
-router.post('/google/authcode', googleAuthCode); 
-router.post('/google', googleSignIn); 
-router.get('/google/url', getGoogleAuthUrl); 
-router.get('/google/callback', googleOAuthCallback); 
+router.post('/google/authcode', googleAuthCode);
+router.post('/google', googleSignIn);
+router.get('/google/url', getGoogleAuthUrl);
+router.get('/google/callback', googleOAuthCallback);
 
 export default router;

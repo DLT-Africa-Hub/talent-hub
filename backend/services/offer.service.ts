@@ -54,11 +54,14 @@ export async function generateOfferPDF(offerData: OfferData): Promise<Buffer> {
       // Company and Date
       doc.fontSize(12);
       doc.text(`${offerData.companyName}`, { align: 'left' });
-      doc.text(`Date: ${new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      })}`, { align: 'right' });
+      doc.text(
+        `Date: ${new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}`,
+        { align: 'right' }
+      );
       doc.moveDown(2);
 
       // Recipient
@@ -105,11 +108,14 @@ export async function generateOfferPDF(offerData: OfferData): Promise<Buffer> {
         doc.moveDown(0.5);
         doc.fontSize(12);
         doc.text(
-          `Proposed Start Date: ${offerData.startDate.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}`
+          `Proposed Start Date: ${offerData.startDate.toLocaleDateString(
+            'en-US',
+            {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }
+          )}`
         );
         doc.moveDown();
       }
@@ -151,7 +157,10 @@ export async function generateOfferPDF(offerData: OfferData): Promise<Buffer> {
 /**
  * Upload PDF to Cloudinary and return URL
  */
-export async function uploadOfferPDF(pdfBuffer: Buffer, fileName: string): Promise<string> {
+export async function uploadOfferPDF(
+  pdfBuffer: Buffer,
+  fileName: string
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -214,26 +223,50 @@ export async function createAndSendOffer(
       amount?: number;
       currency?: string;
     };
-    companyId?: {
-      _id?: mongoose.Types.ObjectId;
-      companyName?: string;
-    } | mongoose.Types.ObjectId;
+    companyId?:
+      | {
+          _id?: mongoose.Types.ObjectId;
+          companyName?: string;
+        }
+      | mongoose.Types.ObjectId;
   }
   interface PopulatedGraduate {
     _id?: mongoose.Types.ObjectId;
     firstName?: string;
     lastName?: string;
-    userId?: {
-      _id?: mongoose.Types.ObjectId;
-      email?: string;
-    } | mongoose.Types.ObjectId;
+    userId?:
+      | {
+          _id?: mongoose.Types.ObjectId;
+          email?: string;
+        }
+      | mongoose.Types.ObjectId;
   }
   const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
-  const jobData = (typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)) ? job : null;
-  const company = (jobData?.companyId && typeof jobData.companyId === 'object' && !(jobData.companyId instanceof mongoose.Types.ObjectId)) ? jobData.companyId : null;
-  const graduate = application.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
-  const graduateData = (typeof graduate === 'object' && graduate && !(graduate instanceof mongoose.Types.ObjectId)) ? graduate : null;
-  const graduateUser = (graduateData?.userId && typeof graduateData.userId === 'object' && !(graduateData.userId instanceof mongoose.Types.ObjectId)) ? graduateData.userId : null;
+  const jobData =
+    typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)
+      ? job
+      : null;
+  const company =
+    jobData?.companyId &&
+    typeof jobData.companyId === 'object' &&
+    !(jobData.companyId instanceof mongoose.Types.ObjectId)
+      ? jobData.companyId
+      : null;
+  const graduate = application.graduateId as
+    | PopulatedGraduate
+    | mongoose.Types.ObjectId;
+  const graduateData =
+    typeof graduate === 'object' &&
+    graduate &&
+    !(graduate instanceof mongoose.Types.ObjectId)
+      ? graduate
+      : null;
+  const graduateUser =
+    graduateData?.userId &&
+    typeof graduateData.userId === 'object' &&
+    !(graduateData.userId instanceof mongoose.Types.ObjectId)
+      ? graduateData.userId
+      : null;
 
   // Check if offer already exists
   const existingOffer = await Offer.findOne({ applicationId: application._id });
@@ -252,15 +285,17 @@ export async function createAndSendOffer(
     location: jobData.location,
     salary: jobData.salary,
     companyName: company.companyName || '',
-    graduateName: `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim(),
+    graduateName:
+      `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim(),
     graduateEmail: graduateUser?.email,
   };
 
   // Generate PDF
   const pdfBuffer = await generateOfferPDF(offerData);
-  const appObjectId = application._id instanceof mongoose.Types.ObjectId
-    ? application._id
-    : new mongoose.Types.ObjectId(String(application._id));
+  const appObjectId =
+    application._id instanceof mongoose.Types.ObjectId
+      ? application._id
+      : new mongoose.Types.ObjectId(String(application._id));
   const fileName = `offer-${appObjectId.toString()}-${Date.now()}`;
   const offerDocumentUrl = await uploadOfferPDF(pdfBuffer, fileName);
 
@@ -269,15 +304,32 @@ export async function createAndSendOffer(
   expiresAt.setDate(expiresAt.getDate() + 7);
 
   // Create offer record
-  const jobId = jobData._id || (job instanceof mongoose.Types.ObjectId ? job : new mongoose.Types.ObjectId());
+  const jobId =
+    jobData._id ||
+    (job instanceof mongoose.Types.ObjectId
+      ? job
+      : new mongoose.Types.ObjectId());
   const companyId = company._id || new mongoose.Types.ObjectId();
-  const graduateId = graduateData._id || (graduate instanceof mongoose.Types.ObjectId ? graduate : new mongoose.Types.ObjectId());
-  
+  const graduateId =
+    graduateData._id ||
+    (graduate instanceof mongoose.Types.ObjectId
+      ? graduate
+      : new mongoose.Types.ObjectId());
+
   const offer = new Offer({
     applicationId: appObjectId,
-    jobId: jobId instanceof mongoose.Types.ObjectId ? jobId : new mongoose.Types.ObjectId(String(jobId)),
-    companyId: companyId instanceof mongoose.Types.ObjectId ? companyId : new mongoose.Types.ObjectId(String(companyId)),
-    graduateId: graduateId instanceof mongoose.Types.ObjectId ? graduateId : new mongoose.Types.ObjectId(String(graduateId)),
+    jobId:
+      jobId instanceof mongoose.Types.ObjectId
+        ? jobId
+        : new mongoose.Types.ObjectId(String(jobId)),
+    companyId:
+      companyId instanceof mongoose.Types.ObjectId
+        ? companyId
+        : new mongoose.Types.ObjectId(String(companyId)),
+    graduateId:
+      graduateId instanceof mongoose.Types.ObjectId
+        ? graduateId
+        : new mongoose.Types.ObjectId(String(graduateId)),
     status: 'pending',
     jobTitle: offerData.jobTitle,
     jobType: offerData.jobType,
@@ -299,19 +351,21 @@ export async function createAndSendOffer(
   const jobTitle = jobData.title || 'the position';
   const companyName = company.companyName || 'the company';
   const offerMessage = `Congratulations! ${companyName} has sent you an offer for the position of ${jobTitle}. Please download, sign, and upload the offer document to accept.`;
-  
+
   if (graduateUser?._id) {
-    const graduateUserId = graduateUser._id instanceof mongoose.Types.ObjectId
-      ? graduateUser._id
-      : new mongoose.Types.ObjectId(String(graduateUser._id));
+    const graduateUserId =
+      graduateUser._id instanceof mongoose.Types.ObjectId
+        ? graduateUser._id
+        : new mongoose.Types.ObjectId(String(graduateUser._id));
     const companyUserId = new mongoose.Types.ObjectId(userId);
-    const offerId = offer._id instanceof mongoose.Types.ObjectId
-      ? offer._id
-      : new mongoose.Types.ObjectId(String(offer._id));
-    
+    const offerId =
+      offer._id instanceof mongoose.Types.ObjectId
+        ? offer._id
+        : new mongoose.Types.ObjectId(String(offer._id));
+
     // Create message for the conversation
     const messageContent = `Congratulations! We are pleased to offer you the position of ${jobTitle} at ${companyName}. Please download the attached offer letter, sign it, upload the signed copy here, and then click 'Accept Offer'.`;
-    
+
     await Message.create({
       senderId: companyUserId,
       receiverId: graduateUserId,
@@ -323,7 +377,7 @@ export async function createAndSendOffer(
       fileName: `Offer_Letter_${jobTitle}_${companyName}.pdf`,
       read: false,
     });
-    
+
     await createNotification({
       userId: graduateUserId.toString(),
       type: 'application',
@@ -340,4 +394,3 @@ export async function createAndSendOffer(
 
   return offer;
 }
-

@@ -34,7 +34,14 @@ const NotificationSchema: Schema = new Schema(
     },
     type: {
       type: String,
-      enum: ['match', 'application', 'message', 'system', 'job_alert', 'interview'],
+      enum: [
+        'match',
+        'application',
+        'message',
+        'system',
+        'job_alert',
+        'interview',
+      ],
       required: true,
     },
     title: {

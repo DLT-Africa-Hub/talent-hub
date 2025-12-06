@@ -27,7 +27,7 @@ class EmailService {
   private transporter: Transporter | null = null;
   private initialized = false;
 
-/**
+  /**
    * Initialize email transporter
    */
   private async initialize(): Promise<void> {
@@ -76,7 +76,11 @@ class EmailService {
     await this.initialize();
 
     // Console mode (development/testing)
-    if (!emailConfig.enabled || emailConfig.provider === 'console' || !this.transporter) {
+    if (
+      !emailConfig.enabled ||
+      emailConfig.provider === 'console' ||
+      !this.transporter
+    ) {
       if (process.env.NODE_ENV !== 'test') {
         console.info('[Email Service] 📧 Console Mode');
         console.info(`To: ${message.to}`);
@@ -104,7 +108,8 @@ class EmailService {
       console.log(`[Email Service] ✅ Email sent: ${info.messageId}`);
     } catch (error) {
       const isLastAttempt = attempt >= emailConfig.retry.maxAttempts;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
 
       console.error(
         `[Email Service] ❌ Email send failed (attempt ${attempt}/${emailConfig.retry.maxAttempts}):`,
@@ -226,9 +231,7 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
 /**
  * Send templated email
  */
-export async function sendTemplatedEmail(
-  options: EmailOptions
-): Promise<void> {
+export async function sendTemplatedEmail(options: EmailOptions): Promise<void> {
   return emailService.sendTemplatedEmail(options);
 }
 
@@ -250,6 +253,6 @@ export async function sendPasswordReset(
   resetLink: string
 ): Promise<void> {
   return emailService.sendPasswordReset(to, resetLink);
-  }
+}
 
 export default emailService;

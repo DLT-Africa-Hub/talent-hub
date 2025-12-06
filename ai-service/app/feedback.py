@@ -176,9 +176,7 @@ def _parse_response(content: str, language: str) -> Dict[str, Any]:
     recommendations = normalise_list("recommendations")
 
     if not skill_gaps:
-        logger.info(
-            "Feedback response missing skill gaps; synthesising placeholder."
-        )
+        logger.info("Feedback response missing skill gaps; synthesising placeholder.")
         skill_gaps = [
             f"No explicit skill gaps identified. "
             f"Consider verifying requirements in {language.upper()}."

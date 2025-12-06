@@ -70,4 +70,3 @@ MessageSchema.index({ offerId: 1 });
 MessageSchema.index({ receiverId: 1, read: 1 });
 
 export default mongoose.model<IMessage>('Message', MessageSchema);
-

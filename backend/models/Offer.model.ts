@@ -1,6 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type OfferStatus = 'pending' | 'signed' | 'accepted' | 'rejected' | 'expired';
+export type OfferStatus =
+  | 'pending'
+  | 'signed'
+  | 'accepted'
+  | 'rejected'
+  | 'expired';
 
 export interface IOffer extends Document {
   applicationId: mongoose.Types.ObjectId;
@@ -8,7 +13,7 @@ export interface IOffer extends Document {
   companyId: mongoose.Types.ObjectId;
   graduateId: mongoose.Types.ObjectId;
   status: OfferStatus;
-  
+
   // Offer details
   jobTitle: string;
   jobType: string;
@@ -20,19 +25,19 @@ export interface IOffer extends Document {
   };
   startDate?: Date;
   benefits?: string[];
-  
+
   // Document management
   offerDocumentUrl?: string; // Original offer PDF
   signedDocumentUrl?: string; // Signed offer PDF uploaded by graduate
   signedDocumentFileName?: string;
-  
+
   // Dates
   sentAt: Date;
   signedAt?: Date;
   acceptedAt?: Date;
   rejectedAt?: Date;
   expiresAt?: Date;
-  
+
   // Metadata
   createdBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
@@ -122,4 +127,3 @@ OfferSchema.index({ companyId: 1, status: 1 });
 OfferSchema.index({ expiresAt: 1 });
 
 export default mongoose.model<IOffer>('Offer', OfferSchema);
-

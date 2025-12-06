@@ -71,7 +71,9 @@ export const getInterviewBySlug = async (
   const isGraduateParticipant = graduateUserId === userId;
 
   if (!isCompanyParticipant && !isGraduateParticipant) {
-    res.status(403).json({ message: 'You do not have access to this interview' });
+    res
+      .status(403)
+      .json({ message: 'You do not have access to this interview' });
     return;
   }
 
@@ -89,8 +91,9 @@ export const getInterviewBySlug = async (
     null;
   const graduate = (interviewData.graduateId as Record<string, any>) || {};
 
-  const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''
-    }`.trim();
+  const graduateName = `${graduate.firstName || ''} ${
+    graduate.lastName || ''
+  }`.trim();
 
   const participantRole = isCompanyParticipant ? 'company' : 'graduate';
   const participantDisplayName =
@@ -121,7 +124,9 @@ export const getInterviewBySlug = async (
         jobType: job.jobType,
       },
       company: {
-        id: interview.companyId?._id?.toString?.() ?? companyInfo?._id?.toString?.(),
+        id:
+          interview.companyId?._id?.toString?.() ??
+          companyInfo?._id?.toString?.(),
         name: companyInfo?.companyName,
       },
       graduate: {
@@ -134,7 +139,10 @@ export const getInterviewBySlug = async (
       participant: {
         role: participantRole,
         name: participantDisplayName,
-        counterpartName: participantRole === 'company' ? graduateName : companyInfo?.companyName,
+        counterpartName:
+          participantRole === 'company'
+            ? graduateName
+            : companyInfo?.companyName,
       },
       joinWindowStartsAt,
     },
@@ -156,7 +164,8 @@ export const suggestTimeSlots = async (
     return;
   }
 
-  const { applicationId, timeSlots, companyTimezone, selectionDeadline } = req.body;
+  const { applicationId, timeSlots, companyTimezone, selectionDeadline } =
+    req.body;
 
   // Validate applicationId
   if (!applicationId || !mongoose.Types.ObjectId.isValid(applicationId)) {
@@ -206,15 +215,18 @@ export const suggestTimeSlots = async (
 
     const duration = slot.duration || 30;
     if (!validDurations.includes(duration)) {
-      res.status(400).json({ message: 'Duration must be 15, 30, 45, or 60 minutes' });
+      res
+        .status(400)
+        .json({ message: 'Duration must be 15, 30, 45, or 60 minutes' });
       return;
     }
 
     // Check for duplicate time slots (same date/time)
     const dateKey = slotDate.toISOString();
     if (seenDates.has(dateKey)) {
-      res.status(400).json({ 
-        message: 'Duplicate time slots are not allowed. Each time slot must be unique.' 
+      res.status(400).json({
+        message:
+          'Duplicate time slots are not allowed. Each time slot must be unique.',
       });
       return;
     }
@@ -264,18 +276,32 @@ export const suggestTimeSlots = async (
   }
 
   const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
-  const jobData = (typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)) ? job : null;
+  const jobData =
+    typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)
+      ? job
+      : null;
 
   if (!jobData || jobData.companyId?.toString() !== company._id.toString()) {
-    res.status(403).json({ message: 'Application does not belong to your company' });
+    res
+      .status(403)
+      .json({ message: 'Application does not belong to your company' });
     return;
   }
 
-  const graduate = application.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
-  const graduateData = (typeof graduate === 'object' && graduate && !(graduate instanceof mongoose.Types.ObjectId)) ? graduate : null;
+  const graduate = application.graduateId as
+    | PopulatedGraduate
+    | mongoose.Types.ObjectId;
+  const graduateData =
+    typeof graduate === 'object' &&
+    graduate &&
+    !(graduate instanceof mongoose.Types.ObjectId)
+      ? graduate
+      : null;
 
   if (!graduateData?.userId) {
-    res.status(400).json({ message: 'Graduate profile is missing a linked user account' });
+    res
+      .status(400)
+      .json({ message: 'Graduate profile is missing a linked user account' });
     return;
   }
 
@@ -287,7 +313,8 @@ export const suggestTimeSlots = async (
 
   if (existingInterviewForApplication) {
     res.status(400).json({
-      message: 'An interview is already scheduled or pending for this application'
+      message:
+        'An interview is already scheduled or pending for this application',
     });
     return;
   }
@@ -305,21 +332,24 @@ export const suggestTimeSlots = async (
     // Provide specific message based on status
     if (existingInterviewForPair.status === 'pending_selection') {
       res.status(400).json({
-        message: 'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.'
+        message:
+          'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.',
       });
       return;
     }
-    
+
     if (existingInterviewForPair.status === 'in_progress') {
       res.status(400).json({
-        message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.'
+        message:
+          'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.',
       });
       return;
     }
-    
+
     if (existingInterviewForPair.status === 'scheduled') {
       res.status(400).json({
-        message: 'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.'
+        message:
+          'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.',
       });
       return;
     }
@@ -345,7 +375,9 @@ export const suggestTimeSlots = async (
     suggestedTimeSlots: suggestedSlots,
     companyTimezone,
     durationMinutes: suggestedSlots[0].duration, // Default to first slot's duration
-    selectionDeadline: selectionDeadline ? new Date(selectionDeadline) : undefined,
+    selectionDeadline: selectionDeadline
+      ? new Date(selectionDeadline)
+      : undefined,
   });
 
   await interview.save();
@@ -363,10 +395,12 @@ export const suggestTimeSlots = async (
   await application.save();
 
   // Send notification to graduate
-  const graduateName = `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim();
-  const graduateUserId = graduateData.userId instanceof mongoose.Types.ObjectId
-    ? graduateData.userId.toString()
-    : String(graduateData.userId);
+  const graduateName =
+    `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim();
+  const graduateUserId =
+    graduateData.userId instanceof mongoose.Types.ObjectId
+      ? graduateData.userId.toString()
+      : String(graduateData.userId);
 
   try {
     await createNotification({
@@ -438,10 +472,12 @@ export const getPendingSelectionInterviews = async (
 
   // Get graduate's timezone from request or default to UTC
   // Frontend should send timezone, but we default to UTC for safety
-  const requestTimezone = typeof req.query.timezone === 'string' ? req.query.timezone : undefined;
-  const graduateTimezone = requestTimezone && isValidTimezone(requestTimezone)
-    ? requestTimezone
-    : 'UTC';
+  const requestTimezone =
+    typeof req.query.timezone === 'string' ? req.query.timezone : undefined;
+  const graduateTimezone =
+    requestTimezone && isValidTimezone(requestTimezone)
+      ? requestTimezone
+      : 'UTC';
 
   const formattedInterviews = interviews.map((interview) => {
     const interviewData = interview as Record<string, unknown>;
@@ -550,7 +586,9 @@ export const selectTimeSlot = async (
     });
 
   if (!interview) {
-    res.status(404).json({ message: 'Interview not found or already confirmed' });
+    res
+      .status(404)
+      .json({ message: 'Interview not found or already confirmed' });
     return;
   }
 
@@ -608,7 +646,8 @@ export const selectTimeSlot = async (
       await session.abortTransaction();
       session.endSession();
       res.status(409).json({
-        message: 'Interview status changed. Another user may have already selected a time slot.',
+        message:
+          'Interview status changed. Another user may have already selected a time slot.',
       });
       return;
     }
@@ -632,14 +671,24 @@ export const selectTimeSlot = async (
     session.endSession();
 
     // Get company and job info for notifications (already populated)
-    const company = interview.companyId as { companyName?: string } | mongoose.Types.ObjectId;
+    const company = interview.companyId as
+      | { companyName?: string }
+      | mongoose.Types.ObjectId;
     const job = interview.jobId as { title?: string } | mongoose.Types.ObjectId;
-    const companyName = typeof company === 'object' && company && !(company instanceof mongoose.Types.ObjectId) && 'companyName' in company
-      ? company.companyName
-      : undefined;
-    const jobTitle = typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId) && 'title' in job
-      ? job.title
-      : undefined;
+    const companyName =
+      typeof company === 'object' &&
+      company &&
+      !(company instanceof mongoose.Types.ObjectId) &&
+      'companyName' in company
+        ? company.companyName
+        : undefined;
+    const jobTitle =
+      typeof job === 'object' &&
+      job &&
+      !(job instanceof mongoose.Types.ObjectId) &&
+      'title' in job
+        ? job.title
+        : undefined;
 
     const formattedDate = formatDateInTimezone(
       selectedSlot.date,
@@ -654,13 +703,15 @@ export const selectTimeSlot = async (
       }
     );
 
-    const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+    const graduateName =
+      `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
 
     // Notify company
     try {
-      const companyUserId = updatedInterview.companyUserId instanceof mongoose.Types.ObjectId
-        ? updatedInterview.companyUserId.toString()
-        : String(updatedInterview.companyUserId);
+      const companyUserId =
+        updatedInterview.companyUserId instanceof mongoose.Types.ObjectId
+          ? updatedInterview.companyUserId.toString()
+          : String(updatedInterview.companyUserId);
 
       await createNotification({
         userId: companyUserId,
@@ -689,7 +740,10 @@ export const selectTimeSlot = async (
         relatedType: 'interview',
       });
     } catch (error) {
-      console.error('Failed to send interview confirmation to graduate:', error);
+      console.error(
+        'Failed to send interview confirmation to graduate:',
+        error
+      );
     }
 
     res.json({
@@ -709,7 +763,9 @@ export const selectTimeSlot = async (
     await session.abortTransaction();
     session.endSession();
     console.error('Error selecting time slot:', error);
-    res.status(500).json({ message: 'Failed to select time slot. Please try again.' });
+    res
+      .status(500)
+      .json({ message: 'Failed to select time slot. Please try again.' });
   }
 };
 
@@ -730,13 +786,19 @@ export const generateStreamTokenController = async (
     let userImage: string | undefined = undefined;
 
     // Check if user is a graduate
-    const graduate = await Graduate.findOne({ userId: new mongoose.Types.ObjectId(userId) }).lean();
+    const graduate = await Graduate.findOne({
+      userId: new mongoose.Types.ObjectId(userId),
+    }).lean();
     if (graduate) {
-      userName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() || 'Graduate';
+      userName =
+        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() ||
+        'Graduate';
       userImage = graduate.profilePictureUrl;
     } else {
       // Check if user is a company
-      const company = await Company.findOne({ userId: new mongoose.Types.ObjectId(userId) }).lean();
+      const company = await Company.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+      }).lean();
       if (company) {
         userName = company.companyName || 'Company';
       }
@@ -775,4 +837,3 @@ export const generateStreamTokenController = async (
     });
   }
 };
-

@@ -312,7 +312,9 @@ class AIServiceClient {
 
   constructor() {
     // Log the configured timeout for debugging
-    console.log(`[AIServiceClient] Configured timeout: ${aiConfig.requestTimeoutMs}ms`);
+    console.log(
+      `[AIServiceClient] Configured timeout: ${aiConfig.requestTimeoutMs}ms`
+    );
   }
 
   async fetchEmbedding(text: string): Promise<number[]> {
@@ -511,19 +513,19 @@ class AIServiceClient {
       message?: string;
     }
     const responseData = error.response.data as ErrorResponseData;
-    
-    const errorMessage = 
-      responseData?.detail || 
-      responseData?.error?.message || 
-      responseData?.message || 
+
+    const errorMessage =
+      responseData?.detail ||
+      responseData?.error?.message ||
+      responseData?.message ||
       '';
-    
+
     // Check for quota-related errors in the response
-    const isQuotaError = 
+    const isQuotaError =
       errorMessage.toLowerCase().includes('quota') ||
       errorMessage.toLowerCase().includes('insufficient_quota') ||
       responseData?.error?.code === 'insufficient_quota';
-    
+
     if (status === 400) {
       if (isQuotaError) {
         return new AIServiceError(

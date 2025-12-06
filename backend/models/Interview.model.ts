@@ -57,61 +57,67 @@ const isValidTimezone = (tz: string): boolean => {
   }
 };
 
-const SuggestedTimeSlotSchema = new Schema({
-  date: {
-    type: Date,
-    required: true,
-    validate: {
-      validator: function(value: Date) {
-        return value > new Date();
+const SuggestedTimeSlotSchema = new Schema(
+  {
+    date: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function (value: Date) {
+          return value > new Date();
+        },
+        message: 'Time slot date must be in the future',
       },
-      message: 'Time slot date must be in the future',
+    },
+    duration: {
+      type: Number,
+      required: true,
+      enum: {
+        values: [15, 30, 45, 60],
+        message: 'Duration must be 15, 30, 45, or 60 minutes',
+      },
+    },
+    timezone: {
+      type: String,
+      required: true,
+      validate: {
+        validator: isValidTimezone,
+        message: 'Invalid timezone',
+      },
     },
   },
-  duration: {
-    type: Number,
-    required: true,
-    enum: {
-      values: [15, 30, 45, 60],
-      message: 'Duration must be 15, 30, 45, or 60 minutes',
-    },
-  },
-  timezone: {
-    type: String,
-    required: true,
-    validate: {
-      validator: isValidTimezone,
-      message: 'Invalid timezone',
-    },
-  },
-}, { _id: true });
+  { _id: true }
+);
 
-const SelectedTimeSlotSchema = new Schema({
-  date: {
-    type: Date,
-    required: true,
-  },
-  duration: {
-    type: Number,
-    required: true,
-    enum: {
-      values: [15, 30, 45, 60],
-      message: 'Duration must be 15, 30, 45, or 60 minutes',
+const SelectedTimeSlotSchema = new Schema(
+  {
+    date: {
+      type: Date,
+      required: true,
+    },
+    duration: {
+      type: Number,
+      required: true,
+      enum: {
+        values: [15, 30, 45, 60],
+        message: 'Duration must be 15, 30, 45, or 60 minutes',
+      },
+    },
+    timezone: {
+      type: String,
+      required: true,
+      validate: {
+        validator: isValidTimezone,
+        message: 'Invalid timezone',
+      },
+    },
+    selectedAt: {
+      type: Date,
+      required: true,
     },
   },
-  timezone: {
-    type: String,
-    required: true,
-    validate: {
-      validator: isValidTimezone,
-      message: 'Invalid timezone',
-    },
-  },
-  selectedAt: {
-    type: Date,
-    required: true,
-  },
-}, { _id: false });
+  { _id: false }
+);
 
 const InterviewSchema = new Schema<IInterview>(
   {
@@ -148,7 +154,7 @@ const InterviewSchema = new Schema<IInterview>(
     },
     scheduledAt: {
       type: Date,
-      required: function(this: IInterview) {
+      required: function (this: IInterview) {
         return this.status !== 'pending_selection';
       },
     },
@@ -160,7 +166,13 @@ const InterviewSchema = new Schema<IInterview>(
     },
     status: {
       type: String,
-      enum: ['pending_selection', 'scheduled', 'in_progress', 'completed', 'cancelled'],
+      enum: [
+        'pending_selection',
+        'scheduled',
+        'in_progress',
+        'completed',
+        'cancelled',
+      ],
       default: 'scheduled',
       required: true,
     },
@@ -222,4 +234,3 @@ InterviewSchema.index({ graduateId: 1, status: 1 }); // For pending_selection qu
 InterviewSchema.index({ selectionDeadline: 1, status: 1 }); // For deadline monitoring
 
 export default mongoose.model<IInterview>('Interview', InterviewSchema);
-

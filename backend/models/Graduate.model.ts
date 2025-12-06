@@ -1,6 +1,5 @@
 import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
-
 export interface IEducationDetails {
   degree: string;
   field: string;
@@ -15,7 +14,7 @@ export interface IWorkExperience {
   startDate: Date;
   endDate?: Date;
   description?: string;
-  current?: boolean
+  current?: boolean;
 }
 
 export interface IAssessmentQuestion {
@@ -25,13 +24,13 @@ export interface IAssessmentQuestion {
   skill?: string;
 }
 
-export interface ICv{
+export interface ICv {
   _id?: Types.ObjectId;
   fileName: string;
   fileUrl: string;
-  size:number;
+  size: number;
   publicId: string;
-  onDisplay:boolean;
+  onDisplay: boolean;
 }
 
 export interface IGraduate {
@@ -43,14 +42,14 @@ export interface IGraduate {
   expLevel: 'entry level' | 'mid level' | 'senior level';
   expYears: number;
   position:
-  | 'frontend developer'
-  | 'backend developer'
-  | 'fullstack developer'
-  | 'mobile developer'
-  | 'devops engineer'
-  | 'data engineer'
-  | 'security engineer'
-  | 'other';
+    | 'frontend developer'
+    | 'backend developer'
+    | 'fullstack developer'
+    | 'mobile developer'
+    | 'devops engineer'
+    | 'data engineer'
+    | 'security engineer'
+    | 'other';
   profilePictureUrl?: string;
   location?: string;
   salaryPerAnnum?: number; // Expected salary per annum
@@ -190,7 +189,7 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
       required: false,
     },
     cv: {
-      type:[
+      type: [
         {
           fileName: {
             type: String,
@@ -204,16 +203,16 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
             type: Number,
             required: true,
           },
-          publicId:{
+          publicId: {
             type: String,
             required: false,
           },
-          onDisplay:{
-            type: Boolean
-          }
-        }
+          onDisplay: {
+            type: Boolean,
+          },
+        },
       ],
-      default:[],
+      default: [],
     },
     workExperiences: {
       type: [
@@ -236,9 +235,9 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
           description: {
             type: String,
           },
-          current:{
+          current: {
             type: Boolean,
-          }
+          },
         },
       ],
       default: [],

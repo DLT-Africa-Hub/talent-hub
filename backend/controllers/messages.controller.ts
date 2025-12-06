@@ -15,10 +15,20 @@ export const sendMessage = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const { receiverId, message, type, fileUrl, fileName, applicationId, offerId } = req.body;
+    const {
+      receiverId,
+      message,
+      type,
+      fileUrl,
+      fileName,
+      applicationId,
+      offerId,
+    } = req.body;
 
     if (!receiverId || !message) {
-      return res.status(400).json({ message: 'receiverId and message are required' });
+      return res
+        .status(400)
+        .json({ message: 'receiverId and message are required' });
     }
 
     // 🔒 SAFETY FIX — Validate user input to prevent MongoDB operator injection
@@ -74,7 +84,6 @@ export const getConversation = async (req: Request, res: Response) => {
       .sort({ createdAt: 1 })
       .lean();
 
-   
     await MessageModel.updateMany(
       {
         senderId: otherUserId,
@@ -103,13 +112,11 @@ export const getChatList = async (req: Request, res: Response) => {
 
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    
     const currentUser = await UserModel.findById(userId).lean();
     if (!currentUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-   
     const conversations = await MessageModel.aggregate([
       {
         $match: {
@@ -146,12 +153,10 @@ export const getChatList = async (req: Request, res: Response) => {
       { $sort: { 'lastMessage.createdAt': -1 } },
     ]);
 
-
     const conversationsWithDetails = await Promise.all(
       conversations.map(async (conv) => {
         const otherUserId = conv._id;
-        
-      
+
         const otherUser = await UserModel.findById(otherUserId).lean();
         if (!otherUser) {
           return null;
@@ -175,9 +180,10 @@ export const getChatList = async (req: Request, res: Response) => {
 
         let userData: UserProfileData | null = null;
 
-       
         if (otherUser.role === 'graduate') {
-          const graduate = await GraduateModel.findOne({ userId: otherUserId }).lean();
+          const graduate = await GraduateModel.findOne({
+            userId: otherUserId,
+          }).lean();
           userData = {
             _id: otherUserId,
             firstName: graduate?.firstName || '',
@@ -186,7 +192,9 @@ export const getChatList = async (req: Request, res: Response) => {
             position: graduate?.position || '',
           };
         } else if (otherUser.role === 'company') {
-          const company = await CompanyModel.findOne({ userId: otherUserId }).lean();
+          const company = await CompanyModel.findOne({
+            userId: otherUserId,
+          }).lean();
           userData = {
             _id: otherUserId,
             companyName: company?.companyName || '',
@@ -197,10 +205,11 @@ export const getChatList = async (req: Request, res: Response) => {
 
         return {
           _id: otherUserId,
-          [otherUser.role === 'graduate' ? 'graduate' : 'company']: userData || { _id: otherUserId },
+          [otherUser.role === 'graduate' ? 'graduate' : 'company']:
+            userData || { _id: otherUserId },
           lastMessage: {
             text: conv.lastMessage.message,
-            message: conv.lastMessage.message, 
+            message: conv.lastMessage.message,
             createdAt: conv.lastMessage.createdAt,
           },
           updatedAt: conv.lastMessage.createdAt,
@@ -209,8 +218,9 @@ export const getChatList = async (req: Request, res: Response) => {
       })
     );
 
-   
-    const validConversations = conversationsWithDetails.filter(conv => conv !== null);
+    const validConversations = conversationsWithDetails.filter(
+      (conv) => conv !== null
+    );
 
     return res.status(200).json({ messages: validConversations });
   } catch (err) {

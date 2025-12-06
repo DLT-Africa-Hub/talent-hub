@@ -83,7 +83,10 @@ export const getOffer = async (req: Request, res: Response): Promise<void> => {
  * Get offer by offer ID (for graduates)
  * GET /api/graduates/offers/by-id/:offerId
  */
-export const getOfferById = async (req: Request, res: Response): Promise<void> => {
+export const getOfferById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -130,7 +133,10 @@ export const getOfferById = async (req: Request, res: Response): Promise<void> =
  * Get offer by offer ID (for companies)
  * GET /api/companies/offers/by-id/:offerId
  */
-export const getOfferByIdForCompany = async (req: Request, res: Response): Promise<void> => {
+export const getOfferByIdForCompany = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -213,7 +219,8 @@ export const uploadSignedOffer = async (
 
   if (offer.status !== 'pending') {
     res.status(400).json({
-      message: 'Offer has already been processed. Cannot upload signed document.'
+      message:
+        'Offer has already been processed. Cannot upload signed document.',
     });
     return;
   }
@@ -233,31 +240,32 @@ export const uploadSignedOffer = async (
 
     try {
       // Upload to Cloudinary
-      const uploadResult = await new Promise<{ secure_url: string; public_id: string }>(
-        (resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              resource_type: 'raw',
-              folder: 'signed-offers',
-              public_id: `signed-offer-${offerId}-${Date.now()}`,
-              format: 'pdf',
-            },
-            (error, result) => {
-              if (error) {
-                reject(error);
-              } else if (result) {
-                resolve({
-                  secure_url: result.secure_url,
-                  public_id: result.public_id as string,
-                });
-              } else {
-                reject(new Error('Upload failed'));
-              }
+      const uploadResult = await new Promise<{
+        secure_url: string;
+        public_id: string;
+      }>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'raw',
+            folder: 'signed-offers',
+            public_id: `signed-offer-${offerId}-${Date.now()}`,
+            format: 'pdf',
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else if (result) {
+              resolve({
+                secure_url: result.secure_url,
+                public_id: result.public_id as string,
+              });
+            } else {
+              reject(new Error('Upload failed'));
             }
-          );
-          uploadStream.end(file.buffer);
-        }
-      );
+          }
+        );
+        uploadStream.end(file.buffer);
+      });
 
       // Update offer - when signed document is uploaded, set status to 'signed'
       offer.signedDocumentUrl = uploadResult.secure_url;
@@ -280,9 +288,12 @@ export const uploadSignedOffer = async (
         jobId?: { title?: string } | mongoose.Types.ObjectId;
       }
       const populatedJob = job as PopulatedApplication | null;
-      const jobTitle = (populatedJob?.jobId && typeof populatedJob.jobId === 'object' && 'title' in populatedJob.jobId)
-        ? populatedJob.jobId.title
-        : undefined;
+      const jobTitle =
+        populatedJob?.jobId &&
+        typeof populatedJob.jobId === 'object' &&
+        'title' in populatedJob.jobId
+          ? populatedJob.jobId.title
+          : undefined;
 
       if (company?.userId) {
         await createNotification({
@@ -290,13 +301,17 @@ export const uploadSignedOffer = async (
           type: 'application',
           title: 'Offer Signed',
           message: `${graduate.firstName} ${graduate.lastName} has signed the offer for ${jobTitle || 'the position'}. Please confirm the hire in the chat.`,
-          relatedId: offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id)),
+          relatedId:
+            offer._id instanceof mongoose.Types.ObjectId
+              ? offer._id
+              : new mongoose.Types.ObjectId(String(offer._id)),
           relatedType: 'application',
         });
       }
 
       res.json({
-        message: 'Signed offer uploaded successfully. Waiting for company confirmation.',
+        message:
+          'Signed offer uploaded successfully. Waiting for company confirmation.',
         offer: {
           id: offer._id as mongoose.Types.ObjectId,
           status: offer.status,
@@ -306,9 +321,12 @@ export const uploadSignedOffer = async (
       });
     } catch (error) {
       console.error('Upload signed offer error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload signed offer';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload signed offer';
       res.status(500).json({
-        message: errorMessage
+        message: errorMessage,
       });
     }
   });
@@ -318,7 +336,10 @@ export const uploadSignedOffer = async (
  * Accept offer (after signing)
  * POST /api/graduates/offers/:offerId/accept
  */
-export const acceptOffer = async (req: Request, res: Response): Promise<void> => {
+export const acceptOffer = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -351,7 +372,8 @@ export const acceptOffer = async (req: Request, res: Response): Promise<void> =>
 
   if (offer.status !== 'signed') {
     res.status(400).json({
-      message: 'Offer must be signed before acceptance. Please upload the signed document first.'
+      message:
+        'Offer must be signed before acceptance. Please upload the signed document first.',
     });
     return;
   }
@@ -389,9 +411,12 @@ export const acceptOffer = async (req: Request, res: Response): Promise<void> =>
     jobId?: { title?: string } | mongoose.Types.ObjectId;
   }
   const populatedApp = populatedApplication as PopulatedApplication | null;
-  const jobTitle = (populatedApp?.jobId && typeof populatedApp.jobId === 'object' && 'title' in populatedApp.jobId)
-    ? populatedApp.jobId.title
-    : undefined;
+  const jobTitle =
+    populatedApp?.jobId &&
+    typeof populatedApp.jobId === 'object' &&
+    'title' in populatedApp.jobId
+      ? populatedApp.jobId.title
+      : undefined;
 
   if (company?.userId) {
     await createNotification({
@@ -399,7 +424,10 @@ export const acceptOffer = async (req: Request, res: Response): Promise<void> =>
       type: 'application',
       title: 'Offer Accepted',
       message: `Congratulations! ${graduate.firstName} ${graduate.lastName} has accepted the offer for ${jobTitle || 'the position'}. The job posting has been closed.`,
-      relatedId: offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id)),
+      relatedId:
+        offer._id instanceof mongoose.Types.ObjectId
+          ? offer._id
+          : new mongoose.Types.ObjectId(String(offer._id)),
       relatedType: 'application',
       email: {
         subject: `Offer Accepted: ${jobTitle || 'Position'}`,
@@ -411,14 +439,22 @@ export const acceptOffer = async (req: Request, res: Response): Promise<void> =>
   res.json({
     message: 'Offer accepted successfully',
     offer: {
-      id: (offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id))).toString(),
+      id: (offer._id instanceof mongoose.Types.ObjectId
+        ? offer._id
+        : new mongoose.Types.ObjectId(String(offer._id))
+      ).toString(),
       status: offer.status,
       acceptedAt: offer.acceptedAt,
     },
-    application: application ? {
-      id: (application._id instanceof mongoose.Types.ObjectId ? application._id : new mongoose.Types.ObjectId(String(application._id))).toString(),
-      status: application.status,
-    } : null,
+    application: application
+      ? {
+          id: (application._id instanceof mongoose.Types.ObjectId
+            ? application._id
+            : new mongoose.Types.ObjectId(String(application._id))
+          ).toString(),
+          status: application.status,
+        }
+      : null,
   });
 };
 
@@ -426,7 +462,10 @@ export const acceptOffer = async (req: Request, res: Response): Promise<void> =>
  * Company confirms hire (after graduate uploads signed offer)
  * POST /api/companies/offers/:offerId/confirm-hire
  */
-export const confirmHire = async (req: Request, res: Response): Promise<void> => {
+export const confirmHire = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -459,7 +498,8 @@ export const confirmHire = async (req: Request, res: Response): Promise<void> =>
 
   if (offer.status !== 'signed') {
     res.status(400).json({
-      message: 'Offer must be signed by the graduate before you can confirm the hire.'
+      message:
+        'Offer must be signed by the graduate before you can confirm the hire.',
     });
     return;
   }
@@ -497,9 +537,12 @@ export const confirmHire = async (req: Request, res: Response): Promise<void> =>
     jobId?: { title?: string } | mongoose.Types.ObjectId;
   }
   const populatedApp = populatedApplication as PopulatedApplication | null;
-  const jobTitle = (populatedApp?.jobId && typeof populatedApp.jobId === 'object' && 'title' in populatedApp.jobId)
-    ? populatedApp.jobId.title
-    : undefined;
+  const jobTitle =
+    populatedApp?.jobId &&
+    typeof populatedApp.jobId === 'object' &&
+    'title' in populatedApp.jobId
+      ? populatedApp.jobId.title
+      : undefined;
 
   if (graduate?.userId) {
     await createNotification({
@@ -507,7 +550,10 @@ export const confirmHire = async (req: Request, res: Response): Promise<void> =>
       type: 'application',
       title: 'Hire Confirmed',
       message: `Congratulations! ${company.companyName} has confirmed your hire for ${jobTitle || 'the position'}. Welcome to the team!`,
-      relatedId: offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id)),
+      relatedId:
+        offer._id instanceof mongoose.Types.ObjectId
+          ? offer._id
+          : new mongoose.Types.ObjectId(String(offer._id)),
       relatedType: 'application',
       email: {
         subject: `Hire Confirmed: ${jobTitle || 'Position'}`,
@@ -519,14 +565,22 @@ export const confirmHire = async (req: Request, res: Response): Promise<void> =>
   res.json({
     message: 'Hire confirmed successfully',
     offer: {
-      id: (offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id))).toString(),
+      id: (offer._id instanceof mongoose.Types.ObjectId
+        ? offer._id
+        : new mongoose.Types.ObjectId(String(offer._id))
+      ).toString(),
       status: offer.status,
       acceptedAt: offer.acceptedAt,
     },
-    application: application ? {
-      id: (application._id instanceof mongoose.Types.ObjectId ? application._id : new mongoose.Types.ObjectId(String(application._id))).toString(),
-      status: application.status,
-    } : null,
+    application: application
+      ? {
+          id: (application._id instanceof mongoose.Types.ObjectId
+            ? application._id
+            : new mongoose.Types.ObjectId(String(application._id))
+          ).toString(),
+          status: application.status,
+        }
+      : null,
   });
 };
 
@@ -534,7 +588,10 @@ export const confirmHire = async (req: Request, res: Response): Promise<void> =>
  * Reject offer
  * POST /api/graduates/offers/:offerId/reject
  */
-export const rejectOffer = async (req: Request, res: Response): Promise<void> => {
+export const rejectOffer = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -567,7 +624,7 @@ export const rejectOffer = async (req: Request, res: Response): Promise<void> =>
 
   if (offer.status === 'accepted' || offer.status === 'rejected') {
     res.status(400).json({
-      message: 'Offer has already been processed'
+      message: 'Offer has already been processed',
     });
     return;
   }
@@ -598,9 +655,12 @@ export const rejectOffer = async (req: Request, res: Response): Promise<void> =>
     jobId?: { title?: string } | mongoose.Types.ObjectId;
   }
   const populatedJob = job as PopulatedApplication | null;
-  const jobTitle = (populatedJob?.jobId && typeof populatedJob.jobId === 'object' && 'title' in populatedJob.jobId)
-    ? populatedJob.jobId.title
-    : undefined;
+  const jobTitle =
+    populatedJob?.jobId &&
+    typeof populatedJob.jobId === 'object' &&
+    'title' in populatedJob.jobId
+      ? populatedJob.jobId.title
+      : undefined;
 
   if (company?.userId) {
     await createNotification({
@@ -608,7 +668,10 @@ export const rejectOffer = async (req: Request, res: Response): Promise<void> =>
       type: 'application',
       title: 'Offer Rejected',
       message: `${graduate.firstName} ${graduate.lastName} has rejected the offer for ${jobTitle || 'the position'}.`,
-      relatedId: offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id)),
+      relatedId:
+        offer._id instanceof mongoose.Types.ObjectId
+          ? offer._id
+          : new mongoose.Types.ObjectId(String(offer._id)),
       relatedType: 'application',
     });
   }
@@ -616,10 +679,12 @@ export const rejectOffer = async (req: Request, res: Response): Promise<void> =>
   res.json({
     message: 'Offer rejected',
     offer: {
-      id: (offer._id instanceof mongoose.Types.ObjectId ? offer._id : new mongoose.Types.ObjectId(String(offer._id))).toString(),
+      id: (offer._id instanceof mongoose.Types.ObjectId
+        ? offer._id
+        : new mongoose.Types.ObjectId(String(offer._id))
+      ).toString(),
       status: offer.status,
       rejectedAt: offer.rejectedAt,
     },
   });
 };
-

@@ -11,24 +11,17 @@ import {
 
 const router = Router();
 
-
 router.use(authenticate);
-
 
 router.get('/conversations', getChatList);
 
-
 router.get('/conversations/:otherUserId', getConversation);
-
 
 router.post('/', sendMessage);
 
-
 router.put('/conversations/:otherUserId/read', markAsRead);
 
-
 router.get('/', getAllMessages);
-
 
 router.get('/unread-count', getUnreadCount);
 

@@ -68,11 +68,10 @@ router.delete('/profile/work-experiences/:experienceId', deleteWorkExperience);
 router.get('/assessment/questions', getAssessmentQuestions);
 router.post('/assessment', submitAssessment);
 
-
-router.get('/profile/cv', getCVs);                     
-router.post('/profile/cv', addCV);                    
-router.delete('/profile/cv/:cvId', deleteCV);           
-router.patch('/profile/cv/:cvId/display', updateCVDisplay); 
+router.get('/profile/cv', getCVs);
+router.post('/profile/cv', addCV);
+router.delete('/profile/cv/:cvId', deleteCV);
+router.patch('/profile/cv/:cvId/display', updateCVDisplay);
 
 // Routes that require email verification (job matching and applications)
 router.use(requireEmailVerification);

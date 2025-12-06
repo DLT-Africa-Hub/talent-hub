@@ -18,7 +18,10 @@ import {
   getAvailableGraduates,
 } from '../controllers/company.controller';
 import { suggestTimeSlots } from '../controllers/interview.controller';
-import { confirmHire, getOfferByIdForCompany } from '../controllers/offer.controller';
+import {
+  confirmHire,
+  getOfferByIdForCompany,
+} from '../controllers/offer.controller';
 import {
   authenticate,
   authorize,
@@ -54,8 +57,16 @@ router.get('/interviews', strictLimiter, getCompanyInterviews);
 router.get('/graduates', strictLimiter, getAvailableGraduates);
 
 // Application management
-router.put('/applications/:applicationId/status', veryStrictLimiter, updateApplicationStatus);
-router.post('/applications/:applicationId/schedule-interview', veryStrictLimiter, scheduleInterview);
+router.put(
+  '/applications/:applicationId/status',
+  veryStrictLimiter,
+  updateApplicationStatus
+);
+router.post(
+  '/applications/:applicationId/schedule-interview',
+  veryStrictLimiter,
+  scheduleInterview
+);
 
 // Offer management
 router.get('/offers/by-id/:offerId', strictLimiter, getOfferByIdForCompany);

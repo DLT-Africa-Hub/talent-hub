@@ -50,7 +50,7 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
             key={guide.guide}
             className="border border-fade flex items-center justify-start gap-4 rounded-xl p-4 bg-white hover:border-button/50 transition-all duration-200 "
           >
-            <div className="bg-button w-[56px] h-[56px] rounded-full flex items-center justify-center text-white flex-shrink-0">
+            <div className="bg-button w-[56px] h-[56px] rounded-full flex items-center justify-center text-white shrink-0">
               <guide.icon className="text-[24px]" />
             </div>
             <div className="flex flex-col items-start gap-1.5 justify-center flex-1">
@@ -69,7 +69,7 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
       <div className="pt-2 w-full">
         <button
           onClick={onStart}
-          className="w-full md:w-[400px] mx-auto rounded-[10px] text-[16px] font-medium transition-all duration-200 h-[52px] flex items-center justify-center bg-button text-[#F8F8F8] hover:bg-[#1B7700] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          className="w-full md:w-[400px] mx-auto rounded-[10px] text-[16px] font-medium transition-all duration-200 h-[52px] flex items-center justify-center bg-button text-[#F8F8F8] hover:bg-button shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
         >
           Start
         </button>

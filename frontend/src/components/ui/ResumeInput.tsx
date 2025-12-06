@@ -342,7 +342,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                 <div className="flex items-center gap-3 min-w-0">
                   <FileIcon
                     size={18}
-                    className="text-[#1C1C1C] flex-shrink-0"
+                    className="text-[#1C1C1C] shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#1C1C1C] truncate">
@@ -373,7 +373,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                     type="button"
                     onClick={() => removeFile(f.id)}
                     disabled={f.isDeleting || f.status === 'uploading'}
-                    className="p-1 hover:bg-red-50 rounded transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1 hover:bg-red-50 rounded transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label={`Remove ${f.name}`}
                   >
                     {f.isDeleting ? (

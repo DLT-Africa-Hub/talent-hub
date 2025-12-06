@@ -60,7 +60,7 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
     <div className="w-full bg-yellow-50 border-b-2 border-yellow-400 px-4 py-3 z-50 sticky top-0">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <svg
               className="w-5 h-5 text-yellow-600"
               fill="none"

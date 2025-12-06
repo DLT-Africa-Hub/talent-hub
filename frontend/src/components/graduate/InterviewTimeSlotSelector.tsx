@@ -127,7 +127,7 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
   return (
     <div className="border border-[#E5E7EB] rounded-2xl bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Header */}
-      <div className="p-6 bg-gradient-to-br from-button/10 via-[#ADED9A]/15 to-button/5 border-b border-[#E5E7EB]">
+      <div className="p-6 bg-linear-to-br from-button/10 via-[#ADED9A]/15 to-button/5 border-b border-[#E5E7EB]">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-4 flex-1">
             <div className="w-12 h-12 rounded-xl bg-button/20 flex items-center justify-center shadow-sm">
@@ -211,7 +211,7 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
         {/* Error/Success messages */}
         {error && (
           <div className="p-4 rounded-xl border-2 border-red-200 bg-red-50 text-sm text-red-700 flex items-start gap-2">
-            <div className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center shrink-0 mt-0.5">
               <span className="text-red-700 text-xs font-bold">!</span>
             </div>
             <span>{error}</span>
@@ -219,7 +219,7 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
         )}
         {success && (
           <div className="p-4 rounded-xl border-2 border-green-200 bg-green-50 text-sm text-green-700 flex items-start gap-2">
-            <HiCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <HiCheck className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
             <span>{success}</span>
           </div>
         )}
@@ -280,7 +280,7 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
                     isPast
                       ? 'border-[#E5E7EB] bg-gray-50 opacity-50 cursor-not-allowed'
                       : isSelected
-                        ? 'border-button bg-gradient-to-br from-[#DBFFC0] to-[#C8F5A8] shadow-md shadow-button/20 scale-[1.02]'
+                        ? 'border-button bg-linear-to-br from-[#DBFFC0] to-[#C8F5A8] shadow-md shadow-button/20 scale-[1.02]'
                         : 'border-[#E5E7EB] bg-white hover:border-button/60 hover:shadow-md hover:bg-button/5 active:scale-[0.99]'
                   }`}
                 >

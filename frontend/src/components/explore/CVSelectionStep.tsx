@@ -276,9 +276,9 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
           {/* Divider */}
           {existingCVs.length > 0 && (
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-[1px] bg-fade" />
+              <div className="flex-1 h-px bg-fade" />
               <span className="text-[14px] text-[#1C1C1CBF]">OR</span>
-              <div className="flex-1 h-[1px] bg-fade" />
+              <div className="flex-1 h-px bg-fade" />
             </div>
           )}
 

@@ -150,7 +150,7 @@ jobs:
       - name: Build
         run: pnpm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'http://localhost:5174/api' }}
+          VITE_API_URL: ${{ secrets.VITE_APP_API_URL || 'http://localhost:5174/api' }}
 
   # AI Service CI
   ai-service:

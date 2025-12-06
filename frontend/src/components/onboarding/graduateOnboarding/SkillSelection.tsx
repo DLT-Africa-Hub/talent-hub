@@ -241,7 +241,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
             <button
               onClick={handleCreateProfile}
               disabled={isCreatingProfile}
-              className="w-full bg-button text-white py-4 px-6 rounded-[10px] font-medium text-[16px] hover:bg-[#1B7700] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-button text-white py-4 px-6 rounded-[10px] font-medium text-[16px] hover:bg-button transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isCreatingProfile ? 'Creating profile...' : 'Yes, proceed'}
             </button>

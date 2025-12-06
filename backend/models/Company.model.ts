@@ -10,6 +10,9 @@ export interface ICompany extends Document {
   location?: string;
   createdAt: Date;
   updatedAt: Date;
+  postedJobs:number;
+  hiredCandidates:Array<mongoose.Types.ObjectId>;
+
 }
 
 const CompanySchema: Schema = new Schema(
@@ -42,6 +45,13 @@ const CompanySchema: Schema = new Schema(
     location: {
       type: String,
     },
+    postedJobs:{
+      type:Number,
+    },
+    hiredCandidates:{
+      type: Array,
+      default:[]
+    }
   },
   {
     timestamps: true,

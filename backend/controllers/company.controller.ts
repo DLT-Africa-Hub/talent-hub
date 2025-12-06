@@ -632,6 +632,11 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 
   await job.save();
 
+  await Company.findByIdAndUpdate(
+    company._id,
+    { $inc: { postedJobs: 1 } }
+  );
+
   // Match graduates based on rank (automatic matching)
   // This happens before AI matching to ensure rank-based matches are created immediately
   if (job.status === 'active') {
@@ -2634,3 +2639,5 @@ export const getAvailableGraduates = async (
     res.status(500).json({ message: 'Failed to fetch graduates' });
   }
 };
+
+

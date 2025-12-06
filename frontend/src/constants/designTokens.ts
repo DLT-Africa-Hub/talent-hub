@@ -245,4 +245,3 @@ export const components = {
 export type ColorKey = keyof typeof colors;
 export type SpacingKey = keyof typeof spacing;
 export type BorderRadiusKey = keyof typeof borderRadius;
-

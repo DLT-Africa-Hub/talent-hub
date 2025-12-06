@@ -2,13 +2,22 @@ import api from './client';
 
 export const adminApi = {
   // User Management
-  getAllUsers: async (params?: { page?: number; limit?: number; role?: string }) => {
+  getAllUsers: async (params?: {
+    page?: number;
+    limit?: number;
+    role?: string;
+  }) => {
     const response = await api.get('/admin/users', { params });
     return response.data;
   },
 
-  searchUsers: async (query: string, params?: { page?: number; limit?: number }) => {
-    const response = await api.get('/admin/users/search', { params: { q: query, ...params } });
+  searchUsers: async (
+    query: string,
+    params?: { page?: number; limit?: number }
+  ) => {
+    const response = await api.get('/admin/users/search', {
+      params: { q: query, ...params },
+    });
     return response.data;
   },
 
@@ -28,13 +37,21 @@ export const adminApi = {
   },
 
   // Job Management
-  getAllJobs: async (params?: { page?: number; limit?: number; status?: string }) => {
+  getAllJobs: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) => {
     const response = await api.get('/admin/jobs', { params });
     return response.data;
   },
 
   // Match Management
-  getAllMatches: async (params?: { page?: number; limit?: number; status?: string }) => {
+  getAllMatches: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) => {
     const response = await api.get('/admin/matches', { params });
     return response.data;
   },
@@ -56,7 +73,11 @@ export const adminApi = {
   },
 
   // Activity Logs
-  getUserActivityLogs: async (params?: { page?: number; limit?: number; userId?: string }) => {
+  getUserActivityLogs: async (params?: {
+    page?: number;
+    limit?: number;
+    userId?: string;
+  }) => {
     const response = await api.get('/admin/user-activity', { params });
     return response.data;
   },
@@ -69,4 +90,3 @@ export const adminApi = {
 };
 
 export default adminApi;
-

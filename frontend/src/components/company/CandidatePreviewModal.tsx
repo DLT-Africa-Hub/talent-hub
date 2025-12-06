@@ -3,9 +3,7 @@ import { HiOutlineBriefcase, HiVideoCamera } from 'react-icons/hi';
 import { CandidateProfile } from '../../types/candidates';
 import BaseModal from '../ui/BaseModal';
 import { Input, Button } from '../ui';
-import {
-  formatSalaryPerAnnum,
-} from '../../utils/job.utils';
+import { formatSalaryPerAnnum } from '../../utils/job.utils';
 
 interface CandidatePreviewModalProps {
   isOpen: boolean;
@@ -59,7 +57,8 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
   if (!candidate) return null;
 
-  const isOfferSent = candidate.status === 'pending' || candidate.status === 'hired';
+  const isOfferSent =
+    candidate.status === 'pending' || candidate.status === 'hired';
   const canAcceptOrReject = !isOfferSent && (onAccept || onReject);
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
@@ -75,18 +74,32 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
         minute: '2-digit',
       })
     : null;
-  const hasUpcomingInterview = candidate.hasUpcomingInterview || false;
-  const hasActiveInterview = hasUpcomingInterview;
+
+  // Check if there's an active interview (scheduled, pending selection, or in progress)
+  // Check both interviewStatus and hasUpcomingInterview for comprehensive coverage
+  const hasActiveInterview =
+    candidate.hasUpcomingInterview ||
+    (candidate.interviewStatus &&
+      ['pending_selection', 'scheduled', 'in_progress'].includes(
+        candidate.interviewStatus
+      )) ||
+    (candidate.interviewScheduledAt && !candidate.interviewStatus); // Fallback: if scheduledAt exists but no status, assume active
   const isSchedulingLoading = isSchedulingInterview || isScheduling;
   const canScheduleInterview =
     !hasActiveInterview &&
     candidate.directContact !== false &&
     !!candidate.applicationId &&
     typeof onScheduleInterview === 'function';
-  const canShowScheduleControls = candidate.directContact !== false && (onScheduleInterview || onSuggestTimeSlots);
-  const canInteractWithScheduling = canScheduleInterview && !isSchedulingLoading && !hasActiveInterview;
+  const canShowScheduleControls =
+    candidate.directContact !== false &&
+    (onScheduleInterview || onSuggestTimeSlots);
+  const canInteractWithScheduling =
+    canScheduleInterview && !isSchedulingLoading && !hasActiveInterview;
   const showDirectContactDisabled = candidate.directContact === false;
-  const showApplicationRequiredMessage = candidate.directContact !== false && !candidate.applicationId && onScheduleInterview;
+  const showApplicationRequiredMessage =
+    candidate.directContact !== false &&
+    !candidate.applicationId &&
+    onScheduleInterview;
   const locationParts = candidate.location
     ? candidate.location.split(' • ')
     : [];
@@ -140,7 +153,10 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
       setScheduledAt('');
       setDurationMinutes(30);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       const message =
         err?.response?.data?.message ||
         err?.message ||
@@ -249,7 +265,10 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
               <div className="h-[40px] w-px bg-[#E0E0E0]" />
               <div className="flex flex-col">
                 <span className="text-[18px] font-semibold text-[#1C1C1C]">
-                  {formatSalaryPerAnnum(candidate.salaryPerAnnum).replace('/year', '')}
+                  {formatSalaryPerAnnum(candidate.salaryPerAnnum).replace(
+                    '/year',
+                    ''
+                  )}
                 </span>
                 <span className="text-[14px] text-[#1C1C1CBF]">
                   Expected Salary
@@ -296,9 +315,25 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                       >
                         {isAccepting ? (
                           <>
-                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg
+                              className="animate-spin h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
                             </svg>
                             Processing...
                           </>
@@ -315,9 +350,25 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                       >
                         {isRejecting ? (
                           <>
-                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg
+                              className="animate-spin h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
                             </svg>
                             Processing...
                           </>
@@ -427,9 +478,25 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                 >
                   {isSchedulingLoading ? (
                     <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Scheduling...
                     </>

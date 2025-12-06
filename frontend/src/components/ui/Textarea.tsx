@@ -26,12 +26,9 @@ const Textarea: React.FC<TextareaProps> = ({
           error ? 'border-red-500' : ''
         } ${className}`}
       />
-      {error && (
-        <p className="text-red-500 text-[14px] font-normal">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-[14px] font-normal">{error}</p>}
     </div>
   );
 };
 
 export default Textarea;
-

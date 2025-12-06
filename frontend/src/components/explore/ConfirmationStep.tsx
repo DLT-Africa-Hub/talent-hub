@@ -1,4 +1,8 @@
-import { HiOutlineDocument, HiOutlinePencil, HiOutlineCheckCircle } from 'react-icons/hi2';
+import {
+  HiOutlineDocument,
+  HiOutlinePencil,
+  HiOutlineCheckCircle,
+} from 'react-icons/hi2';
 
 interface ConfirmationStepProps {
   companyName: string;
@@ -58,7 +62,9 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       {/* Error Message */}
       {submitError && (
         <div className="p-4 rounded-[12px] bg-red-50 border border-red-200">
-          <p className="text-[14px] text-red-600 font-medium">❌ {submitError}</p>
+          <p className="text-[14px] text-red-600 font-medium">
+            ❌ {submitError}
+          </p>
         </div>
       )}
 
@@ -91,9 +97,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       {/* CV Section */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <p className="font-semibold text-[18px] text-[#1C1C1C]">
-            Your CV
-          </p>
+          <p className="font-semibold text-[18px] text-[#1C1C1C]">Your CV</p>
           <button
             type="button"
             onClick={onEditCV}
@@ -108,7 +112,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
             Edit
           </button>
         </div>
-        
+
         <div className="flex items-center gap-3 p-4 rounded-[12px] bg-[#F8F8F8] border border-fade">
           <div className="flex items-center justify-center w-[40px] h-[40px] rounded-[8px] bg-white">
             <HiOutlineDocument className="text-[20px] text-button" />
@@ -117,9 +121,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
             <p className="font-medium text-[14px] text-[#1C1C1C]">
               {cvFileName}
             </p>
-            <p className="text-[12px] text-[#1C1C1CBF]">
-              CV Document
-            </p>
+            <p className="text-[12px] text-[#1C1C1CBF]">CV Document</p>
           </div>
         </div>
       </div>
@@ -151,7 +153,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
             Edit
           </button>
         </div>
-        
+
         <div className="p-4 rounded-[12px] bg-[#F8F8F8] border border-fade">
           <p className="text-[14px] text-[#1C1C1C] leading-relaxed whitespace-pre-line">
             {truncateCoverLetter(coverLetter)}
@@ -176,8 +178,9 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       {/* Info Box */}
       <div className="p-4 rounded-[12px] bg-blue-50 border border-blue-200">
         <p className="text-[12px] text-blue-900">
-          💡 <span className="font-medium">Before you submit:</span> Make sure all information is accurate. 
-          Once submitted, you won't be able to edit your application. The hiring team will be notified immediately.
+          💡 <span className="font-medium">Before you submit:</span> Make sure
+          all information is accurate. Once submitted, you won't be able to edit
+          your application. The hiring team will be notified immediately.
         </p>
       </div>
 

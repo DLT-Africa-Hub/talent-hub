@@ -39,7 +39,9 @@ const ActionButtonGroup: React.FC<ActionButtonGroupProps> = ({
           disabled={secondary.disabled}
           className="w-full flex items-center justify-center gap-[12px] border-2 border-button py-[15px] rounded-[10px] text-button cursor-pointer transition-all hover:bg-button/5 hover:border-button/80 hover:scale-[1.02] active:scale-[0.98] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {secondary.icon || <HiOutlineChatBubbleLeftRight className="text-[24px]" />}
+          {secondary.icon || (
+            <HiOutlineChatBubbleLeftRight className="text-[24px]" />
+          )}
           <p className="text-[16px] font-medium">{secondary.label}</p>
         </button>
       )}
@@ -59,4 +61,3 @@ const ActionButtonGroup: React.FC<ActionButtonGroupProps> = ({
 };
 
 export default ActionButtonGroup;
-

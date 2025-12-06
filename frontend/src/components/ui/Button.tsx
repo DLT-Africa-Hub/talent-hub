@@ -14,8 +14,9 @@ const Button: React.FC<ButtonProps> = ({
   children,
   ...props
 }) => {
-  const baseClasses = 'rounded-[10px] text-[16px] font-medium transition-all duration-200 h-[52px] flex items-center justify-center cursor-pointer';
-  
+  const baseClasses =
+    'rounded-[10px] text-[16px] font-medium transition-all duration-200 h-[52px] flex items-center justify-center cursor-pointer';
+
   const variantClasses = {
     primary: disabled
       ? 'bg-[#1c770092] text-[#F8F8F8] cursor-not-allowed opacity-60'
@@ -42,4 +43,3 @@ const Button: React.FC<ButtonProps> = ({
 };
 
 export default Button;
-

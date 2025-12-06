@@ -25,10 +25,9 @@ export interface CandidateProfile {
     currency?: string;
   };
   salaryPerAnnum?: number;
-  directContact?: boolean; 
+  directContact?: boolean;
   interviewScheduledAt?: string;
   interviewRoomSlug?: string;
   interviewStatus?: string;
   hasUpcomingInterview?: boolean;
 }
-

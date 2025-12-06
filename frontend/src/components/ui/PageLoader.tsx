@@ -14,4 +14,3 @@ const PageLoader: React.FC<PageLoaderProps> = ({
 };
 
 export default PageLoader;
-

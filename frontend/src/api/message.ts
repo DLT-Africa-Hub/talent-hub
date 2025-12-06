@@ -60,7 +60,9 @@ export const messageApi = {
 
   // Mark messages as read
   markAsRead: async (otherUserId: string) => {
-    const response = await api.put(`/messages/conversations/${otherUserId}/read`);
+    const response = await api.put(
+      `/messages/conversations/${otherUserId}/read`
+    );
     return response.data;
   },
 };

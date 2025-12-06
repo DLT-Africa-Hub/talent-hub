@@ -8,7 +8,11 @@ import { LoadingSpinner } from '../../index';
 import { ApiError } from '../../types/api';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
 import { CandidateProfile } from '../../types/candidates';
-import { formatExperience, DEFAULT_PROFILE_IMAGE, formatSalaryPerAnnum } from '../../utils/job.utils';
+import {
+  formatExperience,
+  DEFAULT_PROFILE_IMAGE,
+  formatSalaryPerAnnum,
+} from '../../utils/job.utils';
 import { WorkExperience } from '../../types/api';
 
 interface Graduate {
@@ -163,19 +167,12 @@ const ExploreGraduates = () => {
     setSelectedCandidate(null);
   };
 
-  const handleChat = () => {
-    // TODO: Navigate to chat
-    handleCloseModal();
-  };
-
   const handleViewCV = (candidate?: CandidateProfile) => {
     const cvUrl = candidate?.cv || selectedCandidate?.cv;
     if (cvUrl) {
       window.open(cvUrl, '_blank', 'noopener,noreferrer');
     }
   };
-
-  const filteredAndSortedGraduates = graduates;
 
   return (
     <>
@@ -284,7 +281,6 @@ const ExploreGraduates = () => {
             </div>
           )}
 
-          {/* Active Filters Display */}
           {(filterRank !== 'all' || searchQuery) && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[14px] text-[#1C1C1C80]">
@@ -336,7 +332,7 @@ const ExploreGraduates = () => {
                 'Unable to fetch graduates. Please try again later.'}
             </p>
           </div>
-        ) : filteredAndSortedGraduates.length === 0 ? (
+        ) : graduates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-24 h-24 rounded-full bg-fade flex items-center justify-center mb-4">
               <BsSearch className="text-[40px] text-[#1C1C1C40]" />
@@ -368,7 +364,7 @@ const ExploreGraduates = () => {
           <>
             {/* Graduate Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-              {filteredAndSortedGraduates.map((graduate: Graduate) => (
+              {graduates.map((graduate: Graduate) => (
                 <div
                   key={graduate.id}
                   className="bg-white rounded-[12px] border border-fade p-6 hover:shadow-lg transition-shadow cursor-pointer"
@@ -406,12 +402,7 @@ const ExploreGraduates = () => {
                       {graduate.location}
                     </p>
                   )}
-                  {graduate.education && (
-                    <p className="text-[14px] text-[#1C1C1C80] mb-3">
-                      🎓 {graduate.education.degree} in{' '}
-                      {graduate.education.field}
-                    </p>
-                  )}
+
                   {graduate.salaryPerAnnum && (
                     <p className="text-[14px] text-[#1C1C1C80] mb-3 font-medium">
                       {formatSalaryPerAnnum(graduate.salaryPerAnnum)}
@@ -458,12 +449,10 @@ const ExploreGraduates = () => {
         )}
       </div>
 
-      {/* Candidate Preview Modal */}
       <CandidatePreviewModal
         isOpen={isModalOpen}
         candidate={selectedCandidate}
         onClose={handleCloseModal}
-        onChat={handleChat}
         onViewCV={handleViewCV}
       />
     </>

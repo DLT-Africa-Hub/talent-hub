@@ -17,7 +17,7 @@ async function getApp() {
   if (appLoadError) {
     throw appLoadError;
   }
-  
+
   if (!appInstance) {
     try {
       const appModule = await import('../app');
@@ -27,27 +27,33 @@ async function getApp() {
       console.error('Failed to load Express app - Full error:', error);
       console.error('Error type:', typeof error);
       console.error('Error constructor:', error?.constructor?.name);
-      
+
       if (error instanceof Error) {
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
       }
-      
+
       // Check if it's a Zod validation error
       if (error && typeof error === 'object') {
         const errorObj = error as any;
         if ('issues' in errorObj) {
-          console.error('Zod validation issues:', JSON.stringify(errorObj.issues, null, 2));
+          console.error(
+            'Zod validation issues:',
+            JSON.stringify(errorObj.issues, null, 2)
+          );
         }
         if ('format' in errorObj) {
           console.error('Zod formatted error:', errorObj.format());
         }
         // Log all error properties
         console.error('Error properties:', Object.keys(errorObj));
-        console.error('Full error object:', JSON.stringify(errorObj, Object.getOwnPropertyNames(errorObj), 2));
+        console.error(
+          'Full error object:',
+          JSON.stringify(errorObj, Object.getOwnPropertyNames(errorObj), 2)
+        );
       }
-      
+
       appLoadError = error as Error;
       throw error;
     }
@@ -75,7 +81,7 @@ async function connectToDatabase() {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     } as mongoose.ConnectOptions);
-    
+
     cachedConnection = conn;
     return conn;
   } catch (error) {
@@ -96,10 +102,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await connectToDatabase();
       } catch (error) {
         console.error('MongoDB connection failed:', error);
-        return res.status(500).json({ 
+        return res.status(500).json({
           success: false,
           message: 'Database connection failed',
-          error: process.env.NODE_ENV !== 'production' ? String(error) : undefined
+          error:
+            process.env.NODE_ENV !== 'production' ? String(error) : undefined,
         });
       }
     }
@@ -109,11 +116,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         // Handle request with Express
         app(req as any, res as any);
-        
+
         // Resolve when response is finished
         res.on('finish', () => resolve());
         res.on('close', () => resolve());
-        
+
         // Handle errors
         res.on('error', (error: Error) => {
           console.error('Response error:', error);
@@ -125,7 +132,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           res.status(500).json({
             success: false,
             message: 'Internal server error',
-            error: process.env.NODE_ENV !== 'production' ? String(error) : undefined
+            error:
+              process.env.NODE_ENV !== 'production' ? String(error) : undefined,
           });
         }
         reject(error);
@@ -139,13 +147,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
     }
-    
+
     // Extract error information
     let errorMessage = 'Unknown error';
     let errorStack: string | undefined;
     let errorName: string | undefined;
     let validationIssues: any = undefined;
-    
+
     if (error instanceof Error) {
       errorMessage = error.message;
       errorStack = error.stack;
@@ -154,23 +162,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       errorMessage = error;
     } else if (error && typeof error === 'object') {
       const errorObj = error as any;
-      
+
       // Handle Zod validation errors (ZodError has 'issues' property)
       if ('issues' in errorObj && Array.isArray(errorObj.issues)) {
         validationIssues = errorObj.issues;
         errorMessage = 'Configuration validation failed';
-        
+
         // Format validation errors for better readability
         if (validationIssues.length > 0) {
           const formattedIssues = validationIssues.map((issue: any) => {
-            const path = issue.path && issue.path.length > 0 
-              ? issue.path.join('.') 
-              : 'root';
+            const path =
+              issue.path && issue.path.length > 0
+                ? issue.path.join('.')
+                : 'root';
             return `${path}: ${issue.message}`;
           });
           errorMessage = formattedIssues.join('; ');
         }
-      } 
+      }
       // Handle other object errors
       else if ('message' in errorObj) {
         errorMessage = String(errorObj.message);
@@ -194,7 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else {
       errorMessage = String(error);
     }
-    
+
     // Always show detailed error to help with debugging
     if (!res.headersSent) {
       const errorResponse: any = {
@@ -204,9 +213,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         errorName: errorName,
         ...(validationIssues && { validationIssues }),
         ...(errorStack && { stack: errorStack }),
-        hint: 'Check Vercel environment variables and function logs for details'
+        hint: 'Check Vercel environment variables and function logs for details',
       };
-      
+
       return res.status(500).json(errorResponse);
     }
   }

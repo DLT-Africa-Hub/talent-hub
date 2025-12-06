@@ -29,24 +29,35 @@ const Features = () => {
               <div className="w-5 h-5 bg-black rounded-full blur-xs self-start"></div>
             </div>
           </div>
-          
-          <div className='p-[34px]  gap-[84px] flex flex-col w-full lg:w-[320px] rounded-[20px] bg-[#E1E1E1]'>
-            <p className='max-w-[219px] text-[24px] font-semibold text-[#1C1C1C]'>Direct Communication</p>
-            <p className='max-w-[219px] text-[18px] text-[#1C1C1CBF]'>Chat with companies before receiving offers to ensure the perfect fit</p>
+
+          <div className="p-[34px]  gap-[84px] flex flex-col w-full lg:w-[320px] rounded-[20px] bg-[#E1E1E1]">
+            <p className="max-w-[219px] text-[24px] font-semibold text-[#1C1C1C]">
+              Direct Communication
+            </p>
+            <p className="max-w-[219px] text-[18px] text-[#1C1C1CBF]">
+              Chat with companies before receiving offers to ensure the perfect
+              fit
+            </p>
           </div>
         </div>
         <div className="flex flex-col-reverse items-center w-full lg:flex-row gap-[7px]">
-        <div className='p-[34px]  gap-[84px] flex flex-col w-full lg:w-[320px] rounded-[20px] bg-[#E1E1E1]'>
-            <p className='max-w-[219px] text-[24px] font-semibold text-[#1C1C1C]'>Multiple Job Types</p>
-            <p className='max-w-[219px] text-[18px] text-[#1C1C1CBF]'>Find full-time roles, contracts, part-time positions, or gig opportunities</p>
+          <div className="p-[34px]  gap-[84px] flex flex-col w-full lg:w-[320px] rounded-[20px] bg-[#E1E1E1]">
+            <p className="max-w-[219px] text-[24px] font-semibold text-[#1C1C1C]">
+              Multiple Job Types
+            </p>
+            <p className="max-w-[219px] text-[18px] text-[#1C1C1CBF]">
+              Find full-time roles, contracts, part-time positions, or gig
+              opportunities
+            </p>
           </div>
           <div className="p-[34px] w-full lg:w-[440px] gap-[84px] flex flex-col items-start rounded-[20px] relative bg-[#ADED9A] overflow-hidden ">
             <div className="w-[265px] h-[265px]  bg-black absolute top-[-100px] right-[-100px] rounded-full blur-[100px]" />
             <p className="max-w-[219px] font-semibold text-[24px] text-[#1C1C1C]">
-            Smart Matching
+              Smart Matching
             </p>
             <p className="max-w-[219px] text-[18px] text-[#1C1C1CBF]">
-            Get matched with opportunities that align with your skills and experience
+              Get matched with opportunities that align with your skills and
+              experience
             </p>
             <div className="flex flex-col gap-2.5 w-[40px] absolute bottom-[10px] right-[20px]">
               <div className="w-5 h-5 bg-black rounded-full blur-xs self-start"></div>

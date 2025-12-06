@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   getProfile,
   createProfile,
@@ -32,6 +32,7 @@ import {
 } from '../controllers/interview.controller';
 import {
   getOffer,
+  getOfferById,
   uploadSignedOffer,
   acceptOffer,
   rejectOffer,
@@ -42,7 +43,7 @@ import {
   requireEmailVerification,
 } from '../middleware/auth.middleware';
 
-const router = Router();
+const router: IRouter = Router();
 
 // All routes require authentication and graduate role
 router.use(authenticate);
@@ -67,11 +68,10 @@ router.delete('/profile/work-experiences/:experienceId', deleteWorkExperience);
 router.get('/assessment/questions', getAssessmentQuestions);
 router.post('/assessment', submitAssessment);
 
-
-router.get('/profile/cv', getCVs);                     
-router.post('/profile/cv', addCV);                    
-router.delete('/profile/cv/:cvId', deleteCV);           
-router.patch('/profile/cv/:cvId/display', updateCVDisplay); 
+router.get('/profile/cv', getCVs);
+router.post('/profile/cv', addCV);
+router.delete('/profile/cv/:cvId', deleteCV);
+router.patch('/profile/cv/:cvId/display', updateCVDisplay);
 
 // Routes that require email verification (job matching and applications)
 router.use(requireEmailVerification);
@@ -90,6 +90,7 @@ router.put('/applications/:applicationId', updateApplicationStatus);
 
 // Offer management
 router.get('/offers/:applicationId', getOffer);
+router.get('/offers/by-id/:offerId', getOfferById);
 router.post('/offers/:offerId/upload-signed', uploadSignedOffer);
 router.post('/offers/:offerId/accept', acceptOffer);
 router.post('/offers/:offerId/reject', rejectOffer);

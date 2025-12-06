@@ -5,15 +5,15 @@ import {
   HiOutlineCurrencyDollar,
   HiOutlineClock,
 } from 'react-icons/hi2';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Company } from './CompanyCard';
 import BaseModal from '../ui/BaseModal';
 import { ActionButtonGroup } from '../ui';
 import CVSelectionStep from './CVSelectionStep';
 import CoverLetterStep from './CoverLetterStep';
 import ConfirmationStep from './ConfirmationStep';
-import graduateApi from '../../api/graduate';
 import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
+import { useApplyToJob } from '../../hooks/useApplyToJob';
 import { stripHtml } from '../../utils/text.utils';
 import { ApiResume } from '../../types/api';
 
@@ -21,11 +21,14 @@ interface CompanyPreviewModalProps {
   isOpen: boolean;
   company: Company | null;
   onClose: () => void;
-  onChat?: () => void;
   onApply?: () => void;
 }
 
-type ApplicationStep = 'preview' | 'cv-selection' | 'cover-letter' | 'confirmation';
+type ApplicationStep =
+  | 'preview'
+  | 'cv-selection'
+  | 'cover-letter'
+  | 'confirmation';
 
 interface ApplicationData {
   cv?: ApiResume | File;
@@ -39,55 +42,29 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   isOpen,
   company,
   onClose,
-  onChat,
   onApply,
 }) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [currentStep, setCurrentStep] = useState<ApplicationStep>('preview');
   const [applicationData, setApplicationData] = useState<ApplicationData>({});
-  const [hasApplied, setHasApplied] = useState(false);
-  const [checkingApplied, setCheckingApplied] = useState(true);
-  
-  // Use shared application submission hook
-  const { submitApplication, isSubmitting, submitError, resetError } = useApplicationSubmission({
-    jobId: company?.jobId || '',
-    onSuccess: () => {
-      onApply?.();
-      handleClose();
-    },
+
+  const { submitApplication, isSubmitting, submitError, resetError } =
+    useApplicationSubmission({
+      jobId: company?.jobId || '',
+      onSuccess: () => {
+        onApply?.();
+        handleClose();
+      },
+    });
+
+  const { hasApplied, checkingApplied, resetAppliedStatus } = useApplyToJob({
+    jobId: company?.jobId,
+    isOpen,
   });
-
-useEffect(() => {
-  if (!company?.jobId || !isOpen) return;
-
-  const jobId = company.jobId; // Store in variable after null check
-  if (!jobId) return;
-
-  const checkApplied = async () => {
-    try {
-      setCheckingApplied(true);
-      const res = await graduateApi.alreadyApplied(jobId);
-      setHasApplied(res.applied); // backend returns { applied: true/false }
-    } catch (err) {
-      console.error("Failed to check application status", err);
-    } finally {
-      setCheckingApplied(false);
-    }
-  };
-
-  checkApplied();
-}, [company?.jobId, isOpen]);
-
 
   if (!company) return null;
 
-
-
   const skills = ['React', 'TypeScript', 'JavaScript'];
-
-  const handleChat = () => {
-    onChat?.();
-  };
 
   const handleApplyClick = () => {
     setCurrentStep('cv-selection');
@@ -98,13 +75,13 @@ useEffect(() => {
   };
 
   const handleCVSelection = (selectedCV?: ApiResume, newFile?: File) => {
-    setApplicationData(prev => ({
+    setApplicationData((prev) => ({
       ...prev,
       cv: selectedCV || newFile,
       cvId: selectedCV?._id,
       cvFileName: selectedCV?.fileName || newFile?.name || 'Unknown CV',
     }));
-    
+
     setCurrentStep('cover-letter');
   };
 
@@ -112,8 +89,11 @@ useEffect(() => {
     setCurrentStep('cv-selection');
   };
 
-  const handleCoverLetterSubmit = (coverLetter: string, isAIGenerated: boolean) => {
-    setApplicationData(prev => ({
+  const handleCoverLetterSubmit = (
+    coverLetter: string,
+    isAIGenerated: boolean
+  ) => {
+    setApplicationData((prev) => ({
       ...prev,
       coverLetter,
       isAIGenerated,
@@ -138,17 +118,17 @@ useEffect(() => {
     if (!company.jobId) {
       return;
     }
-  
+
     if (!applicationData.cv) {
       return;
     }
-  
+
     await submitApplication({
       resume: applicationData.cv,
-      coverLetter: applicationData.coverLetter || "",
+      coverLetter: applicationData.coverLetter || '',
     });
   };
-  
+
   const handleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsBookmarked(!isBookmarked);
@@ -159,9 +139,9 @@ useEffect(() => {
     setCurrentStep('preview');
     setApplicationData({});
     resetError();
+    resetAppliedStatus();
     onClose();
   };
-
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -173,7 +153,7 @@ useEffect(() => {
             selectedCVId={applicationData.cvId}
           />
         );
-      
+
       case 'cover-letter':
         return (
           <CoverLetterStep
@@ -185,7 +165,7 @@ useEffect(() => {
             initialIsAIGenerated={applicationData.isAIGenerated}
           />
         );
-      
+
       case 'confirmation':
         return (
           <ConfirmationStep
@@ -206,11 +186,11 @@ useEffect(() => {
             onSubmit={handleFinalSubmit}
           />
         );
-      
+
       case 'preview':
       default:
         return (
-          <div className='flex flex-col gap-[15px]'>
+          <div className="flex flex-col gap-[15px]">
             {/* Company Image */}
             <div className="w-full h-[232px] relative overflow-hidden rounded-[10px] group">
               <img
@@ -224,7 +204,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Company and Job Details */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 w-full">
               <div className="flex flex-col gap-[8px] flex-1">
                 <p
@@ -246,17 +225,23 @@ useEffect(() => {
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-[#F8F8F8] rounded-[12px] border border-fade">
               <div className="flex items-center gap-2 text-[#1C1C1C]">
                 <HiOutlineClock className="text-[20px] text-button" />
-                <span className="font-semibold text-[16px]">{company.contract}</span>
+                <span className="font-semibold text-[16px]">
+                  {company.contract}
+                </span>
               </div>
               <div className="hidden sm:block h-[24px] bg-fade w-0.5" />
               <div className="flex items-center gap-2 text-[#1C1C1C]">
                 <HiOutlineMapPin className="text-[20px] text-button" />
-                <span className="font-semibold text-[16px]">{company.location}</span>
+                <span className="font-semibold text-[16px]">
+                  {company.location}
+                </span>
               </div>
               <div className="hidden sm:block h-[24px] bg-fade w-0.5" />
               <div className="flex items-center gap-2 text-[#1C1C1C]">
                 <HiOutlineCurrencyDollar className="text-[20px] text-button" />
-                <span className="font-semibold text-[16px]">{company.wage}</span>
+                <span className="font-semibold text-[16px]">
+                  {company.wage}
+                </span>
               </div>
             </div>
 
@@ -269,7 +254,9 @@ useEffect(() => {
                 </p>
               </div>
               <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-                {company.description ? stripHtml(company.description) : 'No description available.'}
+                {company.description
+                  ? stripHtml(company.description)
+                  : 'No description available.'}
               </p>
             </div>
 
@@ -298,13 +285,13 @@ useEffect(() => {
             {/* Action Buttons */}
             <div className="pt-2">
               <ActionButtonGroup
-                secondary={{
-                  label: 'Chat',
-                  onClick: handleChat,
-                }}
                 primary={{
-                  label: hasApplied ? 'Already Applied' : (checkingApplied ? 'Checking...' : 'Apply Now'),
-                  onClick: hasApplied ? (() => {}) : handleApplyClick,
+                  label: hasApplied
+                    ? 'Already Applied'
+                    : checkingApplied
+                      ? 'Checking...'
+                      : 'Apply Now',
+                  onClick: hasApplied ? () => {} : handleApplyClick,
                   disabled: hasApplied || checkingApplied,
                 }}
               />

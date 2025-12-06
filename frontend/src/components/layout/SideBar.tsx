@@ -44,7 +44,11 @@ const pagesByRole: Record<string, Page[]> = {
 
   admin: [
     { page: 'Dashboard', link: 'admin', icon: RiHomeSmile2Line },
-    { page: 'Companies', link: 'admin/companies', icon: PiBuildingApartmentLight },
+    {
+      page: 'Companies',
+      link: 'admin/companies',
+      icon: PiBuildingApartmentLight,
+    },
     { page: 'Talents', link: 'admin/talents', icon: HiOutlineUsers },
     { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
     { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
@@ -187,11 +191,11 @@ const SideBar: React.FC = () => {
             <div className="flex-1 text-left min-w-0">
               <p className="text-[#1C1C1C] font-semibold text-[14px] truncate">
                 {displayName}
-            </p>
+              </p>
               <p className="text-[#1C1C1C80] font-normal text-[12px] truncate">
                 @{username}
-            </p>
-          </div>
+              </p>
+            </div>
             <BiChevronDown
               className={`text-[18px] text-[#1C1C1C80] transition-transform ${
                 isDropdownOpen ? 'rotate-180' : ''

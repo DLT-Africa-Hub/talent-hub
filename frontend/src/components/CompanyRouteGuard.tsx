@@ -105,4 +105,3 @@ const CompanyRouteGuard: React.FC<CompanyRouteGuardProps> = ({ children }) => {
 };
 
 export default CompanyRouteGuard;
-

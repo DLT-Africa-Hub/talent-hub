@@ -441,9 +441,8 @@ export const queueGraduateMatching = (
               return id ? ([id, job] as const) : null;
             })
             .filter(
-              (
-                entry
-              ): entry is [string, (typeof jobs)[number]] => entry !== null
+              (entry): entry is [string, (typeof jobs)[number]] =>
+                entry !== null
             )
         );
 
@@ -468,9 +467,8 @@ export const queueGraduateMatching = (
               return id ? ([id, company] as const) : null;
             })
             .filter(
-              (
-                entry
-              ): entry is [string, (typeof companies)[number]] => entry !== null
+              (entry): entry is [string, (typeof companies)[number]] =>
+                entry !== null
             )
         );
 

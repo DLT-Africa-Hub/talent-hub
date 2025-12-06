@@ -1,6 +1,7 @@
 import request from 'supertest';
 import type { Agent } from 'supertest';
 import app from '../../app';
+import User from '../../models/User.model';
 import {
   connectTestDb,
   clearDatabase,
@@ -56,6 +57,13 @@ describe('Admin authorization protections', () => {
       'admin@example.com',
       'admin'
     );
+
+    // Verify email for test admin user (bypass email verification requirement)
+    const adminUserId = adminResponse.body.user.id;
+    await User.findByIdAndUpdate(adminUserId, {
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+    });
 
     await agent
       .get('/api/v1/admin/users')

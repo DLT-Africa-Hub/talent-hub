@@ -1,22 +1,20 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
-
-
 export interface IApplication extends Document {
   graduateId: mongoose.Types.ObjectId;
   jobId: mongoose.Types.ObjectId;
   matchId?: mongoose.Types.ObjectId;
   interviewId?: mongoose.Types.ObjectId;
   status:
-  | 'pending'
-  | 'reviewed'
-  | 'shortlisted'
-  | 'interviewed'
-  | 'accepted'
-  | 'offer_sent'
-  | 'hired'
-  | 'rejected'
-  | 'withdrawn';
+    | 'pending'
+    | 'reviewed'
+    | 'shortlisted'
+    | 'interviewed'
+    | 'accepted'
+    | 'offer_sent'
+    | 'hired'
+    | 'rejected'
+    | 'withdrawn';
   coverLetter?: string;
   resume?: {
     _id?: Types.ObjectId;

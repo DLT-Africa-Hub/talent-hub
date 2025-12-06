@@ -24,8 +24,9 @@ import {
 import { enforceHttps } from './middleware/https.middleware';
 import { userRateLimiter } from './middleware/userRateLimit.middleware';
 import { securityConfig } from './config/secrets';
+import type { Express } from 'express';
 
-const app = express();
+const app: Express = express();
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 app.disable('x-powered-by');
@@ -59,8 +60,8 @@ app.use(userRateLimiter);
 
 // Root endpoint
 app.get('/', (_req, res) => {
-  res.success({ 
-    status: 'ok', 
+  res.success({
+    status: 'ok',
     message: 'Talent Hub API',
     version: '1.0.0',
     endpoints: {
@@ -68,8 +69,8 @@ app.get('/', (_req, res) => {
       apiHealth: `${API_PREFIX}/health`,
       test: '/api/test',
       docs: '/docs',
-      api: API_PREFIX
-    }
+      api: API_PREFIX,
+    },
   });
 });
 
@@ -83,15 +84,15 @@ app.get(`${API_PREFIX}/health`, (_req, res) => {
 
 // Simple test endpoint that doesn't require MongoDB
 app.get('/api/test', (_req, res) => {
-  res.success({ 
-    status: 'ok', 
+  res.success({
+    status: 'ok',
     message: 'Handler is working',
     timestamp: new Date().toISOString(),
     env: {
       nodeEnv: process.env.NODE_ENV,
       apiPrefix: API_PREFIX,
       hasMongoUri: !!process.env.MONGODB_URI,
-    }
+    },
   });
 });
 

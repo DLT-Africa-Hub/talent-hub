@@ -1,8 +1,11 @@
-import express from 'express';
-import { deleteFile, deleteFolder, deleteMultipleFiles } from '../controllers/cloudinary.controller';
+import express, { type IRouter } from 'express';
+import {
+  deleteFile,
+  deleteFolder,
+  deleteMultipleFiles,
+} from '../controllers/cloudinary.controller';
 
-
-const router = express.Router();
+const router: IRouter = express.Router();
 
 router.post('/delete', deleteFile);
 router.post('/delete-multiple', deleteMultipleFiles);

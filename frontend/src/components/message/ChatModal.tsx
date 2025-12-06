@@ -1,10 +1,14 @@
-import React, { useEffect, useRef, useState, FormEvent } from 'react';
+import React, { useEffect, useRef, useState, FormEvent, useMemo } from 'react';
 import { FiX } from 'react-icons/fi';
 import { AiOutlineSend } from 'react-icons/ai';
 import { GrAttachment } from 'react-icons/gr';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { messageApi } from '../../api/message';
+import { graduateApi } from '../../api/graduate';
+import { companyApi } from '../../api/company';
 import { useAuth } from '../../context/AuthContext';
+import { useToastContext } from '../../context/ToastContext';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface Company {
   id?: string | number;
@@ -34,10 +38,15 @@ interface ChatModalProps {
 
 const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const { user } = useAuth();
+  const { success, error: showError } = useToastContext();
   const [input, setInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingSignedOffer, setIsUploadingSignedOffer] = useState(false);
+  const [isConfirmingHire, setIsConfirmingHire] = useState(false);
+  const [showConfirmHireDialog, setShowConfirmHireDialog] = useState(false);
+  const signedOfferInputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
@@ -56,6 +65,231 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     enabled: !!company?.id,
     refetchInterval: 3000,
   });
+
+  // Find offerId or applicationId from messages
+  const { offerId, applicationId } = useMemo(() => {
+    if (!messages || !Array.isArray(messages))
+      return { offerId: null, applicationId: null };
+
+    // First, try to find offerId directly
+    const offerMessage = messages.find((msg: Message) => msg.offerId);
+    if (offerMessage?.offerId) {
+      const foundOfferId =
+        typeof offerMessage.offerId === 'string'
+          ? offerMessage.offerId
+          : offerMessage.offerId.toString();
+      return {
+        offerId: foundOfferId,
+        applicationId: offerMessage.applicationId
+          ? typeof offerMessage.applicationId === 'string'
+            ? offerMessage.applicationId
+            : offerMessage.applicationId.toString()
+          : null,
+      };
+    }
+
+    // If no offerId, try to find applicationId
+    const appMessage = messages.find((msg: Message) => msg.applicationId);
+    if (appMessage?.applicationId) {
+      const foundAppId =
+        typeof appMessage.applicationId === 'string'
+          ? appMessage.applicationId
+          : appMessage.applicationId.toString();
+      return { offerId: null, applicationId: foundAppId };
+    }
+
+    return { offerId: null, applicationId: null };
+  }, [messages]);
+
+  // Fetch offer details by offerId (for graduates)
+  const { data: offerDataById, isLoading: isLoadingOfferById } = useQuery({
+    queryKey: ['offer', offerId],
+    queryFn: async () => {
+      if (!offerId) return null;
+      try {
+        const response = await graduateApi.getOfferById(offerId);
+        return response.offer;
+      } catch (error) {
+        console.error('Error fetching offer by ID:', error);
+        return null;
+      }
+    },
+    enabled: !!offerId && user?.role === 'graduate',
+    refetchInterval: 5000, // Refetch every 5 seconds to check for status updates
+  });
+
+  // Fetch offer details by applicationId (fallback for graduates)
+  const { data: offerDataByApp, isLoading: isLoadingOfferByApp } = useQuery({
+    queryKey: ['offer-by-app', applicationId],
+    queryFn: async () => {
+      if (!applicationId) return null;
+      try {
+        const response = await graduateApi.getOffer(applicationId);
+        return response.offer;
+      } catch (error) {
+        console.error('Error fetching offer by application ID:', error);
+        return null;
+      }
+    },
+    enabled: !!applicationId && !offerId && user?.role === 'graduate',
+    refetchInterval: 5000, // Refetch every 5 seconds to check for status updates
+  });
+
+  // Fetch offer details by offerId (for companies)
+  const { data: offerDataForCompany, isLoading: isLoadingOfferForCompany } =
+    useQuery({
+      queryKey: ['offer-company', offerId],
+      queryFn: async () => {
+        if (!offerId) return null;
+        try {
+          const response = await companyApi.getOfferById(offerId);
+          return response.offer;
+        } catch (error) {
+          console.error('Error fetching offer by ID for company:', error);
+          return null;
+        }
+      },
+      enabled: !!offerId && user?.role === 'company',
+      refetchInterval: 5000, // Refetch every 5 seconds to check for status updates
+    });
+
+  // Use offer from appropriate source based on user role
+  const offer =
+    user?.role === 'company'
+      ? offerDataForCompany || null
+      : offerDataById || offerDataByApp || null;
+  const isLoadingOffer =
+    user?.role === 'company'
+      ? isLoadingOfferForCompany
+      : isLoadingOfferById || isLoadingOfferByApp;
+
+  const handleUploadSignedOffer = async (file: File) => {
+    const offerIdToUpload = offer?._id || offer?.id || offerId;
+
+    if (!offerIdToUpload) {
+      showError('Unable to upload signed offer. Offer ID not found.');
+      return;
+    }
+
+    setIsUploadingSignedOffer(true);
+    try {
+      await graduateApi.uploadSignedOffer(offerIdToUpload.toString(), file);
+
+      // Invalidate queries to refresh offer status
+      queryClient.invalidateQueries({ queryKey: ['offer', offerId] });
+      queryClient.invalidateQueries({
+        queryKey: ['offer-by-app', applicationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['conversation', company?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+
+      success(
+        'Contract signed successfully! The company has been notified and will confirm your hire.'
+      );
+    } catch (error) {
+      console.error('Upload signed offer error:', error);
+      showError('Failed to upload signed contract. Please try again.');
+    } finally {
+      setIsUploadingSignedOffer(false);
+      if (signedOfferInputRef.current) {
+        signedOfferInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleSignedOfferFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate PDF
+    if (
+      file.type !== 'application/pdf' &&
+      !file.name.toLowerCase().endsWith('.pdf')
+    ) {
+      showError('Only PDF files are allowed for signed offers.');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      showError('File size must be less than 10MB');
+      return;
+    }
+
+    handleUploadSignedOffer(file);
+  };
+
+  const handleConfirmHire = async () => {
+    const offerIdToConfirm = offer?._id || offer?.id || offerId;
+
+    if (!offerIdToConfirm || !offer) {
+      showError('Unable to confirm hire. Offer ID not found.');
+      return;
+    }
+
+    setShowConfirmHireDialog(true);
+  };
+
+  const confirmHireAction = async () => {
+    const offerIdToConfirm = offer?._id || offer?.id || offerId;
+
+    if (!offerIdToConfirm || !offer) {
+      showError('Unable to confirm hire. Offer ID not found.');
+      setShowConfirmHireDialog(false);
+      return;
+    }
+
+    setIsConfirmingHire(true);
+    try {
+      await companyApi.confirmHire(offerIdToConfirm.toString());
+
+      // Invalidate and refetch all queries to refresh data immediately
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['offer-company'],
+          exact: false,
+        }),
+        queryClient.invalidateQueries({ queryKey: ['offer'], exact: false }),
+        queryClient.invalidateQueries({
+          queryKey: ['conversation'],
+          exact: false,
+        }),
+        queryClient.invalidateQueries({ queryKey: ['messages'], exact: false }),
+        queryClient.invalidateQueries({
+          queryKey: ['companyApplications'],
+          exact: false,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['companyMatches'],
+          exact: false,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['companyCandidates'],
+          exact: false,
+        }),
+      ]);
+
+      // Refetch immediately to ensure UI updates
+      queryClient.refetchQueries({
+        queryKey: ['companyApplications'],
+        exact: false,
+      });
+
+      success(
+        'Hire confirmed successfully! The candidate has been marked as hired.'
+      );
+      setShowConfirmHireDialog(false);
+    } catch (error) {
+      console.error('Confirm hire error:', error);
+      showError('Failed to confirm hire. Please try again.');
+    } finally {
+      setIsConfirmingHire(false);
+    }
+  };
 
   useEffect(() => {
     if (company?.id && messages && messages.length > 0) {
@@ -149,7 +383,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     if (file) {
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB');
+        showError('File size must be less than 10MB');
         return;
       }
       setSelectedFile(file);
@@ -193,7 +427,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       }
     } catch (error) {
       console.error('Send message error:', error);
-      alert('Failed to send message. Please try again.');
+      showError('Failed to send message. Please try again.');
     }
   };
 
@@ -299,7 +533,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
         {/* Messages area */}
         <div
           ref={messagesRef}
-          className="flex-1 p-4 overflow-y-auto space-y-3 bg-gradient-to-b from-white to-[#fafafa]"
+          className="flex-1 p-4 overflow-y-auto space-y-3 bg-linear-to-b from-white to-[#fafafa]"
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
@@ -320,7 +554,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
                   className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] px-3 py-2 text-[14px] font-medium rounded-lg break-words ${
+                    className={`max-w-[80%] px-3 py-2 text-[14px] font-medium rounded-lg wrap-break-words ${
                       isMine
                         ? 'bg-[#5CFF0D20] text-[#1C1C1C]'
                         : 'bg-fade text-[#1C1C1C]'
@@ -414,6 +648,155 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
           </div>
         )}
 
+        {/* Loading offer indicator */}
+        {user?.role === 'graduate' &&
+          isLoadingOffer &&
+          (offerId || applicationId) &&
+          !offer && (
+            <div className="px-4 py-2 border-t border-fade bg-[#F5F5F5]">
+              <p className="text-[12px] text-[#1C1C1C80]">
+                Loading offer information...
+              </p>
+            </div>
+          )}
+
+        {/* Show pending offer with upload prompt */}
+        {user?.role === 'graduate' && offer && offer.status === 'pending' && (
+          <div className="px-4 py-3 border-t border-fade bg-[#FFF9E6]">
+            <div className="flex flex-col gap-3">
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-[#1C1C1C] mb-1">
+                  Offer Pending Signature
+                </p>
+                <p className="text-[12px] text-[#1C1C1C80]">
+                  Please download, sign, and upload your signed offer document
+                  (PDF). Once uploaded, the company will be notified and can
+                  confirm your hire.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={signedOfferInputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={handleSignedOfferFileSelect}
+                  className="hidden"
+                  disabled={isUploadingSignedOffer}
+                />
+                <button
+                  onClick={() => signedOfferInputRef.current?.click()}
+                  disabled={isUploadingSignedOffer}
+                  className="px-4 py-2 bg-[#FFA500] text-white font-semibold text-[14px] rounded-[20px] hover:bg-[#FF8C00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isUploadingSignedOffer
+                    ? 'Uploading...'
+                    : 'Upload Signed Contract'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contract Signed Status - Show when offer is signed (for graduate) */}
+        {user?.role === 'graduate' && offer && offer.status === 'signed' && (
+          <div className="px-4 py-3 border-t border-fade bg-[#E8F5E9]">
+            <div className="flex items-center gap-2">
+              <span className="text-[16px]">✅</span>
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-[#2E7D32] mb-1">
+                  Contract Signed
+                </p>
+                <p className="text-[12px] text-[#1C1C1C80]">
+                  Your signed offer document has been uploaded. Waiting for
+                  company confirmation.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {user?.role === 'graduate' && offer && offer.status === 'accepted' && (
+          <div className="px-4 py-3 border-t border-fade bg-[#E8F5E9]">
+            <div className="flex items-center gap-2">
+              <span className="text-[16px]">🎉</span>
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-[#2E7D32] mb-1">
+                  Hire Confirmed!
+                </p>
+                <p className="text-[12px] text-[#1C1C1C80]">
+                  Congratulations! The company has confirmed your hire. Welcome
+                  to the team!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {user?.role === 'company' && offer && offer.status === 'signed' && (
+          <div className="px-4 py-3 border-t border-fade bg-[#EFFFE2]">
+            <div className="flex flex-col gap-3">
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-[#1C1C1C] mb-1">
+                  Contract Signed
+                </p>
+                <p className="text-[12px] text-[#1C1C1C80]">
+                  The candidate has uploaded their signed offer document.
+                  Preview the contract before confirming the hire.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {offer.signedDocumentUrl && (
+                  <a
+                    href={offer.signedDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-white border-2 border-[#5CFF0D] text-[#5CFF0D] font-semibold text-[14px] rounded-[20px] hover:bg-[#F0FFF0] transition-colors whitespace-nowrap flex items-center gap-2"
+                  >
+                    <span>📄</span>
+                    Preview Contract
+                  </a>
+                )}
+                <button
+                  onClick={handleConfirmHire}
+                  disabled={isConfirmingHire}
+                  className="px-4 py-2 bg-[#5CFF0D] text-white font-semibold text-[14px] rounded-[20px] hover:bg-[#4DE600] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                >
+                  {isConfirmingHire ? 'Confirming...' : 'Confirm Hire'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {user?.role === 'company' && offer && offer.status === 'accepted' && (
+          <div className="px-4 py-3 border-t border-fade bg-[#E8F5E9]">
+            <div className="flex items-center gap-2">
+              <span className="text-[16px]">✅</span>
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-[#2E7D32] mb-1">
+                  Hire Confirmed
+                </p>
+                <p className="text-[12px] text-[#1C1C1C80]">
+                  The candidate has been marked as hired and the job posting has
+                  been closed.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show rejected status */}
+        {user?.role === 'graduate' && offer && offer.status === 'rejected' && (
+          <div className="px-4 py-3 border-t border-fade bg-[#FFEBEE]">
+            <div className="flex items-center gap-2">
+              <span className="text-[16px]">❌</span>
+              <p className="text-[14px] font-semibold text-[#C62828]">
+                Offer Rejected
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Input area */}
         <form
           onSubmit={handleSend}
@@ -463,6 +846,18 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
           </button>
         </form>
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirmHireDialog}
+        title="Confirm Hire"
+        message="Are you sure you want to confirm this hire? This will mark the candidate as hired and close the job posting."
+        confirmText="Confirm Hire"
+        cancelText="Cancel"
+        variant="info"
+        onConfirm={confirmHireAction}
+        onCancel={() => setShowConfirmHireDialog(false)}
+        isLoading={isConfirmingHire}
+      />
     </div>
   );
 };

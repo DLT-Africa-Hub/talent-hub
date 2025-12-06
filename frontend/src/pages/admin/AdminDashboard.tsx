@@ -70,56 +70,54 @@ const stats: StatCard[] = [
 
 const activities = [
   {
-    activity: "New candidate Sarah Johnson completed AI assessment",
-    time: "2 minutes ago",
+    activity: 'New candidate Sarah Johnson completed AI assessment',
+    time: '2 minutes ago',
   },
   {
-    activity: "Company Tech Innovations Inc posted 3 new jobs",
-    time: "2 minutes ago",
+    activity: 'Company Tech Innovations Inc posted 3 new jobs',
+    time: '2 minutes ago',
   },
   {
-    activity: "Pending approval required for StartUp Dreams Co",
-    time: "2 minutes ago",
+    activity: 'Pending approval required for StartUp Dreams Co',
+    time: '2 minutes ago',
   },
   {
-    activity: "AI matching completed for 45 job-candidate pairs",
-    time: "2 minutes ago",
+    activity: 'AI matching completed for 45 job-candidate pairs',
+    time: '2 minutes ago',
   },
   {
-    activity: "Daily analytics report generated successfully",
-    time: "2 minutes ago",
+    activity: 'Daily analytics report generated successfully',
+    time: '2 minutes ago',
   },
 ];
 
 const hiringCompanies = [
   {
-    name: "Care Chain",
+    name: 'Care Chain',
     jobs: 45,
     hired: 30,
   },
   {
-    name: "DLT Africa",
+    name: 'DLT Africa',
     jobs: 45,
     hired: 30,
   },
   {
-    name: "Enterprise Corp",
+    name: 'Enterprise Corp',
     jobs: 45,
     hired: 30,
   },
   {
-    name: "Tech Innovations Inc",
+    name: 'Tech Innovations Inc',
     jobs: 45,
     hired: 30,
   },
   {
-    name: "DLT Hub",
+    name: 'DLT Hub',
     jobs: 45,
     hired: 30,
   },
-
-]
-
+];
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -164,23 +162,35 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      <div className='grid grid-cols-1 lg:grid-cols-2  w-full'>
+      <div className="grid grid-cols-1 lg:grid-cols-2  w-full">
         <div className="flex flex-col rounded-[10px] border border-fade w-full gap-[21px]  max-w-[715px] p-[23px] max-h-[451px]  bg-white">
-          <p className="text-[#1C1C1C] font-semibold text-[20px]">Recent Activities</p>
-          <div className='flex flex-col gap-[25px] overflow-y-scroll'>
-              {activities.map((activity) => (
-               <ActivityItem activity={activity.activity} time={activity.time} key={activity.activity}/>
-              ))}
+          <p className="text-[#1C1C1C] font-semibold text-[20px]">
+            Recent Activities
+          </p>
+          <div className="flex flex-col gap-[25px] overflow-y-scroll">
+            {activities.map((activity) => (
+              <ActivityItem
+                activity={activity.activity}
+                time={activity.time}
+                key={activity.activity}
+              />
+            ))}
           </div>
-
         </div>
 
         <div className="flex flex-col rounded-[10px] border border-fade w-full gap-[21px] max-h-[451px]  max-w-[715px] p-[23px] bg-white">
-        <p className="text-[#1C1C1C] font-semibold text-[20px]">Top Hiring Companies</p> 
-        <div className='flex flex-col gap-[25px] overflow-y-scroll'>
-              {hiringCompanies.map((company) => (
-                <HiringCompany hired={company.hired} jobs={company.jobs} name={company.name} key={company.name}/>
-              ))}
+          <p className="text-[#1C1C1C] font-semibold text-[20px]">
+            Top Hiring Companies
+          </p>
+          <div className="flex flex-col gap-[25px] overflow-y-scroll">
+            {hiringCompanies.map((company) => (
+              <HiringCompany
+                hired={company.hired}
+                jobs={company.jobs}
+                name={company.name}
+                key={company.name}
+              />
+            ))}
           </div>
         </div>
       </div>

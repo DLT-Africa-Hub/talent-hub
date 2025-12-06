@@ -56,7 +56,9 @@ const JobRankSelector = () => {
       title: jobData.title,
       jobType: jobData.jobType,
       location: jobData.location,
-      salaryAmount: jobData.salary?.amount ? (jobData.salary.amount / 1000).toString() : '',
+      salaryAmount: jobData.salary?.amount
+        ? (jobData.salary.amount / 1000).toString()
+        : '',
       description: jobData.description,
       skills: jobData.requirements.skills.join(', '),
     };
@@ -86,7 +88,7 @@ const JobRankSelector = () => {
       };
 
       const response = await companyApi.createJob(completeJobData);
-      
+
       // Check if there's a warning (job created without AI matching)
       if (response.warning) {
         setWarning(response.warning);

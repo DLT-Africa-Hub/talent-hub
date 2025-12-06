@@ -26,8 +26,11 @@ const Card: React.FC<CardProps> = ({
   className = '',
   imageOverlay,
 }) => {
-  const baseClasses = 'flex flex-col gap-[18px] rounded-[20px] border border-fade bg-white shadow-sm transition-all hover:shadow-md';
-  const clickableClasses = onClick ? 'cursor-pointer hover:border-button/20' : '';
+  const baseClasses =
+    'flex flex-col gap-[18px] rounded-[20px] border border-fade bg-white shadow-sm transition-all hover:shadow-md';
+  const clickableClasses = onClick
+    ? 'cursor-pointer hover:border-button/20'
+    : '';
 
   return (
     <article
@@ -65,12 +68,9 @@ const Card: React.FC<CardProps> = ({
 
       {children && <div className="px-[18px]">{children}</div>}
 
-      {actions && (
-        <div className="px-[18px] pb-[18px]">{actions}</div>
-      )}
+      {actions && <div className="px-[18px] pb-[18px]">{actions}</div>}
     </article>
   );
 };
 
 export default Card;
-

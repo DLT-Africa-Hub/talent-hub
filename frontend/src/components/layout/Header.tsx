@@ -30,7 +30,8 @@ const Header = () => {
     if (user.role === 'graduate') {
       const graduate = graduateProfileQuery.data;
       if (graduate) {
-        const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+        const fullName =
+          `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
         return fullName || user.email?.split('@')[0] || 'User';
       }
     }
@@ -45,7 +46,10 @@ const Header = () => {
     let rank: string | undefined;
     const rankValue = graduate.rank;
     if (rankValue) {
-      const trimmedRank = typeof rankValue === 'string' ? rankValue.trim() : String(rankValue).trim();
+      const trimmedRank =
+        typeof rankValue === 'string'
+          ? rankValue.trim()
+          : String(rankValue).trim();
       if (trimmedRank.length > 0) {
         const firstChar = trimmedRank.charAt(0).toUpperCase();
         if (['A', 'B', 'C', 'D'].includes(firstChar)) {
@@ -83,7 +87,9 @@ const Header = () => {
                   <p className="text-[#1C1C1CBF] font-normal text-[16px]">
                     Your Rank
                   </p>
-                  <p className="text-[#1C1C1CE5] font-bold  text-[20px]">{metrics.rank} Rank</p>
+                  <p className="text-[#1C1C1CE5] font-bold  text-[20px]">
+                    {metrics.rank} Rank
+                  </p>
                 </div>
               </div>
             )}

@@ -26,7 +26,11 @@ const getJobStatusVariant = (status: string): BadgeVariant => {
   return 'default';
 };
 
-const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches, onViewApplicants }) => {
+const JobCard: React.FC<JobCardProps> = ({
+  job,
+  onViewMatches,
+  onViewApplicants,
+}) => {
   const handleViewMatches = () => {
     onViewMatches?.(job);
   };

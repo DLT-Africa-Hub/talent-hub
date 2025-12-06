@@ -1,10 +1,15 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
 import { graduateApi } from '../../api/graduate';
-import { PageLoader, ErrorState, SectionHeader, EmptyState } from '../../components/ui';
+import {
+  PageLoader,
+  ErrorState,
+  SectionHeader,
+  EmptyState,
+} from '../../components/ui';
 import { ApiError } from '../../types/api';
 import {
   DEFAULT_JOB_IMAGE,
@@ -53,7 +58,10 @@ const normalizeMatchScore = (score: number | undefined): number => {
 };
 
 const GraduateDashboard = () => {
-  const [selectedCompany, setSelectedCompany] = useState<(Company & { jobId: string }) | null>(null);
+  const queryClient = useQueryClient();
+  const [selectedCompany, setSelectedCompany] = useState<
+    (Company & { jobId: string }) | null
+  >(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const {
@@ -109,7 +117,10 @@ const GraduateDashboard = () => {
     []
   );
 
-  const { availableOpportunities, companyOffers }: {
+  const {
+    availableOpportunities,
+    companyOffers,
+  }: {
     availableOpportunities: (Company & { jobId: string })[];
     companyOffers: (Company & { jobId: string })[];
   } = useMemo(() => {
@@ -125,7 +136,9 @@ const GraduateDashboard = () => {
       standardMatches.push(transformMatchToCompany(match, index));
     });
 
-    const sortedStandard = [...standardMatches].sort((a, b) => b.match - a.match);
+    const sortedStandard = [...standardMatches].sort(
+      (a, b) => b.match - a.match
+    );
 
     return {
       availableOpportunities: sortedStandard.slice(0, 4),
@@ -148,9 +161,6 @@ const GraduateDashboard = () => {
     if (buttonText === 'Preview') {
       setSelectedCompany(company as Company & { jobId: string });
       setIsModalOpen(true);
-    } else if (buttonText === 'Get in Touch') {
-      // TODO: Handle contact action
-      console.log('Get in Touch clicked for company:', company.id);
     }
   };
 
@@ -159,34 +169,21 @@ const GraduateDashboard = () => {
     setSelectedCompany(null);
   };
 
-  const handleChat = () => {
-    // TODO: Navigate to chat
-    console.log('Chat clicked for company:', selectedCompany?.id);
-  };
-
   const handleApply = () => {
-    // Application is handled by CompanyPreviewModal
-    // This callback can be used for post-application actions if needed
-    console.log('Application submitted for company:', selectedCompany?.id);
+    // Refresh matches and applications after successful application
+    queryClient.invalidateQueries({ queryKey: ['graduateMatches'] });
+    queryClient.invalidateQueries({ queryKey: ['graduateApplications'] });
   };
 
   return (
     <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
-      {error && (
-        <ErrorState
-          message={error}
-          variant="inline"
-        />
-      )}
+      {error && <ErrorState message={error} variant="inline" />}
 
-      {loading && (
-        <PageLoader message="Loading opportunities..." />
-      )}
+      {loading && <PageLoader message="Loading opportunities..." />}
 
       {!loading && (
         <>
-        
-          <div className="flex flex-col gap-[20px] w-full md:gap-[30px] mt-50">
+          <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
             <SectionHeader title="AI Matched Opportunities" />
 
             {availableOpportunities.length > 0 ? (
@@ -204,6 +201,7 @@ const GraduateDashboard = () => {
               <EmptyState
                 title="No opportunities yet"
                 description="Full-time and part-time opportunities will appear here once you're matched with jobs."
+                variant="minimal"
               />
             )}
           </div>
@@ -218,9 +216,7 @@ const GraduateDashboard = () => {
                     key={company.id}
                     company={company}
                     buttonText="Preview"
-                    onButtonClick={() =>
-                      handleButtonClick(company, 'Preview')
-                    }
+                    onButtonClick={() => handleButtonClick(company, 'Preview')}
                   />
                 ))}
               </div>
@@ -228,6 +224,7 @@ const GraduateDashboard = () => {
               <EmptyState
                 title="No contract offers yet"
                 description="Contract and internship opportunities will appear here once you're matched with jobs."
+                variant="minimal"
               />
             )}
           </div>
@@ -238,7 +235,6 @@ const GraduateDashboard = () => {
         isOpen={isModalOpen}
         company={selectedCompany}
         onClose={handleCloseModal}
-        onChat={handleChat}
         onApply={handleApply}
       />
     </div>

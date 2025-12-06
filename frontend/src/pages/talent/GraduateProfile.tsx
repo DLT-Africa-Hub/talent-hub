@@ -12,8 +12,10 @@ import WorkingExperience from '../../components/profile/WorkingExperience';
 import ResumeModal from '../../components/profile/ResumeModal';
 import cloudinaryApi from '../../api/cloudinary';
 import { ApiError } from '../../types/api';
+import { useToastContext } from '../../context/ToastContext';
 
 const GraduateProfile = () => {
+  const { error: showError } = useToastContext();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -102,14 +104,17 @@ const GraduateProfile = () => {
 
       // Store the old profile picture URL before uploading new one
       const oldProfilePictureUrl = graduate.profilePictureUrl;
-      const isReplacingExistingPicture = 
-        oldProfilePictureUrl && 
+      const isReplacingExistingPicture =
+        oldProfilePictureUrl &&
         oldProfilePictureUrl !== DEFAULT_PROFILE_IMAGE &&
         oldProfilePictureUrl.includes('cloudinary.com');
 
       console.log('Uploading new profile picture...');
       if (isReplacingExistingPicture) {
-        console.log('Will delete old picture after upload:', oldProfilePictureUrl);
+        console.log(
+          'Will delete old picture after upload:',
+          oldProfilePictureUrl
+        );
       }
 
       const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -124,7 +129,11 @@ const GraduateProfile = () => {
       const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
       const fileToUpload =
-        file instanceof File ? file : new File([file], 'profile.jpg', { type: (file as Blob).type || 'image/jpeg' });
+        file instanceof File
+          ? file
+          : new File([file], 'profile.jpg', {
+              type: (file as Blob).type || 'image/jpeg',
+            });
 
       const form = new FormData();
       form.append('file', fileToUpload);
@@ -142,7 +151,8 @@ const GraduateProfile = () => {
       }
 
       const data = await res.json();
-      const secureUrl: string | undefined = data.secure_url || data.secureUrl || data.url;
+      const secureUrl: string | undefined =
+        data.secure_url || data.secureUrl || data.url;
       const publicId: string | undefined = data.public_id || data.publicId;
 
       if (!secureUrl) {
@@ -151,7 +161,7 @@ const GraduateProfile = () => {
 
       console.log('New profile picture uploaded:', {
         url: secureUrl,
-        publicId
+        publicId,
       });
 
       // Update profile picture in database
@@ -161,28 +171,38 @@ const GraduateProfile = () => {
       if (isReplacingExistingPicture) {
         try {
           console.log('Deleting old profile picture from Cloudinary...');
-          const deleteResult = await cloudinaryApi.deleteProfilePicture(oldProfilePictureUrl);
-          
+          const deleteResult =
+            await cloudinaryApi.deleteProfilePicture(oldProfilePictureUrl);
+
           if (deleteResult.success) {
-            console.log('Successfully deleted old profile picture:', deleteResult.message);
+            console.log(
+              'Successfully deleted old profile picture:',
+              deleteResult.message
+            );
           } else {
             console.warn('Failed to delete old profile picture:', deleteResult);
           }
         } catch (deleteError) {
           // Log error but don't throw - the new picture is already uploaded and saved
           console.error('Error deleting old profile picture:', deleteError);
-          console.warn('Continuing despite deletion error - new picture is saved');
+          console.warn(
+            'Continuing despite deletion error - new picture is saved'
+          );
         }
       }
 
       // Refresh profile data
-      queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'profilePage'] });
+      queryClient.invalidateQueries({
+        queryKey: ['graduateProfile', 'profilePage'],
+      });
 
       console.log('Profile picture update complete!');
     } catch (err) {
       const error = err as ApiError;
       console.error('Failed to upload profile picture', error);
-      alert(error.response?.data?.message || 'Failed to upload profile picture');
+      showError(
+        error.response?.data?.message || 'Failed to upload profile picture'
+      );
     } finally {
       setIsUploading(false);
     }
@@ -207,10 +227,10 @@ const GraduateProfile = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[32px]">
-        <div className='flex flex-col gap-[32px]'>
+        <div className="flex flex-col gap-[32px]">
           <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
-              <div className='w-full flex flex-col-reverse gap-[20px] lg:flex-row items-start justify-between'>
+              <div className="w-full flex flex-col-reverse gap-[20px] lg:flex-row items-start justify-between">
                 <div className="flex md:flex-row gap-[12px]">
                   <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4] relative">
                     {isUploading && (
@@ -222,7 +242,9 @@ const GraduateProfile = () => {
                       </div>
                     )}
                     <ProfilePictureEditor
-                      imageUrl={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
+                      imageUrl={
+                        graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE
+                      }
                       size={150}
                       onUpload={handleProfilePictureUpload}
                     />
@@ -238,9 +260,9 @@ const GraduateProfile = () => {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setIsResumeModalOpen(true)}
-                  className='px-[20px] py-[12px] rounded-[12px] border border-button bg-button text-white hover:bg-[#176300] transition-colors flex items-center gap-[8px]'
+                  className="px-[20px] py-[12px] rounded-[12px] border border-button bg-button text-white hover:bg-[#176300] transition-colors flex items-center gap-[8px]"
                 >
                   Resume
                 </button>
@@ -339,7 +361,7 @@ const GraduateProfile = () => {
               </div>
             </div>
           </div>
-          <WorkingExperience workExperiences={graduate.workExperiences}/>
+          <WorkingExperience workExperiences={graduate.workExperiences} />
         </div>
 
         <div className="flex flex-col gap-[32px]">

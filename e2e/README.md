@@ -1,128 +1,75 @@
-# E2E Tests for Talent Hub
+# E2E Tests
 
-This directory contains end-to-end (E2E) tests using Playwright to test critical user journeys.
+This directory contains end-to-end tests for the Talent Hub application using Playwright.
 
 ## Setup
 
-1. Install dependencies:
-```bash
-cd e2e
-npm install
-npx playwright install
-```
-
-2. Make sure the backend and frontend are running:
-```bash
-# Terminal 1: Backend
-cd backend
-npm run dev
-
-# Terminal 2: Frontend
-cd frontend
-npm run dev
-```
+The e2e tests are configured to use:
+- **In-memory MongoDB** (via `mongodb-memory-server`) for the backend - no database setup required!
+- **Local frontend** dev server
+- **Local backend** test server
 
 ## Running Tests
 
-### Run all tests
 ```bash
-npm run test:e2e
+# Install dependencies (if not already done)
+pnpm install
+
+# Run all tests
+pnpm test
+
+# Run tests in UI mode
+pnpm exec playwright test --ui
+
+# Run a specific test file
+pnpm exec playwright test tests/example.spec.ts
+
+# Run tests in headed mode (see browser)
+pnpm exec playwright test --headed
 ```
 
-### Run tests in UI mode (interactive)
-```bash
-npm run test:e2e:ui
-```
+## Test Database
 
-### Run tests in headed mode (see browser)
-```bash
-npm run test:e2e:headed
-```
+The tests automatically use an **in-memory MongoDB instance** that:
+- Starts automatically when tests run
+- Is isolated from your development/production database
+- Gets cleaned up after tests complete
+- Requires no setup or configuration
 
-### Debug tests
-```bash
-npm run test:e2e:debug
-```
-
-### View test report
-```bash
-npm run test:e2e:report
-```
-
-## Test Coverage
-
-### Critical User Journeys
-
-1. **Graduate Signup Flow** (`graduate-signup-flow.spec.ts`)
-   - User registration
-   - Email verification
-   - Onboarding completion
-   - Profile creation
-   - Route guard verification
-
-2. **Company Job Post Flow** (`company-job-notification-flow.spec.ts`)
-   - Company registration
-   - Profile completion
-   - Job creation
-   - Notification delivery
-   - Job listing verification
+The backend test server (`backend/index.test.ts`) uses `mongodb-memory-server` to create a temporary MongoDB instance that exists only in memory during test execution.
 
 ## Configuration
 
-Tests are configured in `playwright.config.ts`. Key settings:
-
-- **Base URL**: `http://localhost:5174` (frontend dev server)
-- **Browsers**: Chromium, Firefox, WebKit
-- **Retries**: 2 retries on CI, 0 locally
-- **Screenshots**: On failure only
-- **Videos**: Retained on failure
+The test configuration is in `playwright.config.ts`:
+- Frontend runs on `http://localhost:5174`
+- Backend runs on `http://localhost:3090`
+- Both servers start automatically before tests run
 
 ## Environment Variables
 
-- `PLAYWRIGHT_TEST_BASE_URL`: Override base URL (default: `http://localhost:5174`)
-- `CI`: Set to `true` in CI environment
+The test backend uses these default environment variables (set in `playwright.config.ts`):
+- `NODE_ENV=test`
+- `PORT=3090`
+- `EMAIL_ENABLED=false` (emails are disabled during tests)
+- `EMAIL_PROVIDER=console` (email output goes to console)
 
-## Writing New Tests
+## Writing Tests
 
-1. Create a new test file in `tests/` directory
-2. Use the test helpers from `tests/helpers/test-helpers.ts`
-3. Follow the existing test patterns
-4. Use descriptive test names and descriptions
-
-Example:
-```typescript
-import { test, expect } from '@playwright/test';
-
-test.describe('Feature Name', () => {
-  test('should do something', async ({ page }) => {
-    await page.goto('/');
-    // Test implementation
-  });
-});
-```
-
-## CI Integration
-
-Tests run automatically in CI/CD pipeline. Make sure:
-- Backend is running on port 3090
-- Frontend is running on port 5174
-- MongoDB is available
-- All environment variables are set
+See existing test files in the `tests/` directory for examples:
+- `example.spec.ts` - Basic navigation tests
+- `graduate-signup-flow.spec.ts` - User signup and onboarding flow
+- `company-job-notification-flow.spec.ts` - Company job creation flow
 
 ## Troubleshooting
 
-### Tests fail with timeout
-- Check if backend and frontend are running
-- Verify database connection
-- Check network connectivity
+### Backend server won't start
+- Make sure you have `mongodb-memory-server` installed: `cd ../backend && pnpm install`
+- Check that port 3090 is not already in use
 
-### Selectors not found
-- Use Playwright's codegen: `npx playwright codegen http://localhost:5174`
-- Check browser DevTools for actual selectors
-- Update selectors in test files
+### Frontend server won't start
+- Make sure you have frontend dependencies installed: `cd ../frontend && pnpm install`
+- Check that port 5174 is not already in use
 
-### Flaky tests
-- Add appropriate waits (`waitForLoadState`, `waitForSelector`)
-- Use `waitForURL` for navigation
-- Increase timeout if needed
-
+### Tests fail with database errors
+- The in-memory database should work automatically
+- If issues persist, check that `mongodb-memory-server` is properly installed in the backend

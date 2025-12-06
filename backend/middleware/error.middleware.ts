@@ -21,7 +21,7 @@ export const errorHandler = (
   _next: NextFunction
 ): void => {
   const error = err as ErrorWithStatus;
-  
+
   if (error.code === 'EBADCSRFTOKEN') {
     res.status(403).json({
       success: false,

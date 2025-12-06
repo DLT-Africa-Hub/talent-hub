@@ -72,7 +72,7 @@ const CandidateCard: React.FC<CandidateCardProps> = ({
         </div>
         {candidate.salaryPerAnnum && (
           <div className="text-[11px] font-medium text-[#1C1C1CE5]">
-             {formatSalaryPerAnnum(candidate.salaryPerAnnum)}
+            {formatSalaryPerAnnum(candidate.salaryPerAnnum)}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-[8px] text-[11px] font-medium text-[#1C1C1CE5]">

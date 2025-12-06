@@ -23,7 +23,11 @@ export const companyApi = {
     return response.data;
   },
 
-  getJobs: async (params?: { page?: number; limit?: number; status?: string }) => {
+  getJobs: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) => {
     const response = await api.get('/companies/jobs', { params });
     return response.data;
   },
@@ -44,34 +48,66 @@ export const companyApi = {
   },
 
   // Matches
-  getAllMatches: async (params?: { page?: number; limit?: number; status?: string; minScore?: number }) => {
+  getAllMatches: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    minScore?: number;
+    search?: string;
+  }) => {
     const response = await api.get('/companies/matches', { params });
     return response.data;
   },
 
-  getJobMatches: async (jobId: string, params?: { page?: number; limit?: number; status?: string }) => {
-    const response = await api.get(`/companies/jobs/${jobId}/matches`, { params });
+  getJobMatches: async (
+    jobId: string,
+    params?: { page?: number; limit?: number; status?: string }
+  ) => {
+    const response = await api.get(`/companies/jobs/${jobId}/matches`, {
+      params,
+    });
     return response.data;
   },
 
   updateMatchStatus: async (jobId: string, matchId: string, status: string) => {
-    const response = await api.put(`/companies/jobs/${jobId}/matches/${matchId}`, { status });
+    const response = await api.put(
+      `/companies/jobs/${jobId}/matches/${matchId}`,
+      { status }
+    );
     return response.data;
   },
 
   // Applications
-  getApplications: async (params?: { page?: number; limit?: number; status?: string; jobId?: string }) => {
+  getApplications: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    jobId?: string;
+    search?: string;
+  }) => {
     const response = await api.get('/companies/applications', { params });
     return response.data;
   },
 
-  getInterviews: async (params?: { page?: number; limit?: number; status?: string; upcoming?: 'true' | 'false' }) => {
+  getInterviews: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    upcoming?: 'true' | 'false';
+  }) => {
     const response = await api.get('/companies/interviews', { params });
     return response.data;
   },
 
-  updateApplicationStatus: async (applicationId: string, status: string, notes?: string) => {
-    const response = await api.put(`/companies/applications/${applicationId}/status`, { status, notes });
+  updateApplicationStatus: async (
+    applicationId: string,
+    status: string,
+    notes?: string
+  ) => {
+    const response = await api.put(
+      `/companies/applications/${applicationId}/status`,
+      { status, notes }
+    );
     return response.data;
   },
 
@@ -93,7 +129,10 @@ export const companyApi = {
     companyTimezone: string;
     selectionDeadline?: string;
   }) => {
-    const response = await api.post('/companies/interviews/suggest-slots', payload);
+    const response = await api.post(
+      '/companies/interviews/suggest-slots',
+      payload
+    );
     return response.data;
   },
 
@@ -108,7 +147,19 @@ export const companyApi = {
     const response = await api.get('/companies/graduates', { params });
     return response.data;
   },
+
+  // Offer management
+  getOfferById: async (offerId: string) => {
+    const response = await api.get(`/companies/offers/by-id/${offerId}`);
+    return response.data;
+  },
+
+  confirmHire: async (offerId: string) => {
+    const response = await api.post(
+      `/companies/offers/${offerId}/confirm-hire`
+    );
+    return response.data;
+  },
 };
 
 export default companyApi;
-

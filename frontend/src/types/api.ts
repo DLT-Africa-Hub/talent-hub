@@ -83,6 +83,26 @@ export interface ApiApplication {
   };
   interviewScheduledAt?: string | Date;
   interviewRoomSlug?: string;
+  interviewId?: {
+    _id?: string;
+    status?:
+      | 'pending_selection'
+      | 'scheduled'
+      | 'in_progress'
+      | 'completed'
+      | 'cancelled';
+    scheduledAt?: string | Date;
+    selectedTimeSlot?: {
+      date: string | Date;
+      timezone: string;
+    };
+    suggestedTimeSlots?: Array<{
+      date: string | Date;
+      duration: number;
+      timezone: string;
+    }>;
+    durationMinutes?: number;
+  };
   createdAt?: string | Date;
 }
 
@@ -165,4 +185,3 @@ export interface WorkExperience {
   description?: string;
   [key: string]: unknown;
 }
-

@@ -62,7 +62,9 @@ const GraduateCard: React.FC<Graduate> = ({
         {salaryPerAnnum && (
           <div className="flex flex-col gap-[10px]">
             <div className="flex w-full items-center justify-between">
-              <p className="text-[#1C1C1CBF] text-[14px] font-sf">Expected Salary</p>
+              <p className="text-[#1C1C1CBF] text-[14px] font-sf">
+                Expected Salary
+              </p>
               <p className="text-button text-[14px] font-sf">
                 {formatSalaryPerAnnum(salaryPerAnnum)}
               </p>

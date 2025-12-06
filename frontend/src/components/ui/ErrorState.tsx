@@ -18,7 +18,9 @@ const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   if (variant === 'fullPage') {
     return (
-      <div className={`flex flex-col items-center justify-center py-[60px] ${className}`}>
+      <div
+        className={`flex flex-col items-center justify-center py-[60px] ${className}`}
+      >
         <div className="w-[100px] h-[100px] rounded-[16px] bg-red-50 flex items-center justify-center mb-[20px]">
           <HiOutlineExclamationCircle className="text-[48px] text-red-500" />
         </div>
@@ -41,12 +43,16 @@ const ErrorState: React.FC<ErrorStateProps> = ({
   }
 
   return (
-    <div className={`rounded-[12px] bg-red-50 border border-red-200 p-[16px] ${className}`}>
+    <div
+      className={`rounded-[12px] bg-red-50 border border-red-200 p-[16px] ${className}`}
+    >
       <div className="flex items-start gap-3">
         <HiOutlineExclamationCircle className="text-[20px] text-red-600 shrink-0 mt-0.5" />
         <div className="flex-1">
           {title && (
-            <p className="text-[14px] font-semibold text-red-800 mb-1">{title}</p>
+            <p className="text-[14px] font-semibold text-red-800 mb-1">
+              {title}
+            </p>
           )}
           <p className="text-[14px] text-red-600">{message}</p>
           {onRetry && (
@@ -64,4 +70,3 @@ const ErrorState: React.FC<ErrorStateProps> = ({
 };
 
 export default ErrorState;
-

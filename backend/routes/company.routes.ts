@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   getProfile,
   createProfile,
@@ -19,6 +19,10 @@ import {
 } from '../controllers/company.controller';
 import { suggestTimeSlots } from '../controllers/interview.controller';
 import {
+  confirmHire,
+  getOfferByIdForCompany,
+} from '../controllers/offer.controller';
+import {
   authenticate,
   authorize,
   requireEmailVerification,
@@ -28,7 +32,7 @@ import {
   veryStrictLimiter,
 } from '../middleware/rateLimit.middleware';
 
-const router = Router();
+const router: IRouter = Router();
 
 // All routes require authentication and company role
 router.use(authenticate);
@@ -53,8 +57,20 @@ router.get('/interviews', strictLimiter, getCompanyInterviews);
 router.get('/graduates', strictLimiter, getAvailableGraduates);
 
 // Application management
-router.put('/applications/:applicationId/status', veryStrictLimiter, updateApplicationStatus);
-router.post('/applications/:applicationId/schedule-interview', veryStrictLimiter, scheduleInterview);
+router.put(
+  '/applications/:applicationId/status',
+  veryStrictLimiter,
+  updateApplicationStatus
+);
+router.post(
+  '/applications/:applicationId/schedule-interview',
+  veryStrictLimiter,
+  scheduleInterview
+);
+
+// Offer management
+router.get('/offers/by-id/:offerId', strictLimiter, getOfferByIdForCompany);
+router.post('/offers/:offerId/confirm-hire', veryStrictLimiter, confirmHire);
 
 // Interview scheduling with multiple time slots
 router.post('/interviews/suggest-slots', veryStrictLimiter, suggestTimeSlots);

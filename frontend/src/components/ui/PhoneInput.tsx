@@ -29,9 +29,10 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   };
 
   // Extract local phone number from full phone number
-  const localPhone = value && value.startsWith(countryCode)
-    ? value.replace(countryCode, '')
-    : value || '';
+  const localPhone =
+    value && value.startsWith(countryCode)
+      ? value.replace(countryCode, '')
+      : value || '';
 
   return (
     <div className="flex flex-col gap-2">
@@ -64,12 +65,9 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           className="py-3 w-full px-4 bg-transparent placeholder:text-[#1C1C1C33] text-[15px] focus:outline-none"
         />
       </div>
-      {error && (
-        <p className="text-red-500 text-[14px] font-normal">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-[14px] font-normal">{error}</p>}
     </div>
   );
 };
 
 export default PhoneInput;
-

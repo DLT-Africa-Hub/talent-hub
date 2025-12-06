@@ -21,7 +21,9 @@ const CompanyJobs = () => {
   const queryClient = useQueryClient();
   const [isJobModalOpen, setJobModalOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [selectedJobTitle, setSelectedJobTitle] = useState<string | undefined>(undefined);
+  const [selectedJobTitle, setSelectedJobTitle] = useState<string | undefined>(
+    undefined
+  );
   const [isMatchesModalOpen, setIsMatchesModalOpen] = useState(false);
   const [isApplicantsModalOpen, setIsApplicantsModalOpen] = useState(false);
 

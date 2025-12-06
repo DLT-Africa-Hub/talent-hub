@@ -28,26 +28,35 @@ load_dotenv()
 # Keep-alive configuration
 KEEP_ALIVE_INTERVAL = int(os.getenv("KEEP_ALIVE_INTERVAL_SECONDS", "25"))
 KEEP_ALIVE_ENABLED = os.getenv("KEEP_ALIVE_ENABLED", "true").lower() == "true"
-SERVICE_URL = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("SERVICE_URL") or "http://localhost:8000"
+SERVICE_URL = (
+    os.getenv("RENDER_EXTERNAL_URL")
+    or os.getenv("SERVICE_URL")
+    or "http://localhost:8000"
+)
 
 
 async def keep_alive_task():
     """Background task to ping the health endpoint to prevent Render from sleeping."""
     if not KEEP_ALIVE_ENABLED:
         return
-    
+
     async with httpx.AsyncClient(timeout=5.0) as client:
         while True:
             try:
                 # Ping the health endpoint
                 response = await client.get(f"{SERVICE_URL}/health")
                 if response.status_code == 200:
-                    print(f"[Keep-Alive] Health check successful at {SERVICE_URL}/health")
+                    print(
+                        f"[Keep-Alive] Health check successful at {SERVICE_URL}/health"
+                    )
                 else:
-                    print(f"[Keep-Alive] Health check returned status {response.status_code}")
+                    print(
+                        f"[Keep-Alive] Health check returned status "
+                        f"{response.status_code}"
+                    )
             except Exception as e:
                 print(f"[Keep-Alive] Error pinging health endpoint: {e}")
-            
+
             # Wait for the specified interval
             await asyncio.sleep(KEEP_ALIVE_INTERVAL)
 
@@ -57,14 +66,17 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup: Start keep-alive task
     if KEEP_ALIVE_ENABLED:
-        print(f"[Keep-Alive] Starting keep-alive task (interval: {KEEP_ALIVE_INTERVAL}s, URL: {SERVICE_URL})")
+        print(
+            f"[Keep-Alive] Starting keep-alive task "
+            f"(interval: {KEEP_ALIVE_INTERVAL}s, URL: {SERVICE_URL})"
+        )
         keep_alive_task_instance = asyncio.create_task(keep_alive_task())
     else:
         print("[Keep-Alive] Keep-alive is disabled")
         keep_alive_task_instance = None
-    
+
     yield
-    
+
     # Shutdown: Cancel keep-alive task
     if keep_alive_task_instance:
         keep_alive_task_instance.cancel()
@@ -78,7 +90,7 @@ app = FastAPI(
     title="Talent Hub AI Service",
     description="AI microservice for job matching and candidate evaluation",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -235,8 +247,8 @@ async def root():
             "match": "/match",
             "match_batch": "/match/batch",
             "feedback": "/feedback",
-            "assessment_questions": "/assessment/questions"
-        }
+            "assessment_questions": "/assessment/questions",
+        },
     }
 
 
@@ -248,7 +260,7 @@ async def health_check():
     return {
         "status": "ok",
         "message": "AI Service is running",
-        "openai_configured": api_key_set
+        "openai_configured": api_key_set,
     }
 
 
@@ -256,24 +268,26 @@ async def health_check():
 async def embed_text(request: EmbedRequest):
     """
     Generate embedding for a given text using OpenAI text-embedding-3-large
-    
+
     Args:
         request: Contains text to embed
-        
+
     Returns:
         Embedding vector (list of floats)
     """
     try:
         if not request.text or not request.text.strip():
             raise HTTPException(status_code=400, detail="Text cannot be empty")
-        
+
         embedding = await generate_embedding(request.text)
         return EmbedResponse(embedding=embedding)
-    
+
     except EmbeddingError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:  # pragma: no cover - defensive
-        raise HTTPException(status_code=500, detail=f"Error generating embedding: {str(exc)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error generating embedding: {str(exc)}"
+        )
 
 
 @app.post("/embed/batch", response_model=EmbedBatchResponse)
@@ -291,42 +305,50 @@ async def embed_texts_batch(request: EmbedBatchRequest):
     except EmbeddingError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:  # pragma: no cover - defensive
-        raise HTTPException(status_code=500, detail=f"Error generating embeddings: {str(exc)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error generating embeddings: {str(exc)}"
+        )
 
 
 @app.post("/match", response_model=MatchResponse)
 async def match_candidate(request: MatchRequest):
     """
     Compute similarity between graduate embedding and job embeddings
-    
+
     Args:
         request: Contains graduate embedding and list of job embeddings
-        
+
     Returns:
         Ranked list of matches with scores
     """
     try:
         if not request.graduate_embedding:
-            raise HTTPException(status_code=400, detail="Graduate embedding is required")
-        
+            raise HTTPException(
+                status_code=400, detail="Graduate embedding is required"
+            )
+
         if not request.job_embeddings:
             raise HTTPException(status_code=400, detail="Job embeddings are required")
-        
+
         matches = await compute_matches(
             request.graduate_embedding,
             [job.model_dump(exclude_none=True) for job in request.job_embeddings],
-            request.graduate_metadata.model_dump(exclude_none=True)
-            if request.graduate_metadata
-            else None,
+            (
+                request.graduate_metadata.model_dump(exclude_none=True)
+                if request.graduate_metadata
+                else None
+            ),
             request.options.model_dump(exclude_none=True) if request.options else None,
         )
-        
+
         return MatchResponse(matches=[MatchItem(**match) for match in matches])
-    
+
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error computing matches: {str(exc)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error computing matches: {str(exc)}"
+        )
 
 
 @app.post("/match/batch", response_model=MatchBatchResponse)
@@ -336,11 +358,15 @@ async def match_candidates_batch(request: MatchBatchRequest):
     """
     try:
         if not request.graduates:
-            raise HTTPException(status_code=400, detail="Graduates list cannot be empty")
+            raise HTTPException(
+                status_code=400, detail="Graduates list cannot be empty"
+            )
         if not request.job_embeddings:
             raise HTTPException(status_code=400, detail="Job embeddings are required")
 
-        job_payload = [job.model_dump(exclude_none=True) for job in request.job_embeddings]
+        job_payload = [
+            job.model_dump(exclude_none=True) for job in request.job_embeddings
+        ]
         options_payload = (
             request.options.model_dump(exclude_none=True) if request.options else None
         )
@@ -370,17 +396,19 @@ async def match_candidates_batch(request: MatchBatchRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error computing batch matches: {str(exc)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error computing batch matches: {str(exc)}"
+        )
 
 
 @app.post("/feedback", response_model=FeedbackResponse)
 async def generate_feedback(request: FeedbackRequest):
     """
     Generate skill gap analysis and improvement tips using GPT-4
-    
+
     Args:
         request: Contains graduate profile and job requirements
-        
+
     Returns:
         Feedback, skill gaps, and recommendations
     """
@@ -392,17 +420,19 @@ async def generate_feedback(request: FeedbackRequest):
             additional_context=request.additional_context,
             template_overrides=request.template_overrides,
         )
-        
+
         return FeedbackResponse(
             feedback=feedback_data["feedback"],
             skillGaps=feedback_data["skill_gaps"],
-            recommendations=feedback_data["recommendations"]
+            recommendations=feedback_data["recommendations"],
         )
-    
+
     except FeedbackGenerationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error generating feedback: {str(exc)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error generating feedback: {str(exc)}"
+        )
 
 
 @app.post("/assessment/questions", response_model=AssessmentQuestionResponse)
@@ -412,7 +442,9 @@ async def assessment_questions(request: AssessmentQuestionRequest):
     """
     try:
         if not request.skills:
-            raise HTTPException(status_code=400, detail="At least one skill is required")
+            raise HTTPException(
+                status_code=400, detail="At least one skill is required"
+            )
 
         questions = await generate_assessment_questions(
             request.skills,
@@ -427,10 +459,12 @@ async def assessment_questions(request: AssessmentQuestionRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error generating assessment questions: {str(exc)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error generating assessment questions: {str(exc)}"
+        )
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 
+    uvicorn.run(app, host="0.0.0.0", port=8000)

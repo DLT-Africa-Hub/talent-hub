@@ -66,7 +66,11 @@ const sanitizeStringArray = (value: unknown): string[] => {
   return Array.from(new Set(trimmed));
 };
 
-const EXPERIENCE_LEVELS = new Set(['entry level', 'mid level', 'senior level'] as const);
+const EXPERIENCE_LEVELS = new Set([
+  'entry level',
+  'mid level',
+  'senior level',
+] as const);
 const POSITION_OPTIONS = new Set([
   'frontend developer',
   'backend developer',
@@ -108,7 +112,9 @@ const validatePosition = (
 type PopulatedJobLean = {
   _id: mongoose.Types.ObjectId;
   title?: string;
-  companyId?: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId; companyName: string };
+  companyId?:
+    | mongoose.Types.ObjectId
+    | { _id: mongoose.Types.ObjectId; companyName: string };
   location?: string;
   jobType?: string;
   description?: string;
@@ -248,14 +254,10 @@ export const createProfile = async (
       salaryPerAnnum,
       workExperiences = [],
       cv,
-      summary
+      summary,
     } = req.body;
 
-
-    if (
-      typeof firstName !== 'string' ||
-      typeof lastName !== 'string'
-    ) {
+    if (typeof firstName !== 'string' || typeof lastName !== 'string') {
       res.status(400).json({
         message:
           'firstName, lastName, phoneNumber, expLevel, expYears, and position are required',
@@ -265,12 +267,17 @@ export const createProfile = async (
 
     const parsedPhone = parsePhoneNumber(phoneNumber);
     if (parsedPhone === null) {
-      res.status(400).json({ message: 'phoneNumber must be a valid numeric value' });
+      res
+        .status(400)
+        .json({ message: 'phoneNumber must be a valid numeric value' });
       return;
     }
 
     if (!validateExperienceLevel(expLevel)) {
-      res.status(400).json({ message: 'expLevel must be one of entry level, mid level, or senior level' });
+      res.status(400).json({
+        message:
+          'expLevel must be one of entry level, mid level, or senior level',
+      });
       return;
     }
 
@@ -294,12 +301,14 @@ export const createProfile = async (
     }
 
     // Validate education if provided (optional)
-    let educationData: {
-      degree: string;
-      field: string;
-      institution: string;
-      graduationYear: number;
-    } | undefined;
+    let educationData:
+      | {
+          degree: string;
+          field: string;
+          institution: string;
+          graduationYear: number;
+        }
+      | undefined;
 
     if (education && typeof education === 'object') {
       const { degree, field, institution, graduationYear } = education;
@@ -327,11 +336,9 @@ export const createProfile = async (
       phoneNumber: parsedPhone,
     }).lean();
     if (existingPhone) {
-      res
-        .status(400)
-        .json({
-          message: 'Phone number is already associated with another graduate',
-        });
+      res.status(400).json({
+        message: 'Phone number is already associated with another graduate',
+      });
       return;
     }
 
@@ -349,12 +356,11 @@ export const createProfile = async (
         typeof profilePictureUrl === 'string'
           ? profilePictureUrl.trim()
           : undefined,
-      location:
-        typeof location === 'string'
-          ? location.trim()
-          : undefined,
+      location: typeof location === 'string' ? location.trim() : undefined,
       salaryPerAnnum:
-        typeof salaryPerAnnum === 'number' && Number.isFinite(salaryPerAnnum) && salaryPerAnnum > 0
+        typeof salaryPerAnnum === 'number' &&
+        Number.isFinite(salaryPerAnnum) &&
+        salaryPerAnnum > 0
           ? salaryPerAnnum
           : undefined,
       skills: sanitizeStringArray(skills),
@@ -368,62 +374,60 @@ export const createProfile = async (
       socials:
         typeof socials === 'object' && socials !== null
           ? {
-            github:
-              typeof socials.github === 'string'
-                ? socials.github.trim()
-                : undefined,
-            twitter:
-              typeof socials.twitter === 'string'
-                ? socials.twitter.trim()
-                : undefined,
-            linkedin:
-              typeof socials.linkedin === 'string'
-                ? socials.linkedin.trim()
-                : undefined,
-          }
+              github:
+                typeof socials.github === 'string'
+                  ? socials.github.trim()
+                  : undefined,
+              twitter:
+                typeof socials.twitter === 'string'
+                  ? socials.twitter.trim()
+                  : undefined,
+              linkedin:
+                typeof socials.linkedin === 'string'
+                  ? socials.linkedin.trim()
+                  : undefined,
+            }
           : undefined,
       portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
       workExperiences: Array.isArray(workExperiences)
         ? workExperiences
-          .map((exp) => {
-            if (!exp || typeof exp !== 'object') {
-              return null;
-            }
-            const { company, title, startDate, endDate, description } = exp;
-            if (
-              typeof company !== 'string' ||
-              typeof title !== 'string' ||
-              !startDate
-            ) {
-              return null;
-            }
-            const parsedStart = new Date(startDate);
-            if (Number.isNaN(parsedStart.getTime())) {
-              return null;
-            }
-            let parsedEnd: Date | undefined;
-            if (endDate) {
-              const end = new Date(endDate);
-              if (!Number.isNaN(end.getTime())) {
-                parsedEnd = end;
+            .map((exp) => {
+              if (!exp || typeof exp !== 'object') {
+                return null;
               }
-            }
-            return {
-              company: company.trim(),
-              title: title.trim(),
-              startDate: parsedStart,
-              endDate: parsedEnd,
-              description:
-                typeof description === 'string'
-                  ? description.trim()
-                  : undefined,
-            };
-          })
-          .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
+              const { company, title, startDate, endDate, description } = exp;
+              if (
+                typeof company !== 'string' ||
+                typeof title !== 'string' ||
+                !startDate
+              ) {
+                return null;
+              }
+              const parsedStart = new Date(startDate);
+              if (Number.isNaN(parsedStart.getTime())) {
+                return null;
+              }
+              let parsedEnd: Date | undefined;
+              if (endDate) {
+                const end = new Date(endDate);
+                if (!Number.isNaN(end.getTime())) {
+                  parsedEnd = end;
+                }
+              }
+              return {
+                company: company.trim(),
+                title: title.trim(),
+                startDate: parsedStart,
+                endDate: parsedEnd,
+                description:
+                  typeof description === 'string'
+                    ? description.trim()
+                    : undefined,
+              };
+            })
+            .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
         : [],
     });
-
-
 
     res.status(201).json({
       message: 'Profile created successfully',
@@ -511,9 +515,10 @@ export const updateProfile = async (
     }
 
     if (summary !== undefined) {
-      graduate.summary = typeof summary === 'string' && summary.trim().length > 0
-        ? summary.trim()
-        : undefined;
+      graduate.summary =
+        typeof summary === 'string' && summary.trim().length > 0
+          ? summary.trim()
+          : undefined;
     }
 
     if (typeof profilePictureUrl === 'string') {
@@ -521,9 +526,10 @@ export const updateProfile = async (
     }
 
     if (location !== undefined) {
-      graduate.location = typeof location === 'string' && location.trim().length > 0
-        ? location.trim()
-        : undefined;
+      graduate.location =
+        typeof location === 'string' && location.trim().length > 0
+          ? location.trim()
+          : undefined;
     }
 
     if (phoneNumber !== undefined) {
@@ -542,12 +548,9 @@ export const updateProfile = async (
         }).lean();
 
         if (existingWithPhone) {
-          res
-            .status(400)
-            .json({
-              message:
-                'Phone number is already associated with another graduate',
-            });
+          res.status(400).json({
+            message: 'Phone number is already associated with another graduate',
+          });
           return;
         }
 
@@ -611,9 +614,10 @@ export const updateProfile = async (
 
     // Emit notification for profile update
     try {
-      const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
-        ? graduate.userId.toString()
-        : String(graduate.userId);
+      const graduateUserId =
+        graduate.userId instanceof mongoose.Types.ObjectId
+          ? graduate.userId.toString()
+          : String(graduate.userId);
 
       await notifyGraduateProfileUpdated({
         graduateId: graduateUserId,
@@ -842,7 +846,8 @@ export const addWorkExperience = async (
     const graduate = await findGraduateOrRespond(userId, res);
     if (!graduate) return;
 
-    const { company, title, startDate, endDate, description, current } = req.body;
+    const { company, title, startDate, endDate, description, current } =
+      req.body;
 
     if (
       typeof company !== 'string' ||
@@ -879,7 +884,8 @@ export const addWorkExperience = async (
       title: title.trim(),
       startDate: parsedStart,
       endDate: current ? undefined : parsedEnd, // Remove endDate if currently working
-      description: typeof description === 'string' ? description.trim() : undefined,
+      description:
+        typeof description === 'string' ? description.trim() : undefined,
       current: typeof current === 'boolean' ? current : false,
     });
 
@@ -897,7 +903,6 @@ export const addWorkExperience = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 export const updateWorkExperience = async (
   req: Request,
@@ -927,13 +932,14 @@ export const updateWorkExperience = async (
     }
 
     const experience = graduate.workExperiences[experienceIndex];
-    const { company, title, startDate, endDate, description, current } = req.body;
-
-
+    const { company, title, startDate, endDate, description, current } =
+      req.body;
 
     // Validate and update fields
-    if (typeof company === 'string' && company.trim()) experience.company = company.trim();
-    if (typeof title === 'string' && title.trim()) experience.title = title.trim();
+    if (typeof company === 'string' && company.trim())
+      experience.company = company.trim();
+    if (typeof title === 'string' && title.trim())
+      experience.title = title.trim();
 
     if (startDate) {
       const parsedStart = new Date(startDate);
@@ -943,7 +949,6 @@ export const updateWorkExperience = async (
       }
       experience.startDate = parsedStart;
     }
-
 
     if (typeof current === 'boolean') {
       experience.current = current;
@@ -970,7 +975,8 @@ export const updateWorkExperience = async (
       }
     }
 
-    if (typeof description === 'string') experience.description = description.trim();
+    if (typeof description === 'string')
+      experience.description = description.trim();
 
     graduate.workExperiences[experienceIndex] = experience;
     graduate.markModified('workExperiences');
@@ -985,7 +991,6 @@ export const updateWorkExperience = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 export const deleteWorkExperience = async (
   req: Request,
@@ -1057,7 +1062,9 @@ export const getAssessmentQuestions = async (
       const parsed = Number.parseInt(rawCount, 10);
 
       if (Number.isNaN(parsed) || parsed <= 0 || parsed > 3) {
-        res.status(400).json({ message: 'count must be a positive integer up to 3' });
+        res
+          .status(400)
+          .json({ message: 'count must be a positive integer up to 3' });
 
         return;
       }
@@ -1070,7 +1077,7 @@ export const getAssessmentQuestions = async (
 
     const language =
       typeof req.query.language === 'string' &&
-        req.query.language.trim().length > 0
+      req.query.language.trim().length > 0
         ? req.query.language.trim()
         : undefined;
 
@@ -1087,18 +1094,21 @@ export const getAssessmentQuestions = async (
       language,
     });
 
-    // Store questions in assessmentData for later scoring
+    // Store questions in assessmentData for later scoring using atomic update
+    // This prevents VersionError when document is modified concurrently
+    const updateData: Record<string, unknown> = {
+      'assessmentData.currentQuestions': questions,
+    };
+
+    // Only set initial assessmentData if it doesn't exist
     if (!graduate.assessmentData) {
-      graduate.assessmentData = {
-        submittedAt: new Date(), // Temporary date, will be updated on submission
-        attempts: 0,
-        needsRetake: false,
-        questionSetVersion: 1,
-      };
+      updateData['assessmentData.submittedAt'] = new Date(); // Temporary date, will be updated on submission
+      updateData['assessmentData.attempts'] = 0;
+      updateData['assessmentData.needsRetake'] = false;
+      updateData['assessmentData.questionSetVersion'] = 1;
     }
-    // Store questions temporarily (we'll use them when calculating score)
-    graduate.assessmentData.currentQuestions = questions;
-    await graduate.save();
+
+    await Graduate.findByIdAndUpdate(graduate._id, { $set: updateData }).exec();
 
     res.json({
       questionSetVersion,
@@ -1150,7 +1160,7 @@ export const submitAssessment = async (
       res.status(400).json({
         message: 'Answers must be an array',
         received: typeof answers,
-        value: answers
+        value: answers,
       });
       return;
     }
@@ -1161,12 +1171,15 @@ export const submitAssessment = async (
     }
 
     // Filter out any empty or invalid answers
-    const validAnswers = answers.filter((answer): answer is string =>
-      typeof answer === 'string' && answer.trim().length > 0
+    const validAnswers = answers.filter(
+      (answer): answer is string =>
+        typeof answer === 'string' && answer.trim().length > 0
     );
 
     if (validAnswers.length === 0) {
-      res.status(400).json({ message: 'At least one valid answer is required' });
+      res
+        .status(400)
+        .json({ message: 'At least one valid answer is required' });
       return;
     }
 
@@ -1184,7 +1197,11 @@ export const submitAssessment = async (
     // Calculate score using valid answers
     let correctAnswers = 0;
     let score: number | undefined = undefined;
-    if (storedQuestions && Array.isArray(storedQuestions) && storedQuestions.length === validAnswers.length) {
+    if (
+      storedQuestions &&
+      Array.isArray(storedQuestions) &&
+      storedQuestions.length === validAnswers.length
+    ) {
       storedQuestions.forEach((q, index) => {
         if (validAnswers[index] === q.answer) {
           correctAnswers++;
@@ -1209,7 +1226,8 @@ export const submitAssessment = async (
     const rank =
       score !== undefined
         ? rankThresholds.find(
-            (threshold) => score >= threshold.minScore && score <= threshold.maxScore
+            (threshold) =>
+              score >= threshold.minScore && score <= threshold.maxScore
           )?.rank
         : undefined;
 
@@ -1277,22 +1295,22 @@ export const submitAssessment = async (
 
         const templateOverrides =
           feedbackTemplateOverrides &&
-            typeof feedbackTemplateOverrides === 'object'
+          typeof feedbackTemplateOverrides === 'object'
             ? Object.fromEntries(
-              Object.entries(
-                feedbackTemplateOverrides as Record<string, unknown>
+                Object.entries(
+                  feedbackTemplateOverrides as Record<string, unknown>
+                )
+                  .filter((entry): entry is [string, string] => {
+                    const [, value] = entry;
+                    return typeof value === 'string' && value.trim().length > 0;
+                  })
+                  .map(([key, value]) => [key, value.trim()])
               )
-                .filter((entry): entry is [string, string] => {
-                  const [, value] = entry;
-                  return typeof value === 'string' && value.trim().length > 0;
-                })
-                .map(([key, value]) => [key, value.trim()])
-            )
             : undefined;
 
         const language =
           typeof feedbackLanguage === 'string' &&
-            feedbackLanguage.trim().length >= 2
+          feedbackLanguage.trim().length >= 2
             ? feedbackLanguage.trim()
             : undefined;
 
@@ -1350,7 +1368,9 @@ export const submitAssessment = async (
 
     await graduate.save();
 
-    console.log(`✅ Assessment submitted successfully for user ${userId}. Score: ${score ?? 'N/A'}%, Passed: ${passed}`);
+    console.log(
+      `✅ Assessment submitted successfully for user ${userId}. Score: ${score ?? 'N/A'}%, Passed: ${passed}`
+    );
 
     queueGraduateMatching(graduate._id);
 
@@ -1407,7 +1427,9 @@ export const getAvailableJobs = async (
     const jobType =
       typeof req.query.jobType === 'string' ? req.query.jobType.trim() : '';
     const sortBy =
-      typeof req.query.sortBy === 'string' ? req.query.sortBy.trim() : 'createdAt';
+      typeof req.query.sortBy === 'string'
+        ? req.query.sortBy.trim()
+        : 'createdAt';
 
     const jobFilter: Record<string, unknown> = { status: 'active' };
 
@@ -1424,8 +1446,8 @@ export const getAvailableJobs = async (
     if (jobType && jobType !== 'all') {
       const jobTypeMap: Record<string, string> = {
         'full-time': 'Full time',
-        'contract': 'Contract',
-        'internship': 'Internship',
+        contract: 'Contract',
+        internship: 'Internship',
         'part-time': 'Part time',
       };
       const mappedJobType = jobTypeMap[jobType.toLowerCase()] || jobType;
@@ -1484,8 +1506,8 @@ export const getAvailableJobs = async (
     const jobsPayload = jobs.map((job) => {
       const companyName =
         job.companyId &&
-          typeof job.companyId === 'object' &&
-          'companyName' in job.companyId
+        typeof job.companyId === 'object' &&
+        'companyName' in job.companyId
           ? (job.companyId as { companyName: string }).companyName
           : undefined;
 
@@ -1551,7 +1573,8 @@ export const getMatches = async (
         jobId: mongoose.Types.ObjectId | PopulatedJobLean;
       }>({
         path: 'jobId',
-        select: 'title companyId location requirements salary status jobType description createdAt updatedAt',
+        select:
+          'title companyId location requirements salary status jobType description createdAt updatedAt',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -1577,15 +1600,17 @@ export const getMatches = async (
             typeof jobSource.companyId === 'object' &&
             'companyName' in jobSource.companyId
           ) {
-            companyName = (jobSource.companyId as { companyName: string }).companyName;
+            companyName = (jobSource.companyId as { companyName: string })
+              .companyName;
           }
 
           job = {
             id: jobSource._id.toHexString(),
             title: jobSource.title,
-            companyId: jobSource.companyId instanceof mongoose.Types.ObjectId
-              ? jobSource.companyId
-              : jobSource.companyId?._id || jobSource.companyId,
+            companyId:
+              jobSource.companyId instanceof mongoose.Types.ObjectId
+                ? jobSource.companyId
+                : jobSource.companyId?._id || jobSource.companyId,
             companyName,
             location: jobSource.location,
             jobType: jobSource.jobType,
@@ -1642,7 +1667,8 @@ export const getMatchById = async (
     })
       .populate<{ jobId: mongoose.Types.ObjectId | PopulatedJobLean }>({
         path: 'jobId',
-        select: 'title description descriptionHtml companyId location requirements salary status jobType directContact createdAt updatedAt',
+        select:
+          'title description descriptionHtml companyId location requirements salary status jobType directContact createdAt updatedAt',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -1697,7 +1723,11 @@ export const applyToJob = async (
     if (!graduate.location || graduate.location.trim() === '') {
       missingFields.push('location');
     }
-    if (!graduate.cv || !Array.isArray(graduate.cv) || graduate.cv.length === 0) {
+    if (
+      !graduate.cv ||
+      !Array.isArray(graduate.cv) ||
+      graduate.cv.length === 0
+    ) {
       missingFields.push('CV');
     }
 
@@ -1766,7 +1796,10 @@ export const applyToJob = async (
 
       for (const req of jobWithRequirements.requirements.extraRequirements) {
         const answer = extraAnswers[req.label];
-        if (req.required && (!answer || typeof answer !== 'string' || !answer.trim())) {
+        if (
+          req.required &&
+          (!answer || typeof answer !== 'string' || !answer.trim())
+        ) {
           res.status(400).json({
             message: `Required field "${req.label}" is missing or empty`,
           });
@@ -1788,7 +1821,8 @@ export const applyToJob = async (
         typeof coverLetter === 'string' ? coverLetter.trim() : undefined,
 
       // 🔥 KEY FIX HERE — REMOVE .trim(), STORE OBJECT DIRECTLY
-      resume: typeof resume === 'object' && resume !== null ? resume : undefined,
+      resume:
+        typeof resume === 'object' && resume !== null ? resume : undefined,
       extraAnswers: validatedExtraAnswers,
     });
 
@@ -1814,9 +1848,7 @@ export const applyToJob = async (
           jobId: jobId,
           jobTitle: job.title,
           companyId:
-            company?.userId?.toString() ||
-            company?._id?.toString() ||
-            '',
+            company?.userId?.toString() || company?._id?.toString() || '',
           companyName: company?.companyName || 'Company',
           graduateId: graduate.userId.toString(),
         });
@@ -1837,7 +1869,9 @@ export const applyToJob = async (
       // Notify all admin users if admin handles
       if (!jobDirectContact) {
         const User = (await import('../models/User.model')).default;
-        const adminUsers = await User.find({ role: 'admin' }).select('_id email').lean();
+        const adminUsers = await User.find({ role: 'admin' })
+          .select('_id email')
+          .lean();
 
         for (const admin of adminUsers) {
           await createNotification({
@@ -1893,8 +1927,6 @@ export const alreadyApplied = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
 
 export const getApplications = async (
   req: Request,
@@ -1956,8 +1988,7 @@ export const getInterviews = async (
       return;
     }
 
-    const pageParam =
-      typeof req.query.page === 'string' ? req.query.page : '1';
+    const pageParam = typeof req.query.page === 'string' ? req.query.page : '1';
     const limitParam =
       typeof req.query.limit === 'string' ? req.query.limit : '10';
 
@@ -2007,18 +2038,18 @@ export const getInterviews = async (
             {
               $add: [
                 '$scheduledAt',
-                { $multiply: ['$durationMinutes', 60 * 1000] }
-              ]
+                { $multiply: ['$durationMinutes', 60 * 1000] },
+              ],
             },
-            now
-          ]
-        }
+            now,
+          ],
+        },
       },
       {
         $set: {
           status: 'completed',
           endedAt: now,
-        }
+        },
       }
     );
 
@@ -2198,11 +2229,7 @@ export const updateApplicationStatus = async (
   }
 };
 
-
-export const addCV = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const addCV = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
     if (!userId) {
@@ -2230,7 +2257,6 @@ export const addCV = async (
       return;
     }
 
-
     const existingCV = graduate.cv?.find((cv) => cv.fileUrl === fileUrl.trim());
     if (existingCV) {
       res.status(409).json({
@@ -2239,13 +2265,11 @@ export const addCV = async (
       return;
     }
 
-
     if (onDisplay === true && graduate.cv) {
       graduate.cv.forEach((cv) => {
         cv.onDisplay = false;
       });
     }
-
 
     const newCV = {
       fileName: fileName.trim(),
@@ -2254,7 +2278,6 @@ export const addCV = async (
       publicId: typeof publicId === 'string' ? publicId.trim() : undefined,
       onDisplay: typeof onDisplay === 'boolean' ? onDisplay : false,
     };
-
 
     if (!graduate.cv) {
       graduate.cv = [];
@@ -2276,11 +2299,7 @@ export const addCV = async (
   }
 };
 
-
-export const deleteCV = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteCV = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
     if (!userId) {
@@ -2313,10 +2332,8 @@ export const deleteCV = async (
       return;
     }
 
-
     const deletedCV = graduate.cv[cvIndex];
     const publicId = deletedCV.publicId;
-
 
     graduate.cv.splice(cvIndex, 1);
     graduate.markModified('cv');
@@ -2331,7 +2348,6 @@ export const deleteCV = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 export const updateCVDisplay = async (
   req: Request,
@@ -2369,11 +2385,9 @@ export const updateCVDisplay = async (
       return;
     }
 
-
     graduate.cv.forEach((cv) => {
       cv.onDisplay = false;
     });
-
 
     graduate.cv[cvIndex].onDisplay = true;
 
@@ -2390,10 +2404,7 @@ export const updateCVDisplay = async (
   }
 };
 
-export const getCVs = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getCVs = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
     if (!userId) {

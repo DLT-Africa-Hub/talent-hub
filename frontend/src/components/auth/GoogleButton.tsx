@@ -9,8 +9,6 @@ type Props = {
 };
 
 export const GoogleLoginButton: React.FC<Props> = ({ login }) => {
- 
-
   return (
     <button
       onClick={() => login()}

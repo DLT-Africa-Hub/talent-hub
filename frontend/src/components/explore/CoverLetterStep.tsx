@@ -1,3 +1,4 @@
+import { useToastContext } from '@/context/ToastContext';
 import { useState, useEffect } from 'react';
 import { HiOutlineDocumentText, HiSparkles } from 'react-icons/hi2';
 
@@ -10,14 +11,15 @@ interface CoverLetterStepProps {
   initialIsAIGenerated?: boolean;
 }
 
-const CoverLetterStep: React.FC<CoverLetterStepProps> = ({ 
-  companyName, 
-  jobRole, 
-  onBack, 
+const CoverLetterStep: React.FC<CoverLetterStepProps> = ({
+  companyName,
+  jobRole,
+  onBack,
   onNext,
   initialCoverLetter,
-  initialIsAIGenerated 
+  initialIsAIGenerated,
 }) => {
+  const { error: showError } = useToastContext();
   const [coverLetter, setCoverLetter] = useState(initialCoverLetter || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [useAI, setUseAI] = useState(initialIsAIGenerated || false);
@@ -34,8 +36,8 @@ const CoverLetterStep: React.FC<CoverLetterStepProps> = ({
     setUseAI(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       const generatedLetter = `Dear Hiring Manager,
 
 I am writing to express my strong interest in the ${jobRole} position at ${companyName}. With my background in software development and passion for creating innovative solutions, I am excited about the opportunity to contribute to your team.
@@ -52,7 +54,7 @@ Sincerely,
       setCoverLetter(generatedLetter);
     } catch (error) {
       console.error('Error generating cover letter:', error);
-      alert('Failed to generate cover letter. Please try again.');
+      showError('Failed to generate cover letter. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -66,7 +68,10 @@ Sincerely,
 
   const isNextDisabled = !coverLetter.trim() || isGenerating;
   const charCount = coverLetter.length;
-  const wordCount = coverLetter.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const wordCount = coverLetter
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,10 +85,9 @@ Sincerely,
         </p>
       </div>
 
-      {/* AI Generation Option */}
-      <div className="p-4 rounded-[12px] bg-gradient-to-br from-button/5 to-button/10 border border-button/20">
+      <div className="p-4 rounded-[12px] bg-linear-to-br from-button/5 to-button/10 border border-button/20">
         <div className="flex items-start gap-3">
-          <div className="flex items-center justify-center w-[40px] h-[40px] rounded-[10px] bg-button/10 flex-shrink-0">
+          <div className="flex items-center justify-center w-[40px] h-[40px] rounded-[10px] bg-button/10 shrink-0">
             <HiSparkles className="text-[20px] text-button" />
           </div>
           <div className="flex-1">
@@ -91,7 +95,8 @@ Sincerely,
               AI-Powered Cover Letter
             </p>
             <p className="text-[12px] text-[#1C1C1CBF] mb-3">
-              Let AI generate a professional cover letter tailored to this position. You can edit it afterwards.
+              Let AI generate a professional cover letter tailored to this
+              position. You can edit it afterwards.
             </p>
             <button
               type="button"
@@ -121,9 +126,9 @@ Sincerely,
 
       {/* Divider */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-[1px] bg-fade" />
+        <div className="flex-1 h-px bg-fade" />
         <span className="text-[14px] text-[#1C1C1CBF]">OR</span>
-        <div className="flex-1 h-[1px] bg-fade" />
+        <div className="flex-1 h-px bg-fade" />
       </div>
 
       {/* Manual Input */}
@@ -136,7 +141,7 @@ Sincerely,
             {wordCount} words • {charCount} characters
           </div>
         </div>
-        
+
         <div className="relative">
           <textarea
             value={coverLetter}
@@ -188,7 +193,8 @@ I am writing to express my interest in the position at your company...
       {charCount > 3000 && (
         <div className="p-3 rounded-[10px] bg-amber-50 border border-amber-200">
           <p className="text-[12px] text-amber-800">
-            ⚠️ Your cover letter is quite long. Consider keeping it under 3000 characters for better readability.
+            ⚠️ Your cover letter is quite long. Consider keeping it under 3000
+            characters for better readability.
           </p>
         </div>
       )}

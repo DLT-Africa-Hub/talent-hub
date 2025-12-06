@@ -11,7 +11,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, ingestAuthPayload } = useAuth(); 
+  const { register, ingestAuthPayload } = useAuth();
   const navigate = useNavigate();
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
@@ -27,9 +27,6 @@ const Register = () => {
           }
         );
 
-    
-
-       
         ingestAuthPayload(res.data);
 
         if (role === 'graduate') {
@@ -38,7 +35,10 @@ const Register = () => {
           navigate('/company/onboarding');
         }
       } catch (err: unknown) {
-        const error = err as { message?: string; response?: { data?: { message?: string } } };
+        const error = err as {
+          message?: string;
+          response?: { data?: { message?: string } };
+        };
         console.error(error);
         setError('Google login failed');
       }
@@ -73,9 +73,16 @@ const Register = () => {
       setEmail('');
       setPassword('');
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       console.error(error);
-      setError(error.response?.data?.message || error.message || 'Registration failed. Please try again.');
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          'Registration failed. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -106,15 +113,17 @@ const Register = () => {
             placeholder:
               role === 'company' ? 'company@example.com' : 'john@example.com',
             value: email,
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+              setEmail(e.target.value),
           },
           {
             label: 'Password',
             name: 'password',
             type: 'password',
-            placeholder: 'password',
+            placeholder: '8 characters or more',
             value: password,
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value),
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+              setPassword(e.target.value),
           },
         ]}
         error={error}

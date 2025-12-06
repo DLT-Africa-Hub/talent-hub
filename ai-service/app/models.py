@@ -16,4 +16,3 @@ class JobRequirements(BaseModel):
     skills: List[str]
     education: Optional[str] = None
     experience: Optional[str] = None
-

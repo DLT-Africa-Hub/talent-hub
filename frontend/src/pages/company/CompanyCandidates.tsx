@@ -1,6 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useCompanyApplications,
+  useCompanyMatches,
+  extractApplications,
+  extractMatches,
+} from '../../hooks/useCompanyData';
 import { BsSearch } from 'react-icons/bs';
 import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
@@ -8,14 +14,11 @@ import ScheduleInterviewModal from '../../components/company/ScheduleInterviewMo
 import { CandidateProfile, CandidateStatus } from '../../types/candidates';
 import { companyApi } from '../../api/company';
 import { ApiError } from '../../types/api';
+import { candidateStatusFilters } from '../../utils/job.utils';
 import {
-  candidateStatusFilters,
-  mapApplicationStatusToCandidateStatus,
-  formatExperience,
-  formatLocation,
-  getCandidateRank,
-  DEFAULT_PROFILE_IMAGE,
-} from '../../utils/job.utils';
+  transformApplication,
+  transformMatch,
+} from '../../utils/candidate.utils';
 import { LoadingSpinner } from '../../index';
 import { EmptyState } from '../../components/ui';
 import { MdFilterList } from 'react-icons/md';
@@ -30,201 +33,183 @@ const CompanyCandidates = () => {
     'all'
   );
   const [selectedJobId, setSelectedJobId] = useState<string | 'all'>('all');
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMultiSlotModalOpen, setIsMultiSlotModalOpen] = useState(false);
-  const [multiSlotCandidate, setMultiSlotCandidate] = useState<CandidateProfile | null>(null);
+  const [multiSlotCandidate, setMultiSlotCandidate] =
+    useState<CandidateProfile | null>(null);
 
-  // Transform API application to CandidateProfile using useCallback
-  const transformApplication = useCallback(
-    (app: ApiApplication, index: number): CandidateProfile => {
-      const graduate = app.graduateId || {};
-      const job = app.jobId || {};
-    
-
-      const candidateStatus = mapApplicationStatusToCandidateStatus(
-        app.status || ''
-      );
-
-      const fullName = `${graduate.firstName || ''} ${
-        graduate.lastName || ''
-      }`.trim();
-
-      return {
-        id: app._id || index,
-        applicationId: app._id?.toString(),
-        jobId: job._id?.toString() || job.id?.toString(),
-        jobTitle: job.title,
-        name: fullName || 'Unknown Candidate',
-        role: job.title || graduate.position || 'Developer',
-        status: candidateStatus,
-        rank: getCandidateRank(graduate.rank),
-        statusLabel:
-          candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
-        experience: formatExperience(graduate.expYears || 0),
-        location: formatLocation(job.location || graduate.location),
-        skills: (graduate.skills || []).slice(0, 3),
-        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
-        summary: graduate.summary,
-        cv: typeof app.resume === 'string' ? app.resume : app.resume?.fileUrl,
-        matchPercentage: app.matchId?.score
-          ? app.matchId.score > 1
-            ? Math.min(100, Math.round(app.matchId.score))
-            : Math.min(100, Math.round(app.matchId.score * 100))
-          : undefined,
-        jobType: job.jobType,
-        salary: job.salary,
-        salaryPerAnnum: graduate.salaryPerAnnum,
-        directContact: job.directContact !== false, // Default to true
-      };
-    },
+  const transformApplicationMemo = useCallback(
+    (app: ApiApplication, index: number) => transformApplication(app, index),
     []
   );
 
-  
-
-  // Transform API match to CandidateProfile using useCallback
-  const transformMatch = useCallback(
-    (match: ApiMatch, index: number): CandidateProfile => {
-      const graduate = match.graduateId || {};
-      const job = match.jobId || {};
-
-      const fullName = `${graduate.firstName || ''} ${
-        graduate.lastName || ''
-      }`.trim();
-
-      const matchScore = match.score
-        ? match.score > 1
-          ? Math.min(100, Math.round(match.score))
-          : Math.min(100, Math.round(match.score * 100))
-        : 0;
-
-      return {
-        id: match._id || `match-${index}`,
-        jobId: job._id?.toString() || job.id?.toString(),
-        jobTitle: job.title,
-        name: fullName || 'Unknown Candidate',
-        role: job.title || graduate.position || 'Developer',
-        status: 'matched',
-        rank: getCandidateRank(graduate.rank),
-        statusLabel: 'Matched',
-        experience: formatExperience(graduate.expYears || 0),
-        location: formatLocation(job.location || graduate.location),
-        skills: (graduate.skills || []).slice(0, 3),
-        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
-        summary: graduate.summary,
-        cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
-        matchPercentage: matchScore,
-        jobType: job.jobType,
-        salary: job.salary,
-        salaryPerAnnum: graduate.salaryPerAnnum,
-        directContact: job.directContact !== false, // Default to true
-      };
-    },
+  const transformMatchMemo = useCallback(
+    (match: ApiMatch, index: number) => transformMatch(match, index),
     []
   );
 
-  // Fetch applications using React Query
+  // Map candidate status to backend application status
+  const getBackendStatus = (
+    candidateStatus: CandidateStatus | 'all'
+  ): string | undefined => {
+    if (candidateStatus === 'all') return undefined;
+    if (candidateStatus === 'hired') return 'hired';
+    if (candidateStatus === 'matched') return undefined;
+    if (candidateStatus === 'applied') return 'pending';
+    if (candidateStatus === 'pending') return undefined;
+    return undefined;
+  };
+
+  // Fetch applications using custom hook with backend filtering
   const {
     data: applicationsResponse,
     isLoading: loadingApplications,
     error: applicationsError,
-  } = useQuery({
-    queryKey: ['companyApplications'],
-    queryFn: async () => {
-      const response = await companyApi.getApplications({
-        page: 1,
-        limit: 100,
-      });
-      return response;
-    },
+  } = useCompanyApplications({
+    page: 1,
+    limit: 100,
+    status: getBackendStatus(activeStatus),
+    jobId: selectedJobId !== 'all' ? selectedJobId : undefined,
+    search: searchQuery.trim() || undefined,
+    refetchInterval: 10000,
   });
 
-  // Fetch matches using React Query
+  // Fetch matches using custom hook with backend filtering
+  // Don't fetch matches when filtering by 'hired' or 'pending' - these only come from applications
+  const shouldFetchMatches =
+    activeStatus !== 'hired' && activeStatus !== 'pending';
   const {
     data: matchesResponse,
     isLoading: loadingMatches,
     error: matchesError,
-  } = useQuery({
-    queryKey: ['companyMatches'],
-    queryFn: async () => {
-      const response = await companyApi.getAllMatches({
-        page: 1,
-        limit: 100,
-      });
-      return response;
-    },
+  } = useCompanyMatches({
+    page: 1,
+    limit: 100,
+    search: searchQuery.trim() || undefined,
+    enabled: shouldFetchMatches,
   });
 
   // Extract applications array from response
-  const applicationsData = useMemo(() => {
-    if (!applicationsResponse) return [];
-    // Handle both cases: direct array or object with applications property
-    if (Array.isArray(applicationsResponse)) {
-      return applicationsResponse;
-    }
-    if (
-      applicationsResponse?.applications &&
-      Array.isArray(applicationsResponse.applications)
-    ) {
-      return applicationsResponse.applications;
-    }
-    return [];
-  }, [applicationsResponse]);
+  const applicationsData = useMemo(
+    () => extractApplications(applicationsResponse),
+    [applicationsResponse]
+  );
 
   // Extract matches array from response
-  const matchesData = useMemo(() => {
-    if (!matchesResponse) return [];
-    if (Array.isArray(matchesResponse)) {
-      return matchesResponse;
-    }
-    if (
-      matchesResponse?.matches &&
-      Array.isArray(matchesResponse.matches)
-    ) {
-      return matchesResponse.matches;
-    }
-    return [];
-  }, [matchesResponse]);
+  const matchesData = useMemo(
+    () => extractMatches(matchesResponse),
+    [matchesResponse]
+  );
 
   // Transform applications to candidates using useMemo
   const applicationCandidates = useMemo(() => {
     if (!applicationsData || !Array.isArray(applicationsData)) return [];
-    console.log(applicationsData)
     return applicationsData.map((app: ApiApplication, index: number) =>
-      transformApplication(app, index)
+      transformApplicationMemo(app, index)
     );
-  }, [applicationsData, transformApplication]);
+  }, [applicationsData, transformApplicationMemo]);
 
   // Transform matches to candidates using useMemo
   const matchCandidates = useMemo(() => {
     if (!matchesData || !Array.isArray(matchesData)) return [];
     return matchesData.map((match: ApiMatch, index: number) =>
-      transformMatch(match, index)
+      transformMatchMemo(match, index)
     );
-  }, [matchesData, transformMatch]);
+  }, [matchesData, transformMatchMemo]);
 
-  // Combine candidates, avoiding duplicates (prefer applications over matches)
+  // Combine candidates, avoiding duplicates (merge matches with applications intelligently)
   const candidates = useMemo(() => {
-    const candidateMap = new Map<string | number, CandidateProfile>();
-    
-    // Add matches first
-    matchCandidates.forEach((candidate) => {
-      const key = typeof candidate.id === 'string' && candidate.id.startsWith('match-')
-        ? `match-${candidate.name}-${candidate.role}`
-        : candidate.id;
-      if (!candidateMap.has(key)) {
-        candidateMap.set(key, candidate);
+    // When filtering by 'hired' or 'pending', only use applications (no matches)
+    const shouldIncludeMatches =
+      activeStatus !== 'hired' && activeStatus !== 'pending';
+
+    // Use a composite key: jobId + name to identify unique candidate-job combinations
+    const candidateMap = new Map<
+      string,
+      CandidateProfile & { hasMatch?: boolean; hasApplication?: boolean }
+    >();
+    const matchMap = new Map<string, CandidateProfile>();
+
+    // Store matches first for later merging (only if we should include matches)
+    if (shouldIncludeMatches) {
+      matchCandidates.forEach((candidate) => {
+        const uniqueKey =
+          candidate.jobId && candidate.name
+            ? `${candidate.jobId}-${candidate.name}`
+            : String(candidate.id);
+        matchMap.set(uniqueKey, candidate);
+      });
+    }
+
+    // Process applications and merge with matches if available
+    applicationCandidates.forEach((candidate) => {
+      const uniqueKey =
+        candidate.jobId && candidate.name
+          ? `${candidate.jobId}-${candidate.name}`
+          : String(candidate.id);
+
+      // Check if there's a matching match for this candidate-job combination
+      const matchingMatch = shouldIncludeMatches
+        ? matchMap.get(uniqueKey)
+        : undefined;
+
+      if (matchingMatch) {
+        // Merge: use application data but prioritize "matched" status when there's a match
+        // If there's a match, show "matched" unless application has progressed to "hired" or "pending" (offer sent)
+        // Status hierarchy: applied < matched < pending < hired
+        const finalStatus =
+          candidate.status === 'hired' || candidate.status === 'pending'
+            ? candidate.status // Keep hired/pending if application has progressed that far
+            : 'matched'; // Otherwise show as "matched" when there's a match available
+
+        const mergedCandidate: CandidateProfile & {
+          hasMatch?: boolean;
+          hasApplication?: boolean;
+        } = {
+          ...candidate, // Use application data as base (has more complete info)
+          status: finalStatus,
+          statusLabel:
+            finalStatus === 'matched' ? 'Matched' : candidate.statusLabel,
+          // Preserve match percentage from match if not in application
+          matchPercentage:
+            candidate.matchPercentage || matchingMatch.matchPercentage,
+          // Track that this candidate has both match and application
+          hasMatch: true,
+          hasApplication: true,
+        };
+        candidateMap.set(uniqueKey, mergedCandidate);
+      } else {
+        // No match, just use the application
+        candidateMap.set(uniqueKey, {
+          ...candidate,
+          hasApplication: true,
+          hasMatch: false,
+        });
       }
     });
 
-    // Add applications (they take precedence)
-    applicationCandidates.forEach((candidate) => {
-      candidateMap.set(candidate.id, candidate);
-    });
+    // Add matches that don't have corresponding applications (only if we should include matches)
+    if (shouldIncludeMatches) {
+      matchCandidates.forEach((candidate) => {
+        const uniqueKey =
+          candidate.jobId && candidate.name
+            ? `${candidate.jobId}-${candidate.name}`
+            : String(candidate.id);
+
+        if (!candidateMap.has(uniqueKey)) {
+          candidateMap.set(uniqueKey, {
+            ...candidate,
+            hasMatch: true,
+            hasApplication: false,
+          });
+        }
+      });
+    }
 
     return Array.from(candidateMap.values());
-  }, [applicationCandidates, matchCandidates]);
+  }, [applicationCandidates, matchCandidates, activeStatus]);
 
   // Extract error message
   const error = useMemo(() => {
@@ -240,7 +225,8 @@ const CompanyCandidates = () => {
 
   const loading = loadingApplications || loadingMatches;
 
-  // Get unique jobs from candidates
+  // Get unique jobs from all candidates (fetch from a separate query if needed, or use current data)
+  // For now, we'll get jobs from the fetched candidates
   const availableJobs = useMemo(() => {
     const jobMap = new Map<string, { id: string; title: string }>();
     candidates.forEach((candidate) => {
@@ -256,41 +242,61 @@ const CompanyCandidates = () => {
     return Array.from(jobMap.values());
   }, [candidates]);
 
-
+  // Filter candidates by status only (search and jobId are handled by backend)
+  // Note: 'matched' and 'pending' statuses need client-side filtering due to complex mapping
   const filteredCandidates = useMemo(() => {
     let filtered = candidates;
 
-    // Filter by job
-    if (selectedJobId !== 'all') {
-      filtered = filtered.filter(
-        (candidate: CandidateProfile) => candidate.jobId === selectedJobId
-      );
-    }
-
-    // Filter by status
+    // Filter by status (only for complex mappings that backend doesn't handle)
     if (activeStatus !== 'all') {
-      filtered = filtered.filter(
-        (candidate: CandidateProfile) => candidate.status === activeStatus
-      );
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (candidate: CandidateProfile) =>
-          candidate.name.toLowerCase().includes(query) ||
-          candidate.role.toLowerCase().includes(query) ||
-          candidate.skills.some((skill: string) =>
-            skill.toLowerCase().includes(query)
-          ) ||
-          candidate.location.toLowerCase().includes(query) ||
-          candidate.jobTitle?.toLowerCase().includes(query)
-      );
+      if (activeStatus === 'matched') {
+        // Show candidates that have a match (regardless of whether they also have an application)
+        filtered = filtered.filter(
+          (
+            candidate
+          ): candidate is CandidateProfile & {
+            hasMatch: boolean;
+            hasApplication?: boolean;
+          } => {
+            const extended = candidate as CandidateProfile & {
+              hasMatch?: boolean;
+              hasApplication?: boolean;
+            };
+            return extended.hasMatch === true;
+          }
+        );
+      } else if (activeStatus === 'pending') {
+        // 'pending' is a special case (offer_sent), filter client-side
+        filtered = filtered.filter(
+          (candidate: CandidateProfile) => candidate.status === 'pending'
+        );
+      } else if (activeStatus === 'applied') {
+        // Show candidates that have an application (regardless of whether they also have a match)
+        filtered = filtered.filter(
+          (
+            candidate
+          ): candidate is CandidateProfile & {
+            hasMatch?: boolean;
+            hasApplication: boolean;
+          } => {
+            const extended = candidate as CandidateProfile & {
+              hasMatch?: boolean;
+              hasApplication?: boolean;
+            };
+            return extended.hasApplication === true;
+          }
+        );
+      } else if (activeStatus === 'hired') {
+        // 'hired' is filtered by backend, but ensure we only show candidates with status='hired'
+        // This prevents matches from showing up when filtering by hired
+        filtered = filtered.filter(
+          (candidate: CandidateProfile) => candidate.status === 'hired'
+        );
+      }
     }
 
     return filtered;
-  }, [candidates, selectedJobId, activeStatus, searchQuery]);
+  }, [candidates, activeStatus]);
 
   const handlePreview = (candidate: CandidateProfile) => {
     setSelectedCandidate(candidate);
@@ -302,26 +308,21 @@ const CompanyCandidates = () => {
     setSelectedCandidate(null);
   };
 
- 
-
   useEffect(() => {
-    if (!id) return; 
-    if (candidates.length === 0) return; 
-  
-    const candidate = candidates.find(c => c.id?.toString() === id);
-  
+    if (!id) return;
+    if (candidates.length === 0) return;
+
+    const candidate = candidates.find((c) => c.id?.toString() === id);
+
     if (candidate) {
       setSelectedCandidate(candidate);
       setIsModalOpen(true);
-  
-     
+
       setTimeout(() => {
-        navigate("/candidates", { replace: true });
-      }, 300); 
+        navigate('/candidates', { replace: true });
+      }, 300);
     }
   }, [id, candidates, navigate]);
-  
-  
 
   const handleChat = (candidate: CandidateProfile) => {
     // TODO: Navigate to chat
@@ -395,6 +396,9 @@ const CompanyCandidates = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
       queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+      // Also invalidate job-specific queries used in the CandidatesListModal
+      queryClient.invalidateQueries({ queryKey: ['jobApplicants'] });
+      queryClient.invalidateQueries({ queryKey: ['jobMatches'] });
       // If status is 'accepted', navigate to messages
       if (variables.status === 'accepted') {
         navigate('/messages');
@@ -480,22 +484,19 @@ const CompanyCandidates = () => {
       console.warn('No resume available for candidate', candidate.id);
       return;
     }
-  
+
     // Handle both string URL and object with fileUrl property
-    const url = typeof resume === 'string' 
-      ? resume 
-      : (resume as any)?.fileUrl || resume;
-    
+    const url =
+      typeof resume === 'string' ? resume : (resume as any)?.fileUrl || resume;
+
     if (!url) {
       console.warn('Resume missing URL', resume);
       return;
     }
-  
+
     // Open the resume URL in a new tab
     window.open(url, '_blank', 'noopener,noreferrer');
   };
-  
-  
 
   return (
     <div className="relative py-[24px] px-[24px]">
@@ -619,7 +620,7 @@ const CompanyCandidates = () => {
                       (c) => c.jobId === job.id
                     );
                     if (jobCandidates.length === 0) return null;
-                    
+
                     return (
                       <div key={job.id} className="flex flex-col gap-[16px]">
                         <div className="flex items-center gap-[12px] pb-[8px] border-b border-fade">
@@ -627,7 +628,10 @@ const CompanyCandidates = () => {
                             {job.title}
                           </h2>
                           <span className="px-[12px] py-[4px] rounded-full bg-[#F8F8F8] text-[12px] font-medium text-[#1C1C1C80]">
-                            {jobCandidates.length} {jobCandidates.length === 1 ? 'candidate' : 'candidates'}
+                            {jobCandidates.length}{' '}
+                            {jobCandidates.length === 1
+                              ? 'candidate'
+                              : 'candidates'}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -648,7 +652,7 @@ const CompanyCandidates = () => {
                       (c) => !c.jobId
                     );
                     if (noJobCandidates.length === 0) return null;
-                    
+
                     return (
                       <div className="flex flex-col gap-[16px]">
                         <div className="flex items-center gap-[12px] pb-[8px] border-b border-fade">
@@ -656,17 +660,22 @@ const CompanyCandidates = () => {
                             Other Candidates
                           </h2>
                           <span className="px-[12px] py-[4px] rounded-full bg-[#F8F8F8] text-[12px] font-medium text-[#1C1C1C80]">
-                            {noJobCandidates.length} {noJobCandidates.length === 1 ? 'candidate' : 'candidates'}
+                            {noJobCandidates.length}{' '}
+                            {noJobCandidates.length === 1
+                              ? 'candidate'
+                              : 'candidates'}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                          {noJobCandidates.map((candidate: CandidateProfile) => (
-                            <CandidateCard
-                              key={candidate.id}
-                              candidate={candidate}
-                              onPreview={handlePreview}
-                            />
-                          ))}
+                          {noJobCandidates.map(
+                            (candidate: CandidateProfile) => (
+                              <CandidateCard
+                                key={candidate.id}
+                                candidate={candidate}
+                                onPreview={handlePreview}
+                              />
+                            )
+                          )}
                         </div>
                       </div>
                     );
@@ -687,12 +696,16 @@ const CompanyCandidates = () => {
             ) : (
               <EmptyState
                 title={
-                  searchQuery || activeStatus !== 'all' || selectedJobId !== 'all'
+                  searchQuery ||
+                  activeStatus !== 'all' ||
+                  selectedJobId !== 'all'
                     ? 'No candidates found'
                     : 'No candidates yet'
                 }
                 description={
-                  searchQuery || activeStatus !== 'all' || selectedJobId !== 'all'
+                  searchQuery ||
+                  activeStatus !== 'all' ||
+                  selectedJobId !== 'all'
                     ? 'Try adjusting your search or filters to discover more candidates.'
                     : 'Candidates will appear here once they apply to your job postings.'
                 }
@@ -709,27 +722,40 @@ const CompanyCandidates = () => {
         onChat={handleChat}
         onViewCV={handleViewCV}
         // Only pass schedule/accept/reject handlers for candidates with applicationId
-        onScheduleInterview={selectedCandidate?.applicationId ? handleScheduleInterview : undefined}
-        onSuggestTimeSlots={selectedCandidate?.applicationId ? handleSuggestTimeSlots : undefined}
+        onScheduleInterview={
+          selectedCandidate?.applicationId ? handleScheduleInterview : undefined
+        }
+        onSuggestTimeSlots={
+          selectedCandidate?.applicationId ? handleSuggestTimeSlots : undefined
+        }
         onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
         onReject={selectedCandidate?.applicationId ? handleReject : undefined}
-        isAccepting={!!(
-          updateApplicationStatusMutation.isPending &&
-          selectedCandidate?.applicationId &&
-          updateApplicationStatusMutation.variables?.status === 'accepted' &&
-          updateApplicationStatusMutation.variables?.applicationId === selectedCandidate.applicationId
-        )}
-        isRejecting={!!(
-          updateApplicationStatusMutation.isPending &&
-          selectedCandidate?.applicationId &&
-          updateApplicationStatusMutation.variables?.status === 'rejected' &&
-          updateApplicationStatusMutation.variables?.applicationId === selectedCandidate.applicationId
-        )}
-        isSchedulingInterview={!!(
-          scheduleInterviewMutation.isPending &&
-          selectedCandidate?.applicationId &&
-          scheduleInterviewMutation.variables?.applicationId === selectedCandidate.applicationId
-        )}
+        isAccepting={
+          !!(
+            updateApplicationStatusMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            updateApplicationStatusMutation.variables?.status === 'accepted' &&
+            updateApplicationStatusMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+        isRejecting={
+          !!(
+            updateApplicationStatusMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            updateApplicationStatusMutation.variables?.status === 'rejected' &&
+            updateApplicationStatusMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+        isSchedulingInterview={
+          !!(
+            scheduleInterviewMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            scheduleInterviewMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
       />
 
       {/* Multi-Slot Scheduling Modal */}

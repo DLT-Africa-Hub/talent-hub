@@ -20,11 +20,11 @@ import {
   hashToken,
 } from '../utils/security.utils';
 
-
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI =
-  process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:5174'}/api/v1/auth/google/callback`;
+  process.env.GOOGLE_REDIRECT_URI ||
+  `${process.env.APP_URL || 'http://localhost:5174'}/api/v1/auth/google/callback`;
 
 const googleClientForVerify = new OAuth2Client(GOOGLE_CLIENT_ID);
 const googleClientForServerFlow = new OAuth2Client({
@@ -41,7 +41,6 @@ type GoogleProfile = {
   familyName?: string;
   picture?: string;
 };
-
 
 const DEFAULT_REFRESH_TOKEN_DAYS = 7;
 const DEFAULT_EMAIL_VERIFICATION_DAYS = 2;
@@ -304,7 +303,6 @@ const findOrCreateUserFromGoogle = async (
   profile: GoogleProfile,
   role?: 'graduate' | 'company' | 'admin'
 ): Promise<UserDocument> => {
-
   const defaultRole = 'graduate';
   const resolvedRole = role ?? defaultRole;
 
@@ -324,7 +322,6 @@ const findOrCreateUserFromGoogle = async (
     });
 
     await user.save();
-
   } else {
     let updated = false;
 
@@ -345,8 +342,6 @@ const findOrCreateUserFromGoogle = async (
 
   return user;
 };
-
-
 
 /**
  * Register a new user (graduate, company, or admin)
@@ -724,14 +719,14 @@ export const verifyEmail = async (
     await consumeToken(tokenDoc);
     await invalidateExistingTokens(user._id, TOKEN_TYPES.EMAIL_VERIFICATION);
 
-    res.json({ 
+    res.json({
       message: 'Email verified successfully',
       user: {
         id: user._id.toString(),
         email: user.email,
         role: user.role,
         emailVerified: user.emailVerified,
-      }
+      },
     });
   } catch (error) {
     console.error('Verify email error:', error);
@@ -1029,7 +1024,6 @@ export const googleAuthCode = async (
   }
 };
 
-
 export const getGoogleAuthUrl = async (
   _req: Request,
   res: Response
@@ -1048,7 +1042,6 @@ export const getGoogleAuthUrl = async (
   }
 };
 
-
 export const googleOAuthCallback = async (
   req: Request,
   res: Response
@@ -1063,7 +1056,6 @@ export const googleOAuthCallback = async (
     // Exchange code for tokens
     const tokenResponse = await googleClientForServerFlow.getToken(code);
     const tokens = tokenResponse.tokens;
-
 
     const idToken = tokens.id_token;
     if (!idToken) {
@@ -1091,10 +1083,8 @@ export const googleOAuthCallback = async (
       familyName: payload.family_name,
     };
 
-
     const defaultRole = 'graduate';
     const user = await findOrCreateUserFromGoogle(profile, defaultRole);
-
 
     const { refreshToken } = await createSession({
       userId: user._id,

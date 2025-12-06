@@ -1,23 +1,21 @@
-import {
-  Menu,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import DropdownMenu,{
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-  } from "../ui/dropdown-menu";
-import { RiHomeSmile2Line } from "react-icons/ri";
+import { Menu } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import DropdownMenu, {
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '../ui/dropdown-menu';
+import { RiHomeSmile2Line } from 'react-icons/ri';
 
 const FloatingNavbar = () => {
   const navigationItems = [
-    { name: "Jobs", href: "/jobs" },
-    { name: "About", href: "/about" },
-    { name: "Torem", href: "/torem" },
-    { name: "Lorem", href: "/lorem" },
-    { name: "Sorem", href: "/sorem" },
+    { name: 'Jobs', href: '/jobs' },
+    { name: 'About', href: '/about' },
+    { name: 'Torem', href: '/torem' },
+    { name: 'Lorem', href: '/lorem' },
+    { name: 'Sorem', href: '/sorem' },
   ];
 
   return (
@@ -28,7 +26,7 @@ const FloatingNavbar = () => {
             {/* Logo */}
             <div className="flex items-center space-x-3">
               <div className="relative flex items-center text-[24px] gap-[5px]">
-                <RiHomeSmile2Line className="text-fade"/>
+                <RiHomeSmile2Line className="text-fade" />
                 <p className="text-[#1C1C1C] font-medium">Talent Match</p>
               </div>
             </div>
@@ -51,11 +49,10 @@ const FloatingNavbar = () => {
             {/* Icons / Mobile Menu Trigger */}
             <div className="flex items-center space-x-3">
               <Link to="/register">
-              <button className="hidden py-[13px] px-[54px] text-[#1C1C1C] bg-[#ADED9A] lg:flex rounded-xl">
-                Register
-              </button>
+                <button className="hidden py-[13px] px-[54px] text-[#1C1C1C] bg-[#ADED9A] lg:flex rounded-xl">
+                  Register
+                </button>
               </Link>
-            
 
               {/* Mobile: Dropdown trigger */}
               <div className="lg:hidden">
@@ -70,26 +67,36 @@ const FloatingNavbar = () => {
                   </DropdownMenuTrigger>
 
                   <DropdownMenuContent className="w-56 bg-[#00000033]">
-                    <DropdownMenuLabel className="">Navigation</DropdownMenuLabel>
+                    <DropdownMenuLabel className="">
+                      Navigation
+                    </DropdownMenuLabel>
 
                     {navigationItems.map((item) => (
                       <DropdownMenuItem key={item.name}>
-                        <Link className="w-full" to={item.href}> {item.name}</Link>
-                       
+                        <Link className="w-full" to={item.href}>
+                          {' '}
+                          {item.name}
+                        </Link>
                       </DropdownMenuItem>
                     ))}
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem><Link className="w-full" to="/login">Login</Link></DropdownMenuItem>
-                    <DropdownMenuItem><Link className="w-full" to="/logout">Logout</Link></DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Link className="w-full" to="/login">
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Link className="w-full" to="/logout">
+                        Logout
+                      </Link>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
           </div>
-
-      
         </div>
       </div>
     </nav>

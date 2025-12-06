@@ -128,7 +128,10 @@ const Login = () => {
       await handlePasswordLogin();
     } catch (err: unknown) {
       console.error('Login error:', err);
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       setError(
         error.response?.data?.message || 'Login failed. Please try again.'
       );

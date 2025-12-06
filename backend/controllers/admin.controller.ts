@@ -521,9 +521,10 @@ export const getRankStatistics = async (
       (acc, item) => {
         acc[item._id] = {
           count: item.count,
-          percentage: totalWithRank > 0 
-            ? Math.round((item.count / totalWithRank) * 100) 
-            : 0,
+          percentage:
+            totalWithRank > 0
+              ? Math.round((item.count / totalWithRank) * 100)
+              : 0,
         };
         return acc;
       },

@@ -24,7 +24,9 @@ const LoadingSpinner = ({
   };
 
   const spinner = (
-    <div className={`inline-block animate-spin rounded-full border-solid border-button border-r-transparent ${sizeClasses[size]}`} />
+    <div
+      className={`inline-block animate-spin rounded-full border-solid border-button border-r-transparent ${sizeClasses[size]}`}
+    />
   );
 
   const content = (
@@ -50,4 +52,3 @@ const LoadingSpinner = ({
 };
 
 export default LoadingSpinner;
-

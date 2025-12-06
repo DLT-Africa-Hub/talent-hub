@@ -23,9 +23,7 @@ const EmailVerificationGuard: React.FC<EmailVerificationGuardProps> = ({
     return <>{children}</>;
   }
 
-
   return <>{children}</>;
 };
 
 export default EmailVerificationGuard;
-

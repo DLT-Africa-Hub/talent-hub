@@ -20,7 +20,7 @@ jobs:
         run: |
           cd infrastructure
           echo "MONGODB_URI=mongodb://admin:password@mongodb:27017/talent-hub?authSource=admin" > .env.test
-          echo "JWT_SECRET=test-secret" >> .env.test
+          echo "JWT_ACCESS_SECRET=test-jwt-secret-for-docker-compose-testing-min-32-chars-required!!" >> .env.test
           echo "OPENAI_API_KEY=test-key" >> .env.test
           echo "AI_SERVICE_URL=http://ai-service:8000" >> .env.test
           echo "CORS_ORIGIN=http://localhost:5173" >> .env.test

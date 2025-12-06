@@ -33,7 +33,8 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
     // Handle formats like "3-5 years", "5-7 years", "7-10 years", "10+ years"
     if (yearsStr.includes('3&minus;5') || yearsStr.includes('3-5')) return 4;
     if (yearsStr.includes('5&minus;7') || yearsStr.includes('5-7')) return 6;
-    if (yearsStr.includes('7&minus;10') || yearsStr.includes('7-10')) return 8.5;
+    if (yearsStr.includes('7&minus;10') || yearsStr.includes('7-10'))
+      return 8.5;
     if (yearsStr.includes('10+')) return 10;
     // Try to parse as number, ensure minimum of 3
     const num = parseFloat(yearsStr);
@@ -47,7 +48,9 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
     try {
       // Transform form data to backend format
       const position = rolesToPosition(form.roles || []) || 'other';
-      const expYears = parseYearsOfExperience(form.yearsOfExperience || '3&minus;5 years');
+      const expYears = parseYearsOfExperience(
+        form.yearsOfExperience || '3&minus;5 years'
+      );
       // Backend will parse the phone number string (it accepts both string and number)
       const phoneNumber = form.phoneNo || '';
 
@@ -59,15 +62,13 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         expYears: expYears,
         position: position,
         skills: selectedSkills,
-        cv:form.cv,
-        summary:form.summary,
+        cv: form.cv,
+        summary: form.summary,
         salaryPerAnnum: form.salaryPerAnnum,
         interests: form.interests || [],
         socials: form.socials || {},
         portfolio: form.portfolio?.trim() || undefined,
       };
-
-    
 
       await graduateApi.createProfile(profileData);
       // Profile created successfully, navigate to assessment

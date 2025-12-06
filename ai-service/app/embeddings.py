@@ -98,7 +98,9 @@ async def _set_cache(key: str, value: List[float]) -> None:
     async with _cache_lock:
         if key in _cache:
             _cache.move_to_end(key)
-        _cache[key] = _CacheEntry(value=value, expires_at=time.monotonic() + CACHE_TTL_SECONDS)
+        _cache[key] = _CacheEntry(
+            value=value, expires_at=time.monotonic() + CACHE_TTL_SECONDS
+        )
 
         while len(_cache) > CACHE_MAX_ENTRIES:
             _cache.popitem(last=False)
@@ -116,7 +118,8 @@ def _validate_embedding_dimensions(embedding: Sequence[float]) -> None:
     length = len(embedding)
     if length != EMBEDDING_DIMENSION:
         raise EmbeddingError(
-            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, got {length}"
+            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, "
+            f"got {length}"
         )
 
 
@@ -150,7 +153,8 @@ async def _fetch_embeddings_from_openai(texts: Sequence[str]) -> List[List[float
         data = response.data
         if len(data) != len(texts):
             raise EmbeddingError(
-                f"OpenAI response mismatch: expected {len(texts)} embeddings, got {len(data)}"
+                f"OpenAI response mismatch: expected {len(texts)} embeddings, "
+                f"got {len(data)}"
             )
 
         embeddings: List[List[float]] = []
@@ -163,41 +167,47 @@ async def _fetch_embeddings_from_openai(texts: Sequence[str]) -> List[List[float
 
     except RateLimitError as exc:
         logger.warning("OpenAI embedding request throttled: %s", exc)
-        # Check if this is actually a quota error (429 can mean either rate limit or quota)
+        # Check if this is actually a quota error
+        # (429 can mean either rate limit or quota)
         error_msg = str(exc)
-        
+
         # Try to access error details from the exception
         error_body = None
-        if hasattr(exc, 'response'):
+        if hasattr(exc, "response"):
             error_body = exc.response
-        elif hasattr(exc, 'body'):
+        elif hasattr(exc, "body"):
             error_body = exc.body
-        
+
         error_data = None
         if error_body:
-            if hasattr(error_body, 'body'):
+            if hasattr(error_body, "body"):
                 error_data = error_body.body
             elif isinstance(error_body, dict):
                 error_data = error_body
-        
+
         # Check for quota error indicators in multiple places
         is_quota_error = (
-            'quota' in error_msg.lower() or
-            'insufficient_quota' in error_msg.lower() or
-            'exceeded your current quota' in error_msg.lower() or
-            (isinstance(error_data, dict) and (
-                error_data.get('error', {}).get('code') == 'insufficient_quota' or
-                error_data.get('error', {}).get('type') == 'insufficient_quota' or
-                'quota' in str(error_data).lower()
-            )) or
-            (error_data and 'quota' in str(error_data).lower())
+            "quota" in error_msg.lower()
+            or "insufficient_quota" in error_msg.lower()
+            or "exceeded your current quota" in error_msg.lower()
+            or (
+                isinstance(error_data, dict)
+                and (
+                    error_data.get("error", {}).get("code") == "insufficient_quota"
+                    or error_data.get("error", {}).get("type") == "insufficient_quota"
+                    or "quota" in str(error_data).lower()
+                )
+            )
+            or (error_data and "quota" in str(error_data).lower())
         )
-        
+
         if is_quota_error:
             # Extract the full error message if available
             full_error = error_msg
-            if isinstance(error_data, dict) and error_data.get('error', {}).get('message'):
-                full_error = error_data['error']['message']
+            if isinstance(error_data, dict) and error_data.get("error", {}).get(
+                "message"
+            ):
+                full_error = error_data["error"]["message"]
             raise EmbeddingError(f"OpenAI API quota exceeded: {full_error}") from exc
         raise EmbeddingError("Embedding service is currently rate limited") from exc
     except APITimeoutError as exc:
@@ -207,9 +217,11 @@ async def _fetch_embeddings_from_openai(texts: Sequence[str]) -> List[List[float
         logger.error("OpenAI embedding API error: %s", exc)
         # Preserve the original error message, especially for quota errors
         error_msg = str(exc)
-        if 'quota' in error_msg.lower() or 'insufficient_quota' in error_msg.lower():
+        if "quota" in error_msg.lower() or "insufficient_quota" in error_msg.lower():
             raise EmbeddingError(f"OpenAI API quota exceeded: {error_msg}") from exc
-        raise EmbeddingError(f"Embedding service rejected the request: {error_msg}") from exc
+        raise EmbeddingError(
+            f"Embedding service rejected the request: {error_msg}"
+        ) from exc
     except (APIConnectionError, APIError) as exc:
         logger.error("OpenAI embedding API error: %s", exc)
         raise EmbeddingError(f"Embedding service error: {str(exc)}") from exc
@@ -270,4 +282,3 @@ async def generate_embedding(text: str) -> List[float]:
     """
     embeddings = await generate_embeddings_batch([text])
     return embeddings[0]
-

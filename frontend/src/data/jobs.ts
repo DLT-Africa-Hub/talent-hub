@@ -12,6 +12,3 @@ export interface CompanyJob {
   status: JobStatus;
   image: string;
 }
-
-
-

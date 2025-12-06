@@ -2,7 +2,11 @@ import api from './client';
 
 export const notificationApi = {
   // Get all notifications
-  getNotifications: async (params?: { page?: number; limit?: number; unreadOnly?: boolean }) => {
+  getNotifications: async (params?: {
+    page?: number;
+    limit?: number;
+    unreadOnly?: boolean;
+  }) => {
     const response = await api.get('/notifications', { params });
     return response.data;
   },
@@ -27,4 +31,3 @@ export const notificationApi = {
 };
 
 export default notificationApi;
-

@@ -51,23 +51,21 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
 
   const hasCompletedAssessment = useMemo(() => {
     if (!profileData) return false;
-    const assessmentData = (profileData as GraduateProfileResponse)?.graduate?.assessmentData;
+    const assessmentData = (profileData as GraduateProfileResponse)?.graduate
+      ?.assessmentData;
     return assessmentData?.submittedAt != null;
   }, [profileData]);
 
   const hasPassedAssessment = useMemo(() => {
     if (!profileData) return false;
-    const assessmentData = (profileData as GraduateProfileResponse)?.graduate?.assessmentData;
+    const assessmentData = (profileData as GraduateProfileResponse)?.graduate
+      ?.assessmentData;
     if (!assessmentData) return false;
 
     const lastScore = assessmentData.lastScore;
     const needsRetake = assessmentData.needsRetake;
 
-    return (
-      lastScore !== undefined &&
-      lastScore >= 60 &&
-      needsRetake === false
-    );
+    return lastScore !== undefined && lastScore >= 60 && needsRetake === false;
   }, [profileData]);
 
   if (!isAuth) {
@@ -92,13 +90,34 @@ const AssessmentGuard: React.FC<AssessmentGuardProps> = ({ children }) => {
     return <>{children}</>;
   }
 
-  // For other routes: if error (except 404), redirect to assessment
+  // Handle errors
   if (error) {
-    const is404 = (error as ApiError)?.response?.status === 404;
-    if (is404) {
+    const apiError = error as ApiError;
+    const status = apiError?.response?.status;
+
+    // 401 Unauthorized - redirect to login
+    if (status === 401) {
+      return <Navigate to="/login" replace />;
+    }
+
+    // 404 Not Found - profile doesn't exist yet, allow access (will be handled by onboarding)
+    if (status === 404) {
       return <>{children}</>;
     }
-    return <Navigate to="/assessment" replace />;
+
+    // For other errors, if we have profileData, use it; otherwise allow access
+    // This prevents redirect loops when there are temporary network issues
+    if (profileData) {
+      // We have data, check assessment status
+      if (!hasCompletedAssessment) {
+        return <Navigate to="/assessment" replace />;
+      }
+      return <>{children}</>;
+    }
+
+    // No profileData and error - allow access to prevent blocking users
+    // The error might be temporary (network, server issue, etc.)
+    return <>{children}</>;
   }
 
   // For other routes: if assessment not completed, redirect to assessment

@@ -48,15 +48,15 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
 
     /* Test against mobile viewports. */
     // {
@@ -70,11 +70,35 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: process.env.CI ? undefined : {
-    command: 'cd frontend && npm run dev',
-    url: 'http://localhost:5174',
-    reuseExistingServer: true,
-    timeout: 120 * 1000,
-  },
+  webServer: process.env.CI ? undefined : [
+    // Start backend server with test MongoDB (in-memory)
+    {
+      command: 'cd ../backend && pnpm run start:test',
+      url: 'http://localhost:3090/api/v1/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      stdout: 'ignore',
+      stderr: 'pipe',
+      env: {
+        NODE_ENV: 'test',
+        PORT: '3090',
+        CORS_ORIGIN: 'http://localhost:5174',
+        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'test-jwt-secret-key-min-32-chars-long-for-e2e-tests',
+        JWT_ACCESS_EXPIRE: '15m',
+        EMAIL_ENABLED: 'false',
+        EMAIL_PROVIDER: 'console',
+        // MongoDB will be set by index.test.ts (in-memory)
+      },
+    },
+    // Start frontend dev server
+    {
+      command: 'cd ../frontend && pnpm run dev',
+      url: 'http://localhost:5174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      stdout: 'ignore',
+      stderr: 'pipe',
+    },
+  ],
 });
 

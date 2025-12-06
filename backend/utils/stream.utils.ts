@@ -1,27 +1,39 @@
-import jwt from 'jsonwebtoken';
+import { StreamClient } from '@stream-io/node-sdk';
 
 /**
- * Generate a Stream video token for a user
- * Stream tokens are JWTs signed with the Stream secret
+ * Get Stream client instance
  */
-export function generateStreamToken(userId: string): string {
-    const streamSecret = process.env.STREAM_API_SECRET;
+export function getStreamClient(): StreamClient {
+  const streamApiKey = process.env.STREAM_API_KEY;
+  const streamSecret =
+    process.env.STREAM_API_SECRET || process.env.STREAM_SECRET_KEY;
 
-    if (!streamSecret) {
-        throw new Error('STREAM_SECRET_KEY environment variable is not configured');
-    }
+  if (!streamApiKey || !streamSecret) {
+    throw new Error(
+      'STREAM_API_KEY and STREAM_SECRET_KEY environment variables must be configured'
+    );
+  }
 
-    // Stream token payload structure
-    const payload = {
-        user_id: userId,
-        // Stream tokens typically expire in 24 hours, but can be adjusted
-        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 hours from now
-        iat: Math.floor(Date.now() / 1000), // Issued at time
-    };
-
-    // Sign the token with Stream secret using HS256 algorithm
-    return jwt.sign(payload, streamSecret, {
-        algorithm: 'HS256',
-    });
+  return new StreamClient(streamApiKey, streamSecret, { timeout: 3000 });
 }
 
+/**
+ * Generate a Stream video token for a user using the Stream SDK
+ */
+export function generateStreamToken(
+  userId: string,
+  expirationInSeconds: number = 60 * 60,
+  callCids: string[] = []
+): string {
+  const streamClient = getStreamClient();
+
+  // Generate token with expiration (default 1 hour)
+  // call_cids is required - use empty array for general tokens or specific call IDs
+  const token = streamClient.generateCallToken({
+    user_id: userId,
+    call_cids: callCids,
+    validity_in_seconds: expirationInSeconds,
+  });
+
+  return token;
+}

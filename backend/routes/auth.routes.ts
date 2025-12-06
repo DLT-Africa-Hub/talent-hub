@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   register,
   login,
@@ -29,7 +29,7 @@ import {
   changePasswordSchema,
 } from '../validation/auth.validation';
 
-const router = Router();
+const router: IRouter = Router();
 
 router.post('/register', validateRequest(registerSchema), register);
 router.post('/login', validateRequest(loginSchema), login);
@@ -72,9 +72,9 @@ router.post(
   changePassword
 );
 
-router.post('/google/authcode', googleAuthCode); 
-router.post('/google', googleSignIn); 
-router.get('/google/url', getGoogleAuthUrl); 
-router.get('/google/callback', googleOAuthCallback); 
+router.post('/google/authcode', googleAuthCode);
+router.post('/google', googleSignIn);
+router.get('/google/url', getGoogleAuthUrl);
+router.get('/google/callback', googleOAuthCallback);
 
 export default router;

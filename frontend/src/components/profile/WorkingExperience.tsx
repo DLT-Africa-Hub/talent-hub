@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import graduateApi from '../../api/graduate';
 import { Edit, Trash2 } from 'lucide-react';
-
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface WorkExperienceItem {
   _id?: string;
@@ -22,13 +22,16 @@ interface WorkingExperienceProps {
 
 type BannerType = 'success' | 'error' | null;
 
-const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences = [] }) => {
+const WorkingExperience: React.FC<WorkingExperienceProps> = ({
+  workExperiences = [],
+}) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<WorkExperienceItem | null>(null);
-  const [localExperiences, setLocalExperiences] = useState<WorkExperienceItem[]>(workExperiences);
+  const [localExperiences, setLocalExperiences] =
+    useState<WorkExperienceItem[]>(workExperiences);
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [bannerType, setBannerType] = useState<BannerType>(null);
 
@@ -45,13 +48,18 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
   // Sync and sort experiences
   useEffect(() => {
     const serverExperiences: WorkExperienceItem[] | undefined =
-      gradProfileQuery.data?.workExperiences || gradProfileQuery.data?.work_experiences || workExperiences;
+      gradProfileQuery.data?.workExperiences ||
+      gradProfileQuery.data?.work_experiences ||
+      workExperiences;
 
     if (serverExperiences && Array.isArray(serverExperiences)) {
       const sorted = [...serverExperiences].sort((a, b) => {
         if (a.current && !b.current) return -1;
         if (!a.current && b.current) return 1;
-        if (a.current && b.current) return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+        if (a.current && b.current)
+          return (
+            new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+          );
         const aEnd = a.endDate ? new Date(a.endDate).getTime() : 0;
         const bEnd = b.endDate ? new Date(b.endDate).getTime() : 0;
         return bEnd - aEnd;
@@ -62,7 +70,6 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
     }
   }, [gradProfileQuery.data, gradProfileQuery.isLoading, workExperiences]);
 
-
   useEffect(() => {
     if (!bannerMessage) return;
     const t = setTimeout(() => {
@@ -72,41 +79,67 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
     return () => clearTimeout(t);
   }, [bannerMessage]);
 
- 
   const addExpMutation = useMutation({
     mutationFn: async (exp: WorkExperienceItem) => {
       if (editingExp?._id) {
-       
-        return await graduateApi.updateWorkExperience(editingExp._id, exp as unknown as Record<string, unknown>);
+        return await graduateApi.updateWorkExperience(
+          editingExp._id,
+          exp as unknown as Record<string, unknown>
+        );
       } else {
-        return await graduateApi.addWorkExperience(exp as unknown as Record<string, unknown>);
+        return await graduateApi.addWorkExperience(
+          exp as unknown as Record<string, unknown>
+        );
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'header'] });
-      setBannerMessage(editingExp ? 'Work experience updated successfully' : 'Work experience added successfully');
+      queryClient.invalidateQueries({
+        queryKey: ['graduateProfile', 'header'],
+      });
+      setBannerMessage(
+        editingExp
+          ? 'Work experience updated successfully'
+          : 'Work experience added successfully'
+      );
       setBannerType('success');
       setEditingExp(null);
       setIsModalOpen(false);
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
-      setBannerMessage(error?.response?.data?.message || error?.message || 'Failed to save experience');
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      setBannerMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to save experience'
+      );
       setBannerType('error');
     },
   });
 
   const deleteExpMutation = useMutation({
-    mutationFn: async (id: string) => await graduateApi.deleteWorkExperience(id),
+    mutationFn: async (id: string) =>
+      await graduateApi.deleteWorkExperience(id),
     onSuccess: (_, id) => {
       setLocalExperiences((prev) => prev.filter((exp) => exp._id !== id));
-      queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'header'] });
+      queryClient.invalidateQueries({
+        queryKey: ['graduateProfile', 'header'],
+      });
       setBannerMessage('Work experience deleted');
       setBannerType('success');
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
-      setBannerMessage(error?.response?.data?.message || error?.message || 'Failed to delete experience');
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      setBannerMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to delete experience'
+      );
       setBannerType('error');
     },
   });
@@ -121,10 +154,17 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
     setIsModalOpen(true);
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   const handleDelete = (id?: string) => {
     if (!id) return;
-    if (confirm('Are you sure you want to delete this experience?')) {
-      deleteExpMutation.mutate(id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteExpMutation.mutate(deleteConfirmId);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -147,7 +187,9 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
 
       {localExperiences.length === 0 ? (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-[#1C1C1CBF] font-normal text-[14px]">No work experience added</p>
+          <p className="text-[#1C1C1CBF] font-normal text-[14px]">
+            No work experience added
+          </p>
           <button
             type="button"
             onClick={openAddModal}
@@ -160,19 +202,45 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
         <>
           <div className="grid grid-cols-2 gap-6">
             {localExperiences.map((exp, idx) => (
-              <div key={exp._id ?? idx} className="flex flex-col gap-1.5 border-b italic border-fade pb-4">
+              <div
+                key={exp._id ?? idx}
+                className="flex flex-col gap-1.5 border-b italic border-fade pb-4"
+              >
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-semibold text-[20px] text-[#1c1c1ca1]">{exp.title}</p>
-                    <p className="font-medium text-[14px] text-[#1C1C1CBF]">{exp.company}</p>
-                    <p className="text-[12px] text-[#1C1C1CBF]">
-                      {formatDate(exp.startDate)} - {exp.current ? 'Present' : exp.endDate ? formatDate(exp.endDate) : ''}
+                    <p className="font-semibold text-[20px] text-[#1c1c1ca1]">
+                      {exp.title}
                     </p>
-                    {exp.description && <p className="text-[14px] text-[#1C1C1CBF]">{exp.description}</p>}
+                    <p className="font-medium text-[14px] text-[#1C1C1CBF]">
+                      {exp.company}
+                    </p>
+                    <p className="text-[12px] text-[#1C1C1CBF]">
+                      {formatDate(exp.startDate)} -{' '}
+                      {exp.current
+                        ? 'Present'
+                        : exp.endDate
+                          ? formatDate(exp.endDate)
+                          : ''}
+                    </p>
+                    {exp.description && (
+                      <p className="text-[14px] text-[#1C1C1CBF]">
+                        {exp.description}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => openEditModal(exp)} className="text-blue-500 text-sm"><Edit/></button>
-                    <button onClick={() => handleDelete(exp._id)} className="text-red-500 text-sm"><Trash2/></button>
+                    <button
+                      onClick={() => openEditModal(exp)}
+                      className="text-blue-500 text-sm"
+                    >
+                      <Edit />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(exp._id)}
+                      className="text-red-500 text-sm"
+                    >
+                      <Trash2 />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -194,10 +262,29 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
           onClose={() => setIsModalOpen(false)}
           onSubmit={(exp) => addExpMutation.mutate(exp)}
           submitting={addExpMutation.isPending}
-          defaultErrorMessage={addExpMutation.isError ? String((addExpMutation.error as { message?: string })?.message || 'Error') : undefined}
+          defaultErrorMessage={
+            addExpMutation.isError
+              ? String(
+                  (addExpMutation.error as { message?: string })?.message ||
+                    'Error'
+                )
+              : undefined
+          }
           defaultValues={editingExp || undefined}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        title="Delete Experience"
+        message="Are you sure you want to delete this experience? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+        isLoading={deleteExpMutation.isPending}
+      />
     </div>
   );
 };
@@ -228,9 +315,13 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
   const [endDate, setEndDate] = useState(
     defaultValues?.endDate ? formatInputMonth(defaultValues.endDate) : ''
   );
-  const [description, setDescription] = useState(defaultValues?.description || '');
+  const [description, setDescription] = useState(
+    defaultValues?.description || ''
+  );
   const [current, setCurrent] = useState(defaultValues?.current || false);
-  const [localError, setLocalError] = useState<string | null>(defaultErrorMessage || null);
+  const [localError, setLocalError] = useState<string | null>(
+    defaultErrorMessage || null
+  );
 
   useEffect(() => {
     setLocalError(defaultErrorMessage || null);
@@ -241,7 +332,9 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
     setLocalError(null);
 
     if (!company.trim() || !title.trim() || !startDate) {
-      setLocalError('Please fill in required fields (Company, Title, Start Date).');
+      setLocalError(
+        'Please fill in required fields (Company, Title, Start Date).'
+      );
       return;
     }
 
@@ -311,7 +404,12 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
           </div>
 
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={current} onChange={(e) => setCurrent(e.target.checked)} disabled={submitting} />
+            <input
+              type="checkbox"
+              checked={current}
+              onChange={(e) => setCurrent(e.target.checked)}
+              disabled={submitting}
+            />
             Currently Working Here
           </label>
 
@@ -326,11 +424,26 @@ const AddExperienceModal: React.FC<AddExperienceModalProps> = ({
           {localError && <p className="text-red-500 text-sm">{localError}</p>}
 
           <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-[8px] border border-fade" disabled={submitting}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-[8px] border border-fade"
+              disabled={submitting}
+            >
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-[8px] bg-button text-white font-semibold">
-              {submitting ? (defaultValues ? 'Saving...' : 'Adding...') : defaultValues ? 'Save' : 'Add'}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 rounded-[8px] bg-button text-white font-semibold"
+            >
+              {submitting
+                ? defaultValues
+                  ? 'Saving...'
+                  : 'Adding...'
+                : defaultValues
+                  ? 'Save'
+                  : 'Add'}
             </button>
           </div>
         </form>

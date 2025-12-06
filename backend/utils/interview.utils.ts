@@ -13,4 +13,3 @@ export const buildInterviewRoomUrl = (slug: string): string => {
   const trimmedBase = CLIENT_BASE_URL.replace(/\/+$/, '');
   return `${trimmedBase}/interviews/${slug}`;
 };
-

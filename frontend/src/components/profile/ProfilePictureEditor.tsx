@@ -1,22 +1,26 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
-import Cropper from "react-easy-crop"
-import { Dialog } from "@headlessui/react"
-import { Edit3, X } from "lucide-react"
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Cropper from 'react-easy-crop';
+import { Dialog } from '@headlessui/react';
+import { Edit3, X } from 'lucide-react';
 
 type Props = {
-  imageUrl?: string | null
-  size?: number
-  onUpload?: (file: Blob) => Promise<void> | void
-}
+  imageUrl?: string | null;
+  size?: number;
+  onUpload?: (file: Blob) => Promise<void> | void;
+};
 
-export default function ProfilePictureEditor({ imageUrl, size = 150, onUpload }: Props) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [fileSrc, setFileSrc] = useState<string | null>(imageUrl || null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
+export default function ProfilePictureEditor({
+  imageUrl,
+  size = 150,
+  onUpload,
+}: Props) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [fileSrc, setFileSrc] = useState<string | null>(imageUrl || null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setFileSrc(imageUrl || null)
-  }, [imageUrl])
+    setFileSrc(imageUrl || null);
+  }, [imageUrl]);
 
   return (
     <div className="relative inline-block">
@@ -25,7 +29,7 @@ export default function ProfilePictureEditor({ imageUrl, size = 150, onUpload }:
         style={{ width: size, height: size }}
       >
         <img
-          src={fileSrc || "/placeholder-avatar.png"}
+          src={fileSrc || '/placeholder-avatar.png'}
           className="w-full h-full object-cover"
         />
 
@@ -52,7 +56,7 @@ export default function ProfilePictureEditor({ imageUrl, size = 150, onUpload }:
         previewSize={size}
       />
     </div>
-  )
+  );
 }
 
 /* ------------ MODAL ------------ */
@@ -63,7 +67,7 @@ interface ImageCropModalProps {
   initialImage: string | null;
   onImageSaved: (url: string) => void;
   onUpload?: (file: Blob) => Promise<void> | void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   previewSize?: number;
 }
 
@@ -76,66 +80,84 @@ function ImageCropModal({
   inputRef,
   previewSize = 150,
 }: ImageCropModalProps) {
-  const [imageSrc, setImageSrc] = useState<string | null>(initialImage)
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
+  const [imageSrc, setImageSrc] = useState<string | null>(initialImage);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setImageSrc(initialImage)
-      setCrop({ x: 0, y: 0 })
-      setZoom(1)
+      setImageSrc(initialImage);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
     }
-  }, [initialImage, isOpen])
+  }, [initialImage, isOpen]);
 
   const handleClose = () => {
-    setImageSrc(initialImage)
-    setCrop({ x: 0, y: 0 })
-    setZoom(1)
-    onClose()
-  }
+    setImageSrc(initialImage);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    onClose();
+  };
 
-  const onCropComplete = useCallback((_: unknown, areaPixels: { x: number; y: number; width: number; height: number }) => {
-    setCroppedAreaPixels(areaPixels)
-  }, [])
+  const onCropComplete = useCallback(
+    (
+      _: unknown,
+      areaPixels: { x: number; y: number; width: number; height: number }
+    ) => {
+      setCroppedAreaPixels(areaPixels);
+    },
+    []
+  );
 
   const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      const file = e.target.files[0]
-      const url = await readFile(file)
-      setImageSrc(url as string)
+      const file = e.target.files[0];
+      const url = await readFile(file);
+      setImageSrc(url as string);
 
-      setCrop({ x: 0, y: 0 })
-      setZoom(1)
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
     }
-  }
+  };
 
   const doUpload = async () => {
-    if (!imageSrc || !croppedAreaPixels) return
-    setIsUploading(true)
+    if (!imageSrc || !croppedAreaPixels) return;
+    setIsUploading(true);
 
-    const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
-    await onUpload?.(blob)
+    const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
+    await onUpload?.(blob);
 
-    const preview = URL.createObjectURL(blob)
+    const preview = URL.createObjectURL(blob);
 
     // ✅ ONLY update main profile AFTER saving
-    onImageSaved?.(preview)
+    onImageSaved?.(preview);
 
-    setIsUploading(false)
-    onClose()
-  }
+    setIsUploading(false);
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onClose={handleClose} className="fixed inset-0 z-50 flex items-center justify-center">
+    <Dialog
+      open={isOpen}
+      onClose={handleClose}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+    >
       <div className="fixed inset-0 bg-black/40" />
 
       <div className="relative w-[95%] max-w-3xl bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-semibold">Edit Profile Picture</h3>
-          <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full">
+          <button
+            onClick={handleClose}
+            className="p-2 hover:bg-gray-100 rounded-full"
+          >
             <X />
           </button>
         </div>
@@ -159,16 +181,19 @@ function ImageCropModal({
                   style={{
                     width: previewSize,
                     height: previewSize,
-                    left: "50%",
-                    top: "50%",
-                    transform: "translate(-50%, -50%)",
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
                   }}
                 />
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm">
                 No image selected
-                <button className="mt-3 border px-3 py-1 rounded" onClick={() => inputRef.current?.click()}>
+                <button
+                  className="mt-3 border px-3 py-1 rounded"
+                  onClick={() => inputRef.current?.click()}
+                >
                   Choose File
                 </button>
               </div>
@@ -182,8 +207,12 @@ function ImageCropModal({
                 className="rounded-full overflow-hidden border mx-auto"
                 style={{ width: previewSize, height: previewSize }}
               >
-                {imageSrc ? (
-                  <PreviewCanvas imageSrc={imageSrc} cropPixels={croppedAreaPixels} size={previewSize} />
+                {imageSrc && croppedAreaPixels ? (
+                  <PreviewCanvas
+                    imageSrc={imageSrc}
+                    cropPixels={croppedAreaPixels}
+                    size={previewSize}
+                  />
                 ) : (
                   <div className="flex items-center justify-center text-xs text-gray-400 h-full">
                     No preview
@@ -205,10 +234,19 @@ function ImageCropModal({
               />
             </div>
 
-            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onSelectFile} />
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onSelectFile}
+            />
 
             <div className="flex gap-2 mt-auto">
-              <button className="border px-4 py-2 rounded" onClick={() => inputRef.current?.click()}>
+              <button
+                className="border px-4 py-2 rounded"
+                onClick={() => inputRef.current?.click()}
+              >
                 Choose File
               </button>
 
@@ -217,14 +255,14 @@ function ImageCropModal({
                 disabled={!imageSrc || isUploading}
                 onClick={doUpload}
               >
-                {isUploading ? "Uploading..." : "Save"}
+                {isUploading ? 'Uploading...' : 'Save'}
               </button>
             </div>
           </div>
         </div>
       </div>
     </Dialog>
-  )
+  );
 }
 
 /* ------------ PREVIEW CANVAS ------------- */
@@ -236,20 +274,20 @@ interface PreviewCanvasProps {
 }
 
 function PreviewCanvas({ imageSrc, cropPixels, size }: PreviewCanvasProps) {
-  const ref = useRef<HTMLCanvasElement | null>(null)
+  const ref = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    if (!cropPixels) return
-    ;(async () => {
-      const img = await createImage(imageSrc)
-      const canvas = ref.current
-      const ctx = canvas?.getContext("2d")
-      if (!canvas || !ctx) return
+    if (!cropPixels) return;
+    (async () => {
+      const img = await createImage(imageSrc);
+      const canvas = ref.current;
+      const ctx = canvas?.getContext('2d');
+      if (!canvas || !ctx) return;
 
-      canvas.width = size
-      canvas.height = size
+      canvas.width = size;
+      canvas.height = size;
 
-      ctx.clearRect(0, 0, size, size)
+      ctx.clearRect(0, 0, size, size);
       ctx.drawImage(
         img,
         cropPixels.x,
@@ -260,31 +298,31 @@ function PreviewCanvas({ imageSrc, cropPixels, size }: PreviewCanvasProps) {
         0,
         size,
         size
-      )
-    })()
-  }, [cropPixels, imageSrc, size])
+      );
+    })();
+  }, [cropPixels, imageSrc, size]);
 
-  return <canvas ref={ref} className="w-full h-full" />
+  return <canvas ref={ref} className="w-full h-full" />;
 }
 
 /* ------------ HELPERS ------------- */
 
 function readFile(file: File) {
   return new Promise((res) => {
-    const reader = new FileReader()
-    reader.onload = () => res(reader.result)
-    reader.readAsDataURL(file)
-  })
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result);
+    reader.readAsDataURL(file);
+  });
 }
 
 function createImage(url: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.onload = () => resolve(img)
-    img.onerror = reject
-    img.src = url
-  })
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 interface CropArea {
@@ -295,16 +333,26 @@ interface CropArea {
 }
 
 async function getCroppedImg(src: string, crop: CropArea): Promise<Blob> {
-  const img = await createImage(src)
-  const canvas = document.createElement("canvas")
-  const ctx = canvas.getContext("2d")!
+  const img = await createImage(src);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
 
-  canvas.width = crop.width
-  canvas.height = crop.height
+  canvas.width = crop.width;
+  canvas.height = crop.height;
 
-  ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height)
+  ctx.drawImage(
+    img,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    crop.width,
+    crop.height
+  );
 
   return new Promise((resolve) =>
-    canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9)
-  )
+    canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9)
+  );
 }

@@ -18,14 +18,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     // Check if user has dismissed verification
-    const dismissed = localStorage.getItem('emailVerificationDismissed') === 'true';
+    const dismissed =
+      localStorage.getItem('emailVerificationDismissed') === 'true';
     setVerificationDismissed(dismissed);
 
     // Show modal if user is not verified and hasn't dismissed
     if (user && (user.emailVerified === false || !user.emailVerified)) {
       if (!dismissed) {
         // Check if user has seen the modal in this session
-        const hasSeenModal = sessionStorage.getItem('emailVerificationModalShown');
+        const hasSeenModal = sessionStorage.getItem(
+          'emailVerificationModalShown'
+        );
         if (!hasSeenModal) {
           setShowVerificationModal(true);
           sessionStorage.setItem('emailVerificationModalShown', 'true');
@@ -58,19 +61,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-white relative">
       <div className="relative z-50">
-        <EmailVerificationBanner
-          onOpenModal={handleOpenModal}
-        />
+        <EmailVerificationBanner onOpenModal={handleOpenModal} />
       </div>
 
-      <div className={shouldDisableInteractions ? 'pointer-events-none opacity-50' : ''}>
-      <MobileHeader />
-      <DashboardHeader />
+      <div
+        className={
+          shouldDisableInteractions ? 'pointer-events-none opacity-50' : ''
+        }
+      >
+        <MobileHeader />
+        <DashboardHeader />
       </div>
 
       {shouldDisableInteractions && (
-        <div 
-          className="fixed inset-0 bg-white/80 z-40 pointer-events-auto" 
+        <div
+          className="fixed inset-0 bg-white/80 z-40 pointer-events-auto"
           style={{ top: '0', height: '100vh' }}
         />
       )}
@@ -95,8 +100,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         {children}
       </div>
 
-      <div className={shouldDisableInteractions ? 'pointer-events-none opacity-50' : ''}>
-      <MobileNav />
+      <div
+        className={
+          shouldDisableInteractions ? 'pointer-events-none opacity-50' : ''
+        }
+      >
+        <MobileNav />
       </div>
 
       <EmailVerificationModal
@@ -109,4 +118,3 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 };
 
 export default DashboardLayout;
-

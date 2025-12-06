@@ -107,9 +107,9 @@ const CompanyOnboarding = () => {
 
       // Invalidate company profile queries to ensure fresh data
       await queryClient.invalidateQueries({ queryKey: ['companyProfile'] });
-      
+
       // Small delay to ensure query invalidation completes
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Navigate to company dashboard
       navigate('/company', { replace: true });

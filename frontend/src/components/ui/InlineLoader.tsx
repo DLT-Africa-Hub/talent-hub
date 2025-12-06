@@ -36,4 +36,3 @@ const InlineLoader: React.FC<InlineLoaderProps> = ({
 };
 
 export default InlineLoader;
-

@@ -42,8 +42,15 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
     }
   };
   return (
-    <div className="flex items-center gap-6 p-5 border border-fade rounded-[12px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group cursor-pointer" onClick={() => handleButtonClick(company.id, buttonText === 'Preview' ? 'Preview' : 'Get in Touch')}>
-      {/* Company Image */}
+    <div
+      className="flex items-center gap-6 p-5 border border-fade rounded-[12px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group cursor-pointer"
+      onClick={() =>
+        handleButtonClick(
+          company.id,
+          buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
+        )
+      }
+    >
       <div className="w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] relative overflow-hidden rounded-[12px] shrink-0 group-hover:scale-105 transition-transform duration-300">
         <ImageWithFallback
           src={company.image}
@@ -54,7 +61,6 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
         <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-[16px] border border-white/50 p-2 rounded-full shadow-md">
           <PiBuildingApartmentLight className="text-[#1C1C1C]" />
         </div>
-        {/* Match Badge Overlay */}
         <div className="absolute top-2 right-2">
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/50 shadow-md backdrop-blur-sm ${badgeConfig.container}`}
@@ -67,9 +73,7 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
         </div>
       </div>
 
-      {/* Content Section */}
       <div className="flex-1 min-w-0 flex flex-col gap-4">
-        {/* Company Name and Job Title */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <h3 className="font-semibold text-[20px] sm:text-[22px] text-[#1C1C1C] line-clamp-1">
@@ -81,21 +85,21 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
           </div>
         </div>
 
-        {/* Job Details */}
         <div className="flex flex-col gap-3">
-          {/* Contract Type and Location */}
           <div className="flex items-center gap-3 text-[15px] text-[#1C1C1CBF]">
-            <span className="font-medium text-[#1C1C1C]">{company.contract}</span>
-            <span className="h-3 w-px bg-[#1C1C1C30]" />
+            <span className="font-medium text-[#1C1C1C]">
+              {company.contract}
+            </span>
+            <span className="h-3 w-px bg-fade" />
             <span className="truncate">{company.location}</span>
           </div>
 
-          {/* Salary - Prominent Display */}
           {company.wage && company.wage !== '—' && (
             <div className="flex items-center gap-2 p-3 rounded-[8px] bg-[#EFFFE2] border border-[#1B77001A] w-fit">
               <span className="text-[15px] font-semibold text-button">
                 {company.wage.split(' ')[0]}
-                {company.wage.includes('Annual') || company.wage.includes('Project') ? (
+                {company.wage.includes('Annual') ||
+                company.wage.includes('Project') ? (
                   <span className="text-[13px] font-medium text-[#1B770080] ml-1.5">
                     {company.wage.includes('Annual') ? 'Annual' : 'Project'}
                   </span>

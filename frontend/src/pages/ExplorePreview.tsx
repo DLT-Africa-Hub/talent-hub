@@ -1,10 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import { graduateApi } from '../api/graduate';
-import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../utils/job.utils';
+import {
+  DEFAULT_JOB_IMAGE,
+  formatSalaryRange,
+  formatJobType,
+  getSalaryType,
+} from '../utils/job.utils';
 import { PageLoader, ErrorState } from '../components/ui';
 import { ApiError } from '../types/api';
 
@@ -51,9 +55,10 @@ const ExplorePreview = () => {
 
   // Transform API data to component format
   const job = matchData.job;
-  const matchScore = matchData.score > 1
-    ? Math.min(100, Math.round(matchData.score))
-    : Math.min(100, Math.round(matchData.score * 100));
+  const matchScore =
+    matchData.score > 1
+      ? Math.min(100, Math.round(matchData.score))
+      : Math.min(100, Math.round(matchData.score * 100));
 
   const jobType = job.jobType || 'Full time';
   const salaryRange = formatSalaryRange(job.salary);
@@ -61,22 +66,21 @@ const ExplorePreview = () => {
   const formattedJobType = formatJobType(jobType);
 
   // Extract company name from populated companyId
-  const companyName = 
-    (typeof job.companyId === 'object' && job.companyId !== null && 'companyName' in job.companyId)
+  const companyName =
+    typeof job.companyId === 'object' &&
+    job.companyId !== null &&
+    'companyName' in job.companyId
       ? (job.companyId as any).companyName
       : job.companyName || 'Company';
-  
+
   const jobTitle = job.title || 'Position';
   const location = job.location || 'Location not specified';
   const skills = job.requirements?.skills || [];
-  const description = job.description || job.descriptionHtml || 'No description available.';
+  const description =
+    job.description || job.descriptionHtml || 'No description available.';
 
   const handleBack = () => {
     navigate('/explore');
-  };
-
-  const handleChat = () => {
-    // TODO: Navigate to chat
   };
 
   const handleApply = () => {
@@ -165,20 +169,14 @@ const ExplorePreview = () => {
             <p className="text-center w-full font-semibold">{location}</p>
             <div className="h-[20px] bg-black w-0.5" />
             <p className="text-center w-full font-semibold">
-              {salaryRange === 'Not specified' ? '—' : `${salaryRange} ${salaryType}`}
+              {salaryRange === 'Not specified'
+                ? '—'
+                : `${salaryRange} ${salaryType}`}
             </p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center">
-            <button
-              type="button"
-              onClick={handleChat}
-              className="w-full flex items-center justify-center gap-[12px] border border-button py-[15px] rounded-[10px] text-button cursor-pointer transition hover:bg-[#F8F8F8]"
-            >
-              <HiOutlineChatBubbleLeftRight className="text-[24px]" />
-              <p className="text-[16px] font-medium">Chat</p>
-            </button>
             <button
               type="button"
               onClick={handleApply}
@@ -195,4 +193,3 @@ const ExplorePreview = () => {
 };
 
 export default ExplorePreview;
-

@@ -13,7 +13,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict, Final, List, Optional, TypedDict
+from typing import Final, List, Optional, TypedDict
 
 from openai import (
     APIConnectionError,
@@ -33,11 +33,15 @@ logger = logging.getLogger(__name__)
 
 _api_key = os.getenv("OPENAI_API_KEY")
 if not _api_key:
-    raise RuntimeError("OPENAI_API_KEY environment variable is required for question generation")
+    raise RuntimeError(
+        "OPENAI_API_KEY environment variable is required for question generation"
+    )
 
 client = OpenAI(api_key=_api_key)
 
-ASSESSMENT_MODEL: Final[str] = os.getenv("ASSESSMENT_MODEL", os.getenv("FEEDBACK_MODEL", "gpt-4o-mini"))
+ASSESSMENT_MODEL: Final[str] = os.getenv(
+    "ASSESSMENT_MODEL", os.getenv("FEEDBACK_MODEL", "gpt-4o-mini")
+)
 ASSESSMENT_TEMPERATURE: Final[float] = float(os.getenv("ASSESSMENT_TEMPERATURE", "0.3"))
 ASSESSMENT_MAX_TOKENS: Final[int] = int(os.getenv("ASSESSMENT_MAX_TOKENS", "1000"))
 
@@ -66,9 +70,12 @@ def _build_prompt(
 ) -> str:
     skill_list = _serialise_skills(skills)
     return f"""
-You are an experienced technical interviewer. Draft {num_questions} multiple-choice questions in {language.upper()} that assess a graduate's proficiency with the following skills: {skill_list or "general web development"}.
+You are an experienced technical interviewer. Draft {num_questions} \
+multiple-choice questions in {language.upper()} that assess a graduate's \
+proficiency with the following skills: {skill_list or "general web development"}.
 
-Attempt number: {attempt}. Ensure this set differs from earlier attempts by varying the focus and wording.
+Attempt number: {attempt}. Ensure this set differs from earlier attempts \
+by varying the focus and wording.
 
 Guidelines:
 - Each question must emphasise one primary skill; reflect that in the "skill" field.
@@ -96,7 +103,9 @@ def _parse_questions(payload: str) -> List[AssessmentQuestion]:
         data = json.loads(payload)
     except json.JSONDecodeError as exc:
         logger.error("Unable to parse question JSON: %s", exc)
-        raise QuestionGenerationError("Question generation returned invalid JSON") from exc
+        raise QuestionGenerationError(
+            "Question generation returned invalid JSON"
+        ) from exc
 
     questions = data.get("questions")
     if not isinstance(questions, list) or not questions:
@@ -111,7 +120,12 @@ def _parse_questions(payload: str) -> List[AssessmentQuestion]:
         answer = str(item.get("answer", "")).strip()
         skill = item.get("skill")
 
-        if not question_text or not isinstance(options, list) or len(options) < 2 or not answer:
+        if (
+            not question_text
+            or not isinstance(options, list)
+            or len(options) < 2
+            or not answer
+        ):
             continue
 
         cleaned_options = []
@@ -137,7 +151,11 @@ def _parse_questions(payload: str) -> List[AssessmentQuestion]:
                 question=question_text,
                 options=cleaned_options,
                 answer=answer,
-                skill=str(skill).strip() if isinstance(skill, str) and skill.strip() else None,
+                skill=(
+                    str(skill).strip()
+                    if isinstance(skill, str) and skill.strip()
+                    else None
+                ),
             )
         )
 
@@ -168,19 +186,29 @@ async def _call_openai(prompt: str) -> str:
         )
     except (RateLimitError, APITimeoutError) as exc:
         logger.warning("Question generation rate limited or timed out: %s", exc)
-        raise QuestionGenerationError("Question service is currently unavailable. Please retry shortly.") from exc
+        raise QuestionGenerationError(
+            "Question service is currently unavailable. Please retry shortly."
+        ) from exc
     except (BadRequestError, APIConnectionError, APIError) as exc:
         logger.error("Question generation API error: %s", exc)
-        raise QuestionGenerationError("Question service rejected the request payload.") from exc
+        raise QuestionGenerationError(
+            "Question service rejected the request payload."
+        ) from exc
     except OpenAIError as exc:
         logger.exception("Unexpected OpenAI error during question generation")
-        raise QuestionGenerationError("Unexpected error from question service.") from exc
+        raise QuestionGenerationError(
+            "Unexpected error from question service."
+        ) from exc
     except Exception as exc:  # pragma: no cover
         logger.exception("Unhandled error during question generation")
-        raise QuestionGenerationError("Unable to generate assessment questions.") from exc
+        raise QuestionGenerationError(
+            "Unable to generate assessment questions."
+        ) from exc
 
     choice = response.choices[0]
-    content = choice.message.content if choice.message and choice.message.content else ""
+    content = (
+        choice.message.content if choice.message and choice.message.content else ""
+    )
     if not content:
         raise QuestionGenerationError("Question generation returned an empty response.")
     return content
@@ -194,7 +222,9 @@ async def generate_assessment_questions(
     language: str = "en",
 ) -> List[AssessmentQuestion]:
     if not skills:
-        raise QuestionGenerationError("At least one skill is required to generate questions.")
+        raise QuestionGenerationError(
+            "At least one skill is required to generate questions."
+        )
 
     prompt = _build_prompt(
         skills,
@@ -204,5 +234,3 @@ async def generate_assessment_questions(
     )
     raw = await _call_openai(prompt)
     return _parse_questions(raw)
-
-

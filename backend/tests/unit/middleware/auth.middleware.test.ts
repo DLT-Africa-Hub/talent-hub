@@ -2,8 +2,10 @@ import type { NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { authenticate } from '../../../middleware/auth.middleware';
 import Session from '../../../models/Session.model';
+import User from '../../../models/User.model';
 
 jest.mock('../../../models/Session.model');
+jest.mock('../../../models/User.model');
 jest.mock('../../../utils/jwt.utils', () => ({
   verifyAccessToken: jest.fn(),
 }));
@@ -81,6 +83,13 @@ describe('auth.middleware - authenticate', () => {
     (Session.findById as jest.Mock).mockResolvedValue({
       user: userId,
       isActive: () => true,
+    });
+
+    (User.findById as jest.Mock).mockResolvedValue({
+      _id: userId,
+      email: 'test@example.com',
+      role: 'graduate',
+      emailVerified: true,
     });
 
     const req = {

@@ -25,8 +25,11 @@ const CandidatePreview = () => {
   const transformApplication = (app: ApiApplication): CandidateProfile => {
     const graduate = app.graduateId || {};
     const job = app.jobId || {};
-    const candidateStatus = mapApplicationStatusToCandidateStatus(app.status || '');
-    const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+    const candidateStatus = mapApplicationStatusToCandidateStatus(
+      app.status || ''
+    );
+    const fullName =
+      `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
 
     return {
       id: app._id || '',
@@ -37,7 +40,8 @@ const CandidatePreview = () => {
       role: job.title || graduate.position || 'Developer',
       status: candidateStatus,
       rank: getCandidateRank(graduate.rank),
-      statusLabel: candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
+      statusLabel:
+        candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
       experience: formatExperience(graduate.expYears || 0),
       location: formatLocation(job.location || graduate.location),
       skills: graduate.skills || [],
@@ -60,7 +64,8 @@ const CandidatePreview = () => {
   const transformMatch = (match: ApiMatch): CandidateProfile => {
     const graduate = match.graduateId || {};
     const job = match.jobId || {};
-    const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+    const fullName =
+      `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
     const matchScore = match.score
       ? match.score > 1
         ? Math.min(100, Math.round(match.score))
@@ -91,16 +96,17 @@ const CandidatePreview = () => {
   };
 
   // Fetch applications
-  const { data: applicationsResponse, isLoading: loadingApplications } = useQuery({
-    queryKey: ['companyApplications'],
-    queryFn: async () => {
-      const response = await companyApi.getApplications({
-        page: 1,
-        limit: 100,
-      });
-      return response;
-    },
-  });
+  const { data: applicationsResponse, isLoading: loadingApplications } =
+    useQuery({
+      queryKey: ['companyApplications'],
+      queryFn: async () => {
+        const response = await companyApi.getApplications({
+          page: 1,
+          limit: 100,
+        });
+        return response;
+      },
+    });
 
   // Fetch matches
   const { data: matchesResponse, isLoading: loadingMatches } = useQuery({
@@ -118,7 +124,10 @@ const CandidatePreview = () => {
   const applicationsData = useMemo(() => {
     if (!applicationsResponse) return [];
     if (Array.isArray(applicationsResponse)) return applicationsResponse;
-    if (applicationsResponse?.applications && Array.isArray(applicationsResponse.applications)) {
+    if (
+      applicationsResponse?.applications &&
+      Array.isArray(applicationsResponse.applications)
+    ) {
       return applicationsResponse.applications;
     }
     return [];
@@ -151,12 +160,21 @@ const CandidatePreview = () => {
   }, [id, applicationsData, matchesData]);
 
   const updateApplicationStatusMutation = useMutation({
-    mutationFn: async ({ applicationId, status }: { applicationId: string; status: string }) => {
+    mutationFn: async ({
+      applicationId,
+      status,
+    }: {
+      applicationId: string;
+      status: string;
+    }) => {
       return companyApi.updateApplicationStatus(applicationId, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
       queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+      // Also invalidate job-specific queries used in the CandidatesListModal
+      queryClient.invalidateQueries({ queryKey: ['jobApplicants'] });
+      queryClient.invalidateQueries({ queryKey: ['jobMatches'] });
     },
   });
 
@@ -254,12 +272,14 @@ const CandidatePreview = () => {
 
         {/* Summary Section */}
         {candidate.summary && (
-        <div className="flex flex-col gap-[12px]">
-          <h2 className="text-[20px] font-semibold text-[#1C1C1C]">Summary</h2>
-          <p className="text-[16px] leading-relaxed text-[#1C1C1CBF]">
+          <div className="flex flex-col gap-[12px]">
+            <h2 className="text-[20px] font-semibold text-[#1C1C1C]">
+              Summary
+            </h2>
+            <p className="text-[16px] leading-relaxed text-[#1C1C1CBF]">
               {candidate.summary}
-          </p>
-        </div>
+            </p>
+          </div>
         )}
 
         {/* Skills */}
@@ -275,45 +295,50 @@ const CandidatePreview = () => {
         </div>
 
         {/* Employment Details */}
-        {(candidate.jobType || candidate.location || candidate.salary || candidate.salaryPerAnnum) && (
-        <div className="flex items-center gap-[16px] border-t border-[#E0E0E0] pt-[20px]">
+        {(candidate.jobType ||
+          candidate.location ||
+          candidate.salary ||
+          candidate.salaryPerAnnum) && (
+          <div className="flex items-center gap-[16px] border-t border-[#E0E0E0] pt-[20px]">
             {candidate.jobType && (
               <>
-          <div className="flex flex-col">
-            <span className="text-[18px] font-semibold text-[#1C1C1C]">
+                <div className="flex flex-col">
+                  <span className="text-[18px] font-semibold text-[#1C1C1C]">
                     {candidate.jobType}
-            </span>
-          </div>
-                {(candidate.location || candidate.salary || candidate.salaryPerAnnum) && (
-          <div className="h-[40px] w-px bg-[#E0E0E0]" />
+                  </span>
+                </div>
+                {(candidate.location ||
+                  candidate.salary ||
+                  candidate.salaryPerAnnum) && (
+                  <div className="h-[40px] w-px bg-[#E0E0E0]" />
                 )}
               </>
             )}
             {candidate.location && (
               <>
-          <div className="flex flex-col">
-            <span className="text-[18px] font-semibold text-[#1C1C1C]">
+                <div className="flex flex-col">
+                  <span className="text-[18px] font-semibold text-[#1C1C1C]">
                     {candidate.location}
-            </span>
-          </div>
+                  </span>
+                </div>
                 {(candidate.salary || candidate.salaryPerAnnum) && (
-          <div className="h-[40px] w-px bg-[#E0E0E0]" />
+                  <div className="h-[40px] w-px bg-[#E0E0E0]" />
                 )}
               </>
             )}
             {(candidate.salary || candidate.salaryPerAnnum) && (
-          <div className="flex flex-col">
-            <span className="text-[18px] font-semibold text-[#1C1C1C]">
+              <div className="flex flex-col">
+                <span className="text-[18px] font-semibold text-[#1C1C1C]">
                   {candidate.salary
                     ? `${candidate.salary.currency || '$'}${candidate.salary.min || 0}k-${candidate.salary.max || 0}k`
                     : candidate.salaryPerAnnum
-                    ? `$${candidate.salaryPerAnnum.toLocaleString()}`
-                    : 'N/A'}
-            </span>
-            <span className="text-[14px] text-[#1C1C1CBF]">Annual</span>
-          </div>
+                      ? `$${candidate.salaryPerAnnum.toLocaleString()}`
+                      : 'N/A'}
+                </span>
+                <span className="text-[14px] text-[#1C1C1CBF]">Annual</span>
+              </div>
             )}
-        </div>
+          </div>
         )}
 
         {/* Action Buttons */}
@@ -329,10 +354,15 @@ const CandidatePreview = () => {
           <button
             type="button"
             onClick={handleAccept}
-            disabled={!candidate.applicationId || updateApplicationStatusMutation.isPending}
+            disabled={
+              !candidate.applicationId ||
+              updateApplicationStatusMutation.isPending
+            }
             className="w-full flex items-center justify-center gap-[12px] rounded-[10px] bg-button py-[15px] text-[16px] font-medium text-[#F8F8F8] transition hover:bg-[#176300] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {updateApplicationStatusMutation.isPending ? 'Accepting...' : 'Accept candidate'}
+            {updateApplicationStatusMutation.isPending
+              ? 'Accepting...'
+              : 'Accept candidate'}
             <HiArrowRight className="text-[24px]" />
           </button>
         </div>
@@ -342,4 +372,3 @@ const CandidatePreview = () => {
 };
 
 export default CandidatePreview;
-

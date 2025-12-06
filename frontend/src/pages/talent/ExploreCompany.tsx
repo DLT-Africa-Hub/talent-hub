@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BsSearch, BsFilter } from 'react-icons/bs';
 import { HiOutlineX } from 'react-icons/hi';
 
@@ -33,12 +33,15 @@ interface AvailableJob {
 }
 
 const ExploreCompany = () => {
+  const queryClient = useQueryClient();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<'createdAt' | 'title' | 'salary'>('createdAt');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'title' | 'salary'>(
+    'createdAt'
+  );
   const [filterContract, setFilterContract] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
@@ -112,8 +115,7 @@ const ExploreCompany = () => {
 
       const companyName = job.companyName || 'Company';
 
-      const cardId =
-        parseInt(job.id?.slice(-8) || '', 16) || index + 1;
+      const cardId = parseInt(job.id?.slice(-8) || '', 16) || index + 1;
 
       const rawMatch = typeof job.matchScore === 'number' ? job.matchScore : 0;
       const matchScore = Math.min(100, Math.max(0, Math.round(rawMatch)));
@@ -132,14 +134,16 @@ const ExploreCompany = () => {
             ? '—'
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
-        description: job.description || 'No description provided.'
+        description: job.description || 'No description provided.',
       };
     },
     []
   );
- 
 
-  const jobsData = useMemo(() => jobsResponse?.jobs || [], [jobsResponse?.jobs]);
+  const jobsData = useMemo(
+    () => jobsResponse?.jobs || [],
+    [jobsResponse?.jobs]
+  );
   const pagination = jobsResponse?.pagination || {
     page: 1,
     limit: pageSize,
@@ -160,7 +164,6 @@ const ExploreCompany = () => {
   const handlePreviewClick = (companyId: number) => {
     const company = companies.find((c: Company) => c.id === companyId);
     if (company) {
-      
       setSelectedCompany(company);
       setIsModalOpen(true);
     }
@@ -171,12 +174,10 @@ const ExploreCompany = () => {
     setSelectedCompany(null);
   };
 
-  const handleChat = () => {
-    // TODO: Navigate to chat
-  };
-
   const handleApply = () => {
-    // TODO: Handle application
+    // Refresh the jobs list after successful application
+    queryClient.invalidateQueries({ queryKey: ['exploreJobs'] });
+    queryClient.invalidateQueries({ queryKey: ['graduateApplications'] });
   };
 
   // Companies are already filtered and sorted on the server
@@ -196,7 +197,8 @@ const ExploreCompany = () => {
                 Available Opportunities
               </h1>
               <p className="text-[14px] md:text-[16px] text-[#1C1C1C80]">
-                {pagination.total} {pagination.total === 1 ? 'job' : 'jobs'} found
+                {pagination.total} {pagination.total === 1 ? 'job' : 'jobs'}{' '}
+                found
                 {pagination.total > 0 && (
                   <span className="ml-1">
                     (Page {pagination.page} of {pagination.totalPages})
@@ -236,11 +238,17 @@ const ExploreCompany = () => {
                   }`}
                 >
                   <BsFilter className="text-[18px]" />
-                  <span className="hidden sm:inline text-[14px] font-medium">Filters</span>
+                  <span className="hidden sm:inline text-[14px] font-medium">
+                    Filters
+                  </span>
                 </button>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'title' | 'salary')}
+                  onChange={(e) =>
+                    setSortBy(
+                      e.target.value as 'createdAt' | 'title' | 'salary'
+                    )
+                  }
                   className="px-4 py-3 border border-fade rounded-[10px] bg-white text-[#1C1C1C] outline-none focus:border-button focus:ring-2 focus:ring-button/20 transition-all cursor-pointer text-[14px] font-medium"
                 >
                   <option value="createdAt">Sort by Newest</option>
@@ -254,7 +262,9 @@ const ExploreCompany = () => {
           {/* Filter Chips */}
           {showFilters && (
             <div className="flex flex-wrap items-center gap-3 p-4 bg-[#F8F8F8] rounded-[12px] border border-fade animate-in slide-in-from-top-2 duration-200">
-              <span className="text-[14px] font-medium text-[#1C1C1C80]">Contract Type:</span>
+              <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                Contract Type:
+              </span>
               {contractTypes.map((type) => (
                 <button
                   key={type}
@@ -274,7 +284,9 @@ const ExploreCompany = () => {
           {/* Active Filters Display */}
           {(filterContract !== 'all' || searchQuery) && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[14px] text-[#1C1C1C80]">Active filters:</span>
+              <span className="text-[14px] text-[#1C1C1C80]">
+                Active filters:
+              </span>
               {searchQuery && (
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-button/10 text-button rounded-[20px] text-[14px] font-medium">
                   Search: "{searchQuery}"
@@ -304,7 +316,7 @@ const ExploreCompany = () => {
         </div>
 
         {/* Results Section */}
-        {(loading || isFetching) ? (
+        {loading || isFetching ? (
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner message="Loading opportunities..." />
           </div>
@@ -326,7 +338,9 @@ const ExploreCompany = () => {
             <div className="w-24 h-24 rounded-full bg-fade flex items-center justify-center mb-4">
               <BsSearch className="text-[40px] text-[#1C1C1C40]" />
             </div>
-            <h3 className="text-[20px] font-semibold text-[#1C1C1C] mb-2">No jobs found</h3>
+            <h3 className="text-[20px] font-semibold text-[#1C1C1C] mb-2">
+              No jobs found
+            </h3>
             <p className="text-[16px] text-[#1C1C1C80] text-center max-w-md">
               {pagination.total === 0
                 ? 'No job opportunities available at the moment. Check back later!'
@@ -392,7 +406,6 @@ const ExploreCompany = () => {
         isOpen={isModalOpen}
         company={selectedCompany}
         onClose={handleCloseModal}
-        onChat={handleChat}
         onApply={handleApply}
       />
     </>

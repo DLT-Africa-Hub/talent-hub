@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   getAllUsers,
   searchUsers,
@@ -20,7 +20,7 @@ import {
   requireEmailVerification,
 } from '../middleware/auth.middleware';
 
-const router = Router();
+const router: IRouter = Router();
 
 // All routes require authentication, email verification, and admin role
 router.use(authenticate);

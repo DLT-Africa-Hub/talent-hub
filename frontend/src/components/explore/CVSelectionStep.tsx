@@ -18,12 +18,14 @@ interface CVSelectionStepProps {
   selectedCVId?: string;
 }
 
-const CVSelectionStep: React.FC<CVSelectionStepProps> = ({ 
-  onBack, 
+const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
+  onBack,
   onNext,
-  selectedCVId 
+  selectedCVId,
 }) => {
-  const [selectedCV, setSelectedCV] = useState<string | null>(selectedCVId || null);
+  const [selectedCV, setSelectedCV] = useState<string | null>(
+    selectedCVId || null
+  );
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [existingCVs, setExistingCVs] = useState<CV[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,15 +56,15 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
@@ -75,7 +77,10 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
-    if (!allowedMime.includes(file.type) && !/\.(pdf|docx?|PDF|DOCX?)$/.test(file.name)) {
+    if (
+      !allowedMime.includes(file.type) &&
+      !/\.(pdf|docx?|PDF|DOCX?)$/.test(file.name)
+    ) {
       setError('Only PDF, DOC, and DOCX files are allowed');
       return;
     }
@@ -118,7 +123,11 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
     xhr.onload = async () => {
       try {
         const resp = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300 && (resp.secure_url || resp.url)) {
+        if (
+          xhr.status >= 200 &&
+          xhr.status < 300 &&
+          (resp.secure_url || resp.url)
+        ) {
           const secureUrl = resp.secure_url || resp.url;
           const publicId = resp.public_id || resp.publicId;
 
@@ -134,7 +143,7 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
 
           setUploadedFile(file);
           setSelectedCV(null);
-          
+
           e.target.value = '';
         } else {
           console.error('Cloudinary upload failed:', xhr.status, resp);
@@ -170,7 +179,7 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
       const latestCV = existingCVs[existingCVs.length - 1];
       onNext(latestCV, uploadedFile);
     } else if (selectedCV) {
-      const cv = existingCVs.find(cv => cv._id === selectedCV);
+      const cv = existingCVs.find((cv) => cv._id === selectedCV);
       onNext(cv);
     }
   };
@@ -185,7 +194,8 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
           Select Your CV
         </h2>
         <p className="text-[14px] text-[#1C1C1CBF]">
-          Choose an existing CV or upload a new one to continue with your application
+          Choose an existing CV or upload a new one to continue with your
+          application
         </p>
       </div>
 
@@ -222,19 +232,26 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex items-center justify-center w-[40px] h-[40px] rounded-[8px] ${
-                        selectedCV === cv._id ? 'bg-button/10' : 'bg-white'
-                      }`}>
-                        <HiOutlineDocument className={`text-[20px] ${
-                          selectedCV === cv._id ? 'text-button' : 'text-[#1C1C1C]'
-                        }`} />
+                      <div
+                        className={`flex items-center justify-center w-[40px] h-[40px] rounded-[8px] ${
+                          selectedCV === cv._id ? 'bg-button/10' : 'bg-white'
+                        }`}
+                      >
+                        <HiOutlineDocument
+                          className={`text-[20px] ${
+                            selectedCV === cv._id
+                              ? 'text-button'
+                              : 'text-[#1C1C1C]'
+                          }`}
+                        />
                       </div>
                       <div className="flex flex-col items-start">
                         <p className="font-medium text-[14px] text-[#1C1C1C]">
                           {cv.fileName}
                         </p>
                         <p className="text-[12px] text-[#1C1C1CBF]">
-                          {formatDate(cv.uploadedAt)} • {formatFileSize(cv.size)}
+                          {formatDate(cv.uploadedAt)} •{' '}
+                          {formatFileSize(cv.size)}
                         </p>
                       </div>
                     </div>
@@ -296,7 +313,7 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
                   </p>
                   {uploadProgress > 0 && (
                     <div className="w-full max-w-[200px] h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-button transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       />

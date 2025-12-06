@@ -15,4 +15,3 @@ export interface NotificationItem {
   relatedId?: string | null;
   relatedType?: string | null;
 }
-

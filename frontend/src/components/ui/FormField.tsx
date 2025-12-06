@@ -31,15 +31,10 @@ const FormField: React.FC<FormFieldProps> = ({
         </label>
       )}
       {children}
-      {hint && !error && (
-        <p className="text-[12px] text-[#1C1C1C80]">{hint}</p>
-      )}
-      {error && (
-        <p className="text-[12px] text-red-600">{error}</p>
-      )}
+      {hint && !error && <p className="text-[12px] text-[#1C1C1C80]">{hint}</p>}
+      {error && <p className="text-[12px] text-red-600">{error}</p>}
     </div>
   );
 };
 
 export default FormField;
-

@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { HiChevronDown } from 'react-icons/hi2';
 import Modal from '../auth/Modal';
-import {
-  Button,
-  Input,
-  Select,
-} from '../ui';
+import { Button, Input, Select } from '../ui';
 import RichTextEditor from '../ui/RichTextEditor';
 import RankSelector, {
   RankOption,
@@ -134,7 +130,9 @@ const JobCreationModal = ({
       return;
     }
 
-    const salaryAmount = formData.salaryAmount ? parseInt(formData.salaryAmount, 10) : undefined;
+    const salaryAmount = formData.salaryAmount
+      ? parseInt(formData.salaryAmount, 10)
+      : undefined;
 
     const payload: JobPayload = {
       title: formData.title,
@@ -181,7 +179,10 @@ const JobCreationModal = ({
       onJobCreated?.();
       setStep('success');
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string }; status?: number }; message?: string };
+      const error = err as {
+        response?: { data?: { message?: string }; status?: number };
+        message?: string;
+      };
       let errorMessage = 'Failed to create job. Please try again.';
 
       if (error.response?.data?.message) {
@@ -212,10 +213,7 @@ const JobCreationModal = ({
   };
 
   const renderDetailsStep = () => (
-    <form
-      onSubmit={handleDetailsSubmit}
-      className="flex flex-col gap-5"
-    >
+    <form onSubmit={handleDetailsSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-1 text-center text-[#1C1C1C]">
         <h2 className="text-[24px] font-semibold">Create a new job</h2>
         <p className="text-[15px] text-[#1C1C1C80]">
@@ -365,7 +363,9 @@ const JobCreationModal = ({
                       >
                         <div
                           className={`w-4 h-4 border-2 rounded flex items-center justify-center ${
-                            isSelected ? 'border-button bg-button' : 'border-fade'
+                            isSelected
+                              ? 'border-button bg-button'
+                              : 'border-fade'
                           }`}
                         >
                           {isSelected && (
@@ -420,7 +420,9 @@ const JobCreationModal = ({
       <RichTextEditor
         label="Job Description"
         value={formData.description}
-        onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
+        onChange={(html) =>
+          setFormData((prev) => ({ ...prev, description: html }))
+        }
         placeholder="Describe the role, responsibilities, and requirements"
         required
         rows={6}
@@ -442,7 +444,9 @@ const JobCreationModal = ({
               type="radio"
               name="directContact"
               checked={formData.directContact === true}
-              onChange={() => setFormData((prev) => ({ ...prev, directContact: true }))}
+              onChange={() =>
+                setFormData((prev) => ({ ...prev, directContact: true }))
+              }
               className="mt-1 w-4 h-4 text-button focus:ring-button"
             />
             <div className="flex-1">
@@ -450,7 +454,8 @@ const JobCreationModal = ({
                 Discuss directly with applicants
               </span>
               <span className="text-[12px] text-[#1C1C1C80] block mt-1">
-                You'll be able to chat and schedule interviews directly with candidates
+                You'll be able to chat and schedule interviews directly with
+                candidates
               </span>
             </div>
           </label>
@@ -459,7 +464,9 @@ const JobCreationModal = ({
               type="radio"
               name="directContact"
               checked={formData.directContact === false}
-              onChange={() => setFormData((prev) => ({ ...prev, directContact: false }))}
+              onChange={() =>
+                setFormData((prev) => ({ ...prev, directContact: false }))
+              }
               className="mt-1 w-4 h-4 text-button focus:ring-button"
             />
             <div className="flex-1">
@@ -467,7 +474,8 @@ const JobCreationModal = ({
                 Let DLT Africa handle applications
               </span>
               <span className="text-[12px] text-[#1C1C1C80] block mt-1">
-                DLT Africa admin team will review and manage applications on your behalf
+                DLT Africa admin team will review and manage applications on
+                your behalf
               </span>
             </div>
           </label>
@@ -520,7 +528,10 @@ const JobCreationModal = ({
         </div>
       )}
 
-      <RankSelector selectedRank={selectedRank} onRankSelect={setSelectedRank} />
+      <RankSelector
+        selectedRank={selectedRank}
+        onRankSelect={setSelectedRank}
+      />
 
       <div className="flex justify-end gap-3 pt-2">
         <Button
@@ -553,7 +564,8 @@ const JobCreationModal = ({
         Job posted successfully
       </h2>
       <p className="text-[#1C1C1C80] text-[15px] max-w-[420px]">
-        Your job is now live and will start receiving AI-powered matches shortly.
+        Your job is now live and will start receiving AI-powered matches
+        shortly.
       </p>
       {warning && (
         <div className="w-full rounded-[12px] bg-yellow-50 border border-yellow-200 p-[16px] text-[14px] text-yellow-800">
@@ -571,7 +583,12 @@ const JobCreationModal = ({
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="xl" className="max-h-[90vh] overflow-y-auto">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      size="xl"
+      className="max-h-[90vh] overflow-y-auto"
+    >
       {step === 'details' && renderDetailsStep()}
       {step === 'rank' && renderRankStep()}
       {step === 'success' && renderSuccessStep()}
@@ -580,4 +597,3 @@ const JobCreationModal = ({
 };
 
 export default JobCreationModal;
-

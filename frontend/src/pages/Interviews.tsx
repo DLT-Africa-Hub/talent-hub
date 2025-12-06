@@ -1,10 +1,20 @@
-import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { companyApi } from '../api/company';
 import { graduateApi } from '../api/graduate';
-import { Button, EmptyState, PageLoader, SectionHeader } from '../components/ui';
+import {
+  Button,
+  EmptyState,
+  PageLoader,
+  SectionHeader,
+} from '../components/ui';
 import { ApiError } from '../types/api';
 import InterviewTimeSlotSelector, {
   PendingInterview,
@@ -60,26 +70,63 @@ const Interviews = () => {
   const userRole = user?.role;
   const isCompany = userRole === ROLE_COMPANY;
   const isGraduate = userRole === ROLE_GRADUATE;
-  const [selectingInterviewId, setSelectingInterviewId] = useState<string | null>(null);
+  const [selectingInterviewId, setSelectingInterviewId] = useState<
+    string | null
+  >(null);
 
-  const {
-    data,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['interviews', userRole],
+  // Fetch upcoming interviews (all at once)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['interviews', userRole, 'upcoming'],
     queryFn: async () => {
       if (isCompany) {
-        return companyApi.getInterviews({ page: 1, limit: 100 });
+        return companyApi.getInterviews({
+          page: 1,
+          limit: 100,
+          upcoming: 'true',
+        });
       }
-      return graduateApi.getInterviews({ page: 1, limit: 100 });
+      return graduateApi.getInterviews({
+        page: 1,
+        limit: 100,
+        upcoming: 'true',
+      });
     },
   });
 
+  // Fetch past interviews with infinite scrolling (5 per page)
   const {
-    data: pendingData,
-    isLoading: pendingLoading,
-  } = useQuery({
+    data: pastData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isLoadingPast,
+  } = useInfiniteQuery({
+    queryKey: ['interviews', userRole, 'past'],
+    queryFn: async ({ pageParam = 1 }) => {
+      if (isCompany) {
+        return companyApi.getInterviews({
+          page: pageParam,
+          limit: 5,
+          upcoming: 'false',
+        });
+      }
+      return graduateApi.getInterviews({
+        page: pageParam,
+        limit: 5,
+        upcoming: 'false',
+      });
+    },
+    getNextPageParam: (lastPage) => {
+      const pagination = lastPage.pagination;
+      if (pagination && pagination.page < pagination.pages) {
+        return pagination.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+  });
+
+  const { data: pendingData, isLoading: pendingLoading } = useQuery({
     queryKey: ['interviews', 'pending-selection'],
     queryFn: () => graduateApi.getPendingSelectionInterviews(),
     enabled: isGraduate,
@@ -95,7 +142,10 @@ const Interviews = () => {
       slotId: string;
       graduateTimezone: string;
     }) => {
-      return graduateApi.selectTimeSlot(interviewId, { slotId, graduateTimezone });
+      return graduateApi.selectTimeSlot(interviewId, {
+        slotId,
+        graduateTimezone,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['interviews'] });
@@ -109,50 +159,70 @@ const Interviews = () => {
     graduateTimezone: string
   ) => {
     setSelectingInterviewId(interviewId);
-    await selectSlotMutation.mutateAsync({ interviewId, slotId, graduateTimezone });
+    await selectSlotMutation.mutateAsync({
+      interviewId,
+      slotId,
+      graduateTimezone,
+    });
   };
 
   const pendingInterviews: PendingInterview[] = pendingData?.interviews ?? [];
 
-  const interviews = useMemo(() => (data?.interviews ?? []) as InterviewRecord[], [data?.interviews]);
+  // Upcoming interviews from the query
+  const upcoming = useMemo(() => {
+    const interviews = (data?.interviews ?? []) as InterviewRecord[];
+    return interviews.sort(
+      (a, b) =>
+        new Date(a.scheduledAt || 0).getTime() -
+        new Date(b.scheduledAt || 0).getTime()
+    );
+  }, [data?.interviews]);
 
-  const { upcoming, past } = useMemo(() => {
-    if (!interviews.length) {
-      return { upcoming: [], past: [] };
-    }
-    const now = Date.now();
-    const future: InterviewRecord[] = [];
-    const completed: InterviewRecord[] = [];
-
-    interviews.forEach((interview) => {
-      const scheduledTime = interview.scheduledAt
-        ? new Date(interview.scheduledAt).getTime()
-        : 0;
-      const duration = interview.durationMinutes || 30;
-      const endTime = scheduledTime + duration * 60 * 1000;
-
-      if (endTime < now) {
-        completed.push(interview);
-      } else {
-        future.push(interview);
+  // Past interviews from infinite query (flatten pages)
+  const past = useMemo(() => {
+    if (!pastData?.pages) return [];
+    const allPast: InterviewRecord[] = [];
+    pastData.pages.forEach((page) => {
+      if (page.interviews) {
+        allPast.push(...(page.interviews as InterviewRecord[]));
       }
     });
+    return allPast.sort(
+      (a, b) =>
+        new Date(b.scheduledAt || 0).getTime() -
+        new Date(a.scheduledAt || 0).getTime()
+    );
+  }, [pastData?.pages]);
 
-    return {
-      upcoming: future.sort(
-        (a, b) =>
-          new Date(a.scheduledAt || 0).getTime() -
-          new Date(b.scheduledAt || 0).getTime()
-      ),
-      past: completed.sort(
-        (a, b) =>
-          new Date(b.scheduledAt || 0).getTime() -
-          new Date(a.scheduledAt || 0).getTime()
-      ),
+  // Intersection observer for infinite scrolling
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
     };
-  }, [interviews]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const canJoinInterview = (scheduledAt?: string) => {
+  const canJoinInterview = (scheduledAt?: string, isPast: boolean = false) => {
+    // Past interviews are never joinable
+    if (isPast) return false;
+
     if (!scheduledAt) return false;
     const scheduledTime = new Date(scheduledAt).getTime();
     if (Number.isNaN(scheduledTime)) return false;
@@ -168,8 +238,11 @@ const Interviews = () => {
     }
   };
 
-  const renderInterviewCard = (interview: InterviewRecord) => {
-    const joinable = canJoinInterview(interview.scheduledAt);
+  const renderInterviewCard = (
+    interview: InterviewRecord,
+    isPast: boolean = false
+  ) => {
+    const joinable = canJoinInterview(interview.scheduledAt, isPast);
     const counterpartName = isCompany
       ? interview.participant?.name || 'Candidate'
       : interview.job?.companyName || 'Company';
@@ -188,9 +261,7 @@ const Interviews = () => {
             {counterpartName}
           </p>
           {interview.job?.title && (
-            <p className="text-sm text-[#1C1C1C80]">
-              {interview.job?.title}
-            </p>
+            <p className="text-sm text-[#1C1C1C80]">{interview.job?.title}</p>
           )}
         </div>
 
@@ -218,17 +289,21 @@ const Interviews = () => {
           </div>
           <Button
             onClick={() => handleJoin(interview.roomSlug)}
-            disabled={!joinable}
+            disabled={!joinable || isPast}
             className="w-full sm:w-auto"
           >
-            {joinable ? actionLabel : 'Available closer to start time'}
+            {isPast
+              ? 'Interview Completed'
+              : joinable
+                ? actionLabel
+                : 'Available closer to start time'}
           </Button>
         </div>
       </div>
     );
   };
 
-  if (isLoading || pendingLoading) {
+  if (isLoading || pendingLoading || isLoadingPast) {
     return <PageLoader message="Loading interviews..." />;
   }
 
@@ -249,22 +324,30 @@ const Interviews = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         {/* Pending Selection Section - Graduates Only */}
         {isGraduate && pendingInterviews.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <p className="text-lg font-semibold text-[#1C1C1C]">
-                Action Required
-              </p>
-              <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
-                {pendingInterviews.length} pending
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center">
+                  <span className="text-yellow-700 text-lg font-bold">!</span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#1C1C1C]">
+                    Action Required
+                  </h2>
+                  <p className="text-sm text-[#1C1C1C80]">
+                    Select your preferred time slot for these interviews
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 text-sm font-semibold shadow-sm">
+                {pendingInterviews.length}{' '}
+                {pendingInterviews.length === 1 ? 'pending' : 'pending'}
               </span>
             </div>
-            <p className="text-sm text-[#1C1C1C80] mb-2">
-              Select your preferred time slot for these interviews
-            </p>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
               {pendingInterviews.map((interview) => (
                 <InterviewTimeSlotSelector
                   key={interview.id}
@@ -278,12 +361,12 @@ const Interviews = () => {
         )}
 
         <div className="flex flex-col gap-3">
-          <p className="text-lg font-semibold text-[#1C1C1C]">
-            Upcoming
-          </p>
+          <p className="text-lg font-semibold text-[#1C1C1C]">Upcoming</p>
           {upcoming.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {upcoming.map(renderInterviewCard)}
+              {upcoming.map((interview) =>
+                renderInterviewCard(interview, false)
+              )}
             </div>
           ) : (
             <EmptyState
@@ -296,9 +379,27 @@ const Interviews = () => {
         <div className="flex flex-col gap-3">
           <p className="text-lg font-semibold text-[#1C1C1C]">Past</p>
           {past.length > 0 ? (
-            <div className="flex flex-col gap-4">
-              {past.map(renderInterviewCard)}
-            </div>
+            <>
+              <div className="flex flex-col gap-4">
+                {past.map((interview) => renderInterviewCard(interview, true))}
+              </div>
+              {/* Infinite scroll trigger */}
+              <div
+                ref={observerTarget}
+                className="h-4 flex items-center justify-center"
+              >
+                {isFetchingNextPage && (
+                  <div className="text-sm text-[#1C1C1C80]">
+                    Loading more...
+                  </div>
+                )}
+              </div>
+              {!hasNextPage && past.length > 0 && (
+                <div className="text-sm text-[#1C1C1C80] text-center py-2">
+                  No more past interviews
+                </div>
+              )}
+            </>
           ) : (
             <EmptyState
               title="No interviews yet"
@@ -312,4 +413,3 @@ const Interviews = () => {
 };
 
 export default Interviews;
-

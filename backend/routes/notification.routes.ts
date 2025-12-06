@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import {
   getUnreadNotificationCount,
@@ -7,7 +7,7 @@ import {
   markNotificationRead,
 } from '../controllers/notification.controller';
 
-const router = Router();
+const router: IRouter = Router();
 
 router.use(authenticate);
 

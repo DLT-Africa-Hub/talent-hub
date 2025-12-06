@@ -76,97 +76,103 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   });
 
   // Transform match to CandidateProfile
-  const transformMatch = useCallback((match: ApiMatch, index: number): CandidateProfile => {
-    const graduate = match.graduateId || {};
-    const job = match.jobId || {};
+  const transformMatch = useCallback(
+    (match: ApiMatch, index: number): CandidateProfile => {
+      const graduate = match.graduateId || {};
+      const job = match.jobId || {};
 
-    const fullName = `${graduate.firstName || ''} ${
-      graduate.lastName || ''
-    }`.trim();
+      const fullName = `${graduate.firstName || ''} ${
+        graduate.lastName || ''
+      }`.trim();
 
-    const matchScore = match.score
-      ? match.score > 1
-        ? Math.min(100, Math.round(match.score))
-        : Math.min(100, Math.round(match.score * 100))
-      : 0;
+      const matchScore = match.score
+        ? match.score > 1
+          ? Math.min(100, Math.round(match.score))
+          : Math.min(100, Math.round(match.score * 100))
+        : 0;
 
-    return {
-      id: match._id || `match-${index}`,
-      name: fullName || 'Unknown Candidate',
-      role: job.title || graduate.position || 'Developer',
-      status: 'matched',
-      rank: getCandidateRank(graduate.rank),
-      statusLabel: 'Matched',
-      experience: formatExperience(graduate.expYears || 0),
-      location: formatLocation(job.location || graduate.location),
-      skills: (graduate.skills || []).slice(0, 3),
-      image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
-      summary: graduate.summary,
-      cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
-      matchPercentage: matchScore,
-      jobType: job.jobType,
-      salary: job.salary,
-    };
-  }, []);
+      return {
+        id: match._id || `match-${index}`,
+        name: fullName || 'Unknown Candidate',
+        role: job.title || graduate.position || 'Developer',
+        status: 'matched',
+        rank: getCandidateRank(graduate.rank),
+        statusLabel: 'Matched',
+        experience: formatExperience(graduate.expYears || 0),
+        location: formatLocation(job.location || graduate.location),
+        skills: (graduate.skills || []).slice(0, 3),
+        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+        summary: graduate.summary,
+        cv:
+          typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
+        matchPercentage: matchScore,
+        jobType: job.jobType,
+        salary: job.salary,
+      };
+    },
+    []
+  );
 
   // Transform application to CandidateProfile
-  const transformApplication = useCallback((
-    application: ApiApplication,
-    index: number
-  ): CandidateProfile => {
-    const graduate = application.graduateId || {};
-    const job = application.jobId || {};
-    const company = job.companyId || {};
+  const transformApplication = useCallback(
+    (application: ApiApplication, index: number): CandidateProfile => {
+      const graduate = application.graduateId || {};
+      const job = application.jobId || {};
+      const company = job.companyId || {};
 
-    const fullName = `${graduate.firstName || ''} ${
-      graduate.lastName || ''
-    }`.trim();
+      const fullName = `${graduate.firstName || ''} ${
+        graduate.lastName || ''
+      }`.trim();
 
-    const candidateStatus = mapApplicationStatusToCandidateStatus(
-      application.status || ''
-    );
+      const candidateStatus = mapApplicationStatusToCandidateStatus(
+        application.status || ''
+      );
 
-    const matchScore = application.matchId?.score
-      ? application.matchId.score > 1
-        ? Math.min(100, Math.round(application.matchId.score))
-        : Math.min(100, Math.round(application.matchId.score * 100))
-      : undefined;
+      const matchScore = application.matchId?.score
+        ? application.matchId.score > 1
+          ? Math.min(100, Math.round(application.matchId.score))
+          : Math.min(100, Math.round(application.matchId.score * 100))
+        : undefined;
 
-    // Get CV from graduate or application resume
-    let cvUrl: string | undefined;
-    if (graduate.cv && Array.isArray(graduate.cv) && graduate.cv.length > 0) {
-      const displayCV = graduate.cv.find((cv: { onDisplay?: boolean; fileUrl?: string }) => cv.onDisplay);
-      cvUrl = displayCV?.fileUrl || graduate.cv[0]?.fileUrl;
-    }
-    if (!cvUrl && application.resume?.fileUrl) {
-      cvUrl = application.resume.fileUrl;
-    }
+      // Get CV from graduate or application resume
+      let cvUrl: string | undefined;
+      if (graduate.cv && Array.isArray(graduate.cv) && graduate.cv.length > 0) {
+        const displayCV = graduate.cv.find(
+          (cv: { onDisplay?: boolean; fileUrl?: string }) => cv.onDisplay
+        );
+        cvUrl = displayCV?.fileUrl || graduate.cv[0]?.fileUrl;
+      }
+      if (!cvUrl && application.resume?.fileUrl) {
+        cvUrl = application.resume.fileUrl;
+      }
 
-    return {
-      id: application._id || `application-${index}`,
-      applicationId: application._id?.toString(),
-      jobId: application.jobId?._id?.toString() || jobId || '',
-      jobTitle: job.title,
-      companyName: company.companyName,
-      name: fullName || 'Unknown Candidate',
-      role: graduate.position || 'Developer',
-      status: candidateStatus,
-      rank: getCandidateRank(graduate.rank),
-      statusLabel:
-        (application.status || '').charAt(0).toUpperCase() +
-        (application.status || '').slice(1),
-      experience: formatExperience(graduate.expYears || 0),
-      location: formatLocation(job.location || graduate.location),
-      skills: (graduate.skills || []).slice(0, 3),
-      image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
-      summary: graduate.summary,
-      cv: cvUrl,
-      matchPercentage: matchScore,
-      jobType: job.jobType,
-      salary: job.salary,
-      directContact: job.directContact,
-    };
-  }, [jobId]);
+      return {
+        id: application._id || `application-${index}`,
+        applicationId: application._id?.toString(),
+        jobId: application.jobId?._id?.toString() || jobId || '',
+        jobTitle: job.title,
+        companyName: company.companyName,
+        name: fullName || 'Unknown Candidate',
+        role: graduate.position || 'Developer',
+        status: candidateStatus,
+        rank: getCandidateRank(graduate.rank),
+        statusLabel:
+          (application.status || '').charAt(0).toUpperCase() +
+          (application.status || '').slice(1),
+        experience: formatExperience(graduate.expYears || 0),
+        location: formatLocation(job.location || graduate.location),
+        skills: (graduate.skills || []).slice(0, 3),
+        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
+        summary: graduate.summary,
+        cv: cvUrl,
+        matchPercentage: matchScore,
+        jobType: job.jobType,
+        salary: job.salary,
+        directContact: job.directContact,
+      };
+    },
+    [jobId]
+  );
 
   // Get candidates based on type
   const candidates = useMemo(() => {

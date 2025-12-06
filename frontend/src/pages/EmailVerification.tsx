@@ -126,7 +126,7 @@ const EmailVerification = () => {
           </p>
         </div>
 
-          <div className="flex flex-col gap-4 w-full bg-white rounded-[12px] p-6 border border-fade">
+        <div className="flex flex-col gap-4 w-full bg-white rounded-[12px] p-6 border border-fade">
           <div className="text-center">
             <div className="mx-auto w-16 h-16 bg-[#1E9500]/10 rounded-full flex items-center justify-center mb-4">
               <svg

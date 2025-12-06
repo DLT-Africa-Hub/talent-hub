@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import LoadingSpinner from './LoadingSpinner';
-import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../../utils/job.utils';
+import {
+  DEFAULT_JOB_IMAGE,
+  formatSalaryRange,
+  formatJobType,
+  getSalaryType,
+} from '../../utils/job.utils';
 import { stripHtml } from '../../utils/text.utils';
-import { graduateApi } from '../../api/graduate';
 import api from '../../api/client';
+import { useApplyToJob } from '../../hooks/useApplyToJob';
+import { Company } from '../explore/CompanyCard';
 
 interface JobData {
   id: string;
@@ -33,8 +38,8 @@ interface JobPreviewModalProps {
   matchScore?: number;
   hasApplied?: boolean;
   onClose: () => void;
-  onChat?: () => void;
-  onApply?: () => void;
+  onApply?: () => void; // Legacy callback - kept for backward compatibility
+  onOpenApplication?: (company: Company) => void; // New: Opens CompanyPreviewModal with full flow
 }
 
 const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
@@ -42,13 +47,15 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   jobId,
   jobData: preloadedJobData,
   matchScore,
-  hasApplied: hasAppliedProp = false,
   onClose,
-  onChat,
   onApply,
+  onOpenApplication,
 }) => {
-  // State for real-time application status check
-  const [hasApplied, setHasApplied] = useState(hasAppliedProp);
+  // Use shared apply hook for checking applied status
+  const { hasApplied, checkingApplied } = useApplyToJob({
+    jobId: jobId || undefined,
+    isOpen,
+  });
 
   // Fetch job details only if not provided
   const {
@@ -63,7 +70,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
       try {
         const response = await api.get(`/graduates/matches`);
         const matches = response.data.matches || [];
-        const match = matches.find((m: { job?: { id?: string } }) => m.job?.id === jobId);
+        const match = matches.find(
+          (m: { job?: { id?: string } }) => m.job?.id === jobId
+        );
         if (match?.job) {
           return match.job as JobData;
         }
@@ -78,26 +87,40 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
     enabled: isOpen && !!jobId && !preloadedJobData,
   });
 
-  // Check if graduate has already applied when modal opens
-  useEffect(() => {
-    if (!jobId || !isOpen) return;
+  // Convert JobData to Company format for application flow
+  const convertJobToCompany = (job: JobData, jobIdStr: string): Company => {
+    const matchPercentage =
+      typeof matchScore === 'number'
+        ? Math.round(
+            matchScore > 1 ? Math.min(matchScore, 100) : matchScore * 100
+          )
+        : 0;
 
-    const jobIdStr = jobId; // Store in variable after null check
-    if (!jobIdStr) return;
+    const salaryRange = formatSalaryRange(job.salary);
+    const salaryType = job.jobType ? getSalaryType(job.jobType) : 'Annual';
+    const wage =
+      salaryRange === 'Not specified'
+        ? '—'
+        : `${salaryRange.replace(/[k$]/g, '')} ${salaryType}`;
 
-    const checkApplied = async () => {
-      try {
-        const res = await graduateApi.alreadyApplied(jobIdStr);
-        setHasApplied(res.applied); // backend returns { applied: true/false }
-      } catch (err) {
-        console.error('Failed to check application status', err);
-        // Fallback to prop value on error
-        setHasApplied(hasAppliedProp);
-      }
+    const formattedJobType = job.jobType
+      ? formatJobType(job.jobType)
+      : 'Full-time';
+
+    return {
+      id: parseInt(jobIdStr) || 0, // Use jobId as id, or generate unique id
+      jobId: jobIdStr,
+      name: job.companyName || 'Company',
+      role: job.title || 'Position',
+      match: matchPercentage,
+      contract: formattedJobType,
+      location: job.location || 'Location not specified',
+      wageType: salaryType,
+      wage: wage,
+      image: DEFAULT_JOB_IMAGE,
+      description: job.description,
     };
-
-    checkApplied();
-  }, [jobId, isOpen, hasAppliedProp]);
+  };
 
   // Use preloaded data if available, otherwise use fetched data
   const job = preloadedJobData || fetchedJobData;
@@ -130,14 +153,21 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   const skills = job?.requirements?.skills || [];
   const salaryRange = formatSalaryRange(job?.salary);
   const salaryType = job?.jobType ? getSalaryType(job.jobType) : 'Annual';
-  const formattedJobType = job?.jobType ? formatJobType(job.jobType) : 'Full-time';
-
-  const handleChat = () => {
-    onChat?.();
-  };
+  const formattedJobType = job?.jobType
+    ? formatJobType(job.jobType)
+    : 'Full-time';
 
   const handleApply = () => {
-    if (hasApplied) return;
+    if (hasApplied || !job || !jobId) return;
+
+    // If onOpenApplication is provided, use full application flow
+    if (onOpenApplication) {
+      const company = convertJobToCompany(job, jobId);
+      onOpenApplication(company);
+      return;
+    }
+
+    // Fallback to legacy callback for backward compatibility
     onApply?.();
   };
 
@@ -209,7 +239,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               {typeof matchScore === 'number' && (
                 <div className="flex items-center h-[49px] bg-fade text-[#1C1C1CBF] text-[16px] py-[15px] px-6 rounded-[70px]">
                   {Math.round(
-                    matchScore > 1 ? Math.min(matchScore, 100) : matchScore * 100
+                    matchScore > 1
+                      ? Math.min(matchScore, 100)
+                      : matchScore * 100
                   )}
                   % match
                 </div>
@@ -223,11 +255,14 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               </p>
               {hasApplied && (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-[14px] text-green-800">
-                  You have already applied for this job. Sit tight — we will notify you when the company responds.
+                  You have already applied for this job. Sit tight — we will
+                  notify you when the company responds.
                 </div>
               )}
               <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-                {job.description ? stripHtml(job.description) : 'No description available.'}
+                {job.description
+                  ? stripHtml(job.description)
+                  : 'No description available.'}
               </p>
             </div>
 
@@ -257,7 +292,10 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                 </p>
                 <div className="h-[20px] bg-black w-0.5" />
                 <p className="text-center w-full font-semibold">
-                  {salaryRange === 'Not specified' ? '—' : salaryRange.replace(/[k$]/g, '')} {salaryType}
+                  {salaryRange === 'Not specified'
+                    ? '—'
+                    : salaryRange.replace(/[k$]/g, '')}{' '}
+                  {salaryType}
                 </p>
               </div>
 
@@ -265,24 +303,22 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center">
                 <button
                   type="button"
-                  onClick={handleChat}
-                  className="w-full flex items-center justify-center gap-[12px] border border-button py-[15px] rounded-[10px] text-button cursor-pointer transition hover:bg-[#F8F8F8]"
-                >
-                  <HiOutlineChatBubbleLeftRight className="text-[24px]" />
-                  <p className="text-[16px] font-medium">Chat</p>
-                </button>
-                <button
-                  type="button"
                   onClick={handleApply}
-                  disabled={hasApplied}
+                  disabled={hasApplied || checkingApplied}
                   className={`w-full flex items-center justify-center gap-[12px] py-[15px] rounded-[10px] text-[16px] font-medium transition ${
-                    hasApplied
+                    hasApplied || checkingApplied
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-button text-[#F8F8F8] cursor-pointer hover:bg-[#176300]'
                   }`}
                 >
                   <BsSend className="text-[24px]" />
-                  <p>{hasApplied ? 'Application Submitted' : 'Apply'}</p>
+                  <p>
+                    {checkingApplied
+                      ? 'Checking...'
+                      : hasApplied
+                        ? 'Application Submitted'
+                        : 'Apply'}
+                  </p>
                 </button>
               </div>
             </div>
@@ -294,4 +330,3 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
 };
 
 export default JobPreviewModal;
-

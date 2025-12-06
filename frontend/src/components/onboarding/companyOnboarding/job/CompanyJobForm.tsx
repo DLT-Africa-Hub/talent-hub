@@ -105,9 +105,8 @@ const CompanyJobForm = () => {
       return;
     }
 
-    // Parse salary value
     const salaryAmount = formData.salaryAmount
-      ? parseInt(formData.salaryAmount) * 1000 // Convert from k to actual amount
+      ? parseInt(formData.salaryAmount) * 1000
       : undefined;
 
     const jobData = {
@@ -135,7 +134,6 @@ const CompanyJobForm = () => {
       status: 'active' as const,
     };
 
-    // Navigate to rank selector with job data and form data for restoration
     navigate('/jobs/rank-selector', { state: { jobData, formData } });
   };
 
@@ -346,13 +344,14 @@ const CompanyJobForm = () => {
               ))}
             </div>
           )}
-          
         </div>
 
         <RichTextEditor
           label="Job Description"
           value={formData.description}
-          onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
+          onChange={(html) =>
+            setFormData((prev) => ({ ...prev, description: html }))
+          }
           placeholder="Describe the role, responsibilities, and requirements"
           required
           rows={6}
@@ -410,7 +409,10 @@ const CompanyJobForm = () => {
                     value={req.type}
                     onChange={(e) => {
                       const updated = [...formData.extraRequirements];
-                      updated[index].type = e.target.value as 'text' | 'url' | 'textarea';
+                      updated[index].type = e.target.value as
+                        | 'text'
+                        | 'url'
+                        | 'textarea';
                       setFormData((prev) => ({
                         ...prev,
                         extraRequirements: updated,
@@ -428,7 +430,9 @@ const CompanyJobForm = () => {
                   onClick={() => {
                     setFormData((prev) => ({
                       ...prev,
-                      extraRequirements: prev.extraRequirements.filter((_, i) => i !== index),
+                      extraRequirements: prev.extraRequirements.filter(
+                        (_, i) => i !== index
+                      ),
                     }));
                   }}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
@@ -470,7 +474,6 @@ const CompanyJobForm = () => {
           ))}
         </div>
 
-        {/* Contact Preference Section */}
         <div className="flex flex-col gap-3 p-4 border border-fade rounded-xl bg-[#F8F8F8]">
           <div>
             <label className="text-[#1C1C1C] text-[16px] font-medium">
@@ -486,7 +489,9 @@ const CompanyJobForm = () => {
                 type="radio"
                 name="directContact"
                 checked={formData.directContact === true}
-                onChange={() => setFormData((prev) => ({ ...prev, directContact: true }))}
+                onChange={() =>
+                  setFormData((prev) => ({ ...prev, directContact: true }))
+                }
                 className="mt-1 w-4 h-4 text-button focus:ring-button"
               />
               <div className="flex-1">
@@ -494,7 +499,8 @@ const CompanyJobForm = () => {
                   Discuss directly with applicants
                 </span>
                 <span className="text-[12px] text-[#1C1C1C80] block mt-1">
-                  You'll be able to chat and schedule interviews directly with candidates
+                  You'll be able to chat and schedule interviews directly with
+                  candidates
                 </span>
               </div>
             </label>
@@ -503,7 +509,9 @@ const CompanyJobForm = () => {
                 type="radio"
                 name="directContact"
                 checked={formData.directContact === false}
-                onChange={() => setFormData((prev) => ({ ...prev, directContact: false }))}
+                onChange={() =>
+                  setFormData((prev) => ({ ...prev, directContact: false }))
+                }
                 className="mt-1 w-4 h-4 text-button focus:ring-button"
               />
               <div className="flex-1">
@@ -511,7 +519,9 @@ const CompanyJobForm = () => {
                   Let DLT Africa handle applications
                 </span>
                 <span className="text-[12px] text-[#1C1C1C80] block mt-1">
-                  DLT Africa admin team will review and manage applications on your behalf
+                  DLT Africa admin team will review applications, schedule
+                  interviews, vet all candidates, and notify you about the best
+                  candidates
                 </span>
               </div>
             </label>

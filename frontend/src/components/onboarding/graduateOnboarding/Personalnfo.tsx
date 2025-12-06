@@ -11,8 +11,6 @@ interface Props {
   onNext: () => void;
 }
 
-
-
 const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
   const [countryCode, setCountryCode] = useState('+234');
 
@@ -25,24 +23,16 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
   };
 
   const isFormComplete = useMemo(() => {
-    // If you want to require a CV, add: form.cv && form.cv.length > 0
     return (
       form.firstName.trim() !== '' &&
       form.lastName.trim() !== '' &&
       (form.phoneNo?.trim() ?? '') &&
       (form.cv?.length ?? 0) > 0
-      // && (form.cv?.length ?? 0) > 0 // <-- uncomment to require resume
     );
-  }, [
-    form.firstName,
-    form.lastName,
-    form.phoneNo,
-    form.cv, // keep cv in deps if you decide to include it in validation
-  ]);
+  }, [form.firstName, form.lastName, form.phoneNo, form.cv]);
 
   return (
     <div className="flex items-center justify-center w-full flex-col gap-6 md:gap-8 font-inter max-w-[542px] mx-auto">
-      {/* Header */}
       <div className="flex flex-col w-full gap-2.5 text-left md:text-center">
         <h2 className="font-semibold text-[32px] text-[#1C1C1C]">
           Set up your profile
@@ -52,7 +42,6 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
         </p>
       </div>
 
-      {/* Form */}
       <form
         className="flex flex-col gap-4 w-full"
         onSubmit={(e) => {
@@ -60,26 +49,30 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           if (isFormComplete) onNext();
         }}
       >
-        <div className="flex items-center gap-2.5  w-full">
-          <Input
-            label="First Name"
-            required
-            type="text"
-            placeholder="John"
-            name="firstName"
-            value={form.firstName}
-            onChange={(e) => handleInputChange('firstName', e.target.value)}
-          />
+        <div className="flex items-center gap-2.5 w-full">
+          <div className="flex-1">
+            <Input
+              label="First Name"
+              required
+              type="text"
+              placeholder="John"
+              name="firstName"
+              value={form.firstName}
+              onChange={(e) => handleInputChange('firstName', e.target.value)}
+            />
+          </div>
 
-          <Input
-            label="Last Name"
-            required
-            type="text"
-            placeholder="Doe"
-            name="lastName"
-            value={form.lastName}
-            onChange={(e) => handleInputChange('lastName', e.target.value)}
-          />
+          <div className="flex-1">
+            <Input
+              label="Last Name"
+              required
+              type="text"
+              placeholder="Doe"
+              name="lastName"
+              value={form.lastName}
+              onChange={(e) => handleInputChange('lastName', e.target.value)}
+            />
+          </div>
         </div>
 
         <PhoneInput
@@ -98,7 +91,6 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           }}
         />
 
-        {/* Continue Button */}
         <div className="pt-2">
           <Button type="submit" disabled={!isFormComplete}>
             Continue

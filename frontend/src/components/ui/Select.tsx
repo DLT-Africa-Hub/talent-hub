@@ -5,7 +5,10 @@ interface SelectOption {
   label: string;
 }
 
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
+interface SelectProps extends Omit<
+  React.SelectHTMLAttributes<HTMLSelectElement>,
+  'children'
+> {
   label?: string;
   required?: boolean;
   error?: string;
@@ -42,12 +45,9 @@ const Select: React.FC<SelectProps> = ({
           </option>
         ))}
       </select>
-      {error && (
-        <p className="text-red-500 text-[14px] font-normal">{error}</p>
-      )}
+      {error && <p className="text-red-500 text-[14px] font-normal">{error}</p>}
     </div>
   );
 };
 
 export default Select;
-

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, cloneElement } from "react";
+import React, { useState, useRef, useEffect, cloneElement } from 'react';
 
 interface DropdownMenuProps {
   children: React.ReactNode;
@@ -27,27 +27,33 @@ export const DropdownMenuTrigger = ({ children }: TriggerProps) => {
       setOpen((prev: boolean) => !prev);
 
       // Save state globally for content
-      (window as Window & { __dropdown_open?: boolean }).__dropdown_open = !open;
-      document.dispatchEvent(new Event("dropdown-toggle"));
+      (window as Window & { __dropdown_open?: boolean }).__dropdown_open =
+        !open;
+      document.dispatchEvent(new Event('dropdown-toggle'));
     },
   });
 };
 
 export const DropdownMenuContent = ({
   children,
-  className = "",
+  className = '',
 }: ContentProps) => {
-  const [open, setOpen] = useState((window as Window & { __dropdown_open?: boolean }).__dropdown_open || false);
+  const [open, setOpen] = useState(
+    (window as Window & { __dropdown_open?: boolean }).__dropdown_open || false
+  );
   const ref = useRef<HTMLDivElement>(null);
 
   // Listen for trigger toggle
   useEffect(() => {
     const listener = () => {
-      setOpen((window as Window & { __dropdown_open?: boolean }).__dropdown_open || false);
+      setOpen(
+        (window as Window & { __dropdown_open?: boolean }).__dropdown_open ||
+          false
+      );
     };
-    document.addEventListener("dropdown-toggle", listener);
+    document.addEventListener('dropdown-toggle', listener);
 
-    return () => document.removeEventListener("dropdown-toggle", listener);
+    return () => document.removeEventListener('dropdown-toggle', listener);
   }, []);
 
   // Close on click outside
@@ -58,9 +64,9 @@ export const DropdownMenuContent = ({
         // Track dropdown state if needed
       }
     };
-    document.addEventListener("click", clickHandler);
+    document.addEventListener('click', clickHandler);
 
-    return () => document.removeEventListener("click", clickHandler);
+    return () => document.removeEventListener('click', clickHandler);
   }, []);
 
   if (!open) return null;
@@ -76,24 +82,26 @@ export const DropdownMenuContent = ({
 };
 
 export const DropdownMenuLabel = ({
-    children,
-    className = "",
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => (
-    <div className={`px-3 py-2 text-xs font-semibold text-gray-500 ${className}`}>
-      {children}
-    </div>
-  );
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div className={`px-3 py-2 text-xs font-semibold text-gray-500 ${className}`}>
+    {children}
+  </div>
+);
 
-export const DropdownMenuSeparator = ({ className = "" }: { className?: string }) => (
-    <div className={`h-px bg-gray-200 my-1 ${className}`} />
-  );
+export const DropdownMenuSeparator = ({
+  className = '',
+}: {
+  className?: string;
+}) => <div className={`h-px bg-gray-200 my-1 ${className}`} />;
 
 export const DropdownMenuItem = ({
   children,
-  className = "",
+  className = '',
   onClick,
 }: {
   children: React.ReactNode;

@@ -1,10 +1,6 @@
-
-import React, { useState, useEffect } from "react";
-import { GraduateForm } from "../../../constants/type";
-import { positions } from "../../../utils/material.utils";
-
-
-
+import React, { useState, useEffect } from 'react';
+import { GraduateForm } from '../../../constants/type';
+import { positions } from '../../../utils/material.utils';
 
 interface Props {
   form: GraduateForm;

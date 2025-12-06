@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Input, Button } from '../ui';
 import { GoogleLoginButton } from './GoogleButton';
 
-
 interface AuthFormProps {
   title: string;
   subtitle: string;
@@ -66,16 +65,14 @@ const AuthForm: React.FC<AuthFormProps> = ({
       <div className="absolute inset-0 bg-white/50"></div>
 
       <div className="flex flex-col items-center justify-between  lg:justify-center gap-6 z-10 py-12 px-5 w-full max-w-[542px] mx-auto">
-     
-
         {/* ---------- HEADER ---------- */}
         <div className="flex flex-col w-full text-center">
           <h2 className="font-semibold text-[32px] text-[#1C1C1C]">{title}</h2>
           <p className="font-normal text-[18px] text-[#1C1C1CBF]">{subtitle}</p>
         </div>
 
-           {/* ---------- ROLE TABS (ONLY ON REGISTER) ---------- */}
-           {mode === 'register' && (
+        {/* ---------- ROLE TABS (ONLY ON REGISTER) ---------- */}
+        {mode === 'register' && (
           <div className="w-full mb-2">
             <div className="flex border-b border-gray-200  rounded-t-xl">
               {/* Graduate */}

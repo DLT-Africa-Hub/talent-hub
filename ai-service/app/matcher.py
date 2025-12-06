@@ -20,7 +20,15 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Iterable, List, MutableMapping, Optional, Sequence, Tuple, TypedDict
+from typing import (
+    Dict,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+)
 
 import numpy as np
 
@@ -107,7 +115,8 @@ def _validate_vector(vector: Sequence[float]) -> np.ndarray:
         raise ValueError("Embedding vector must be one-dimensional")
     if array.size != EMBEDDING_DIMENSION:
         raise ValueError(
-            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, got {array.size}"
+            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, "
+            f"got {array.size}"
         )
     return array
 
@@ -172,7 +181,9 @@ async def _set_cache(key: str, value: List[MatchResult]) -> None:
     async with _cache_lock:
         if key in _cache:
             _cache.move_to_end(key)
-        _cache[key] = _CacheEntry(value=value, expires_at=time.monotonic() + MATCH_CACHE_TTL_SECONDS)
+        _cache[key] = _CacheEntry(
+            value=value, expires_at=time.monotonic() + MATCH_CACHE_TTL_SECONDS
+        )
 
         while len(_cache) > MATCH_CACHE_MAX_ENTRIES:
             _cache.popitem(last=False)
@@ -189,7 +200,9 @@ def cosine_similarity(vec1: Sequence[float], vec2: Sequence[float]) -> float:
     return dot_product / (norm1 * norm2)
 
 
-def _skills_similarity(graduate: Optional[List[str]], job: Optional[List[str]]) -> float:
+def _skills_similarity(
+    graduate: Optional[List[str]], job: Optional[List[str]]
+) -> float:
     if not graduate:
         return 0.0
     if not job:
@@ -255,7 +268,9 @@ def _freshness_score(updated_at: Optional[str]) -> float:
     return float(min(max(decay, 0.0), 1.0))
 
 
-def _deduplicate_jobs(job_embeddings: Sequence[JobEmbeddingPayload]) -> List[JobEmbeddingPayload]:
+def _deduplicate_jobs(
+    job_embeddings: Sequence[JobEmbeddingPayload],
+) -> List[JobEmbeddingPayload]:
     deduped: Dict[str, JobEmbeddingPayload] = {}
     for job in job_embeddings:
         job_id = job.get("id")
@@ -268,9 +283,15 @@ def _deduplicate_jobs(job_embeddings: Sequence[JobEmbeddingPayload]) -> List[Job
     return list(deduped.values())
 
 
-def _prepare_options(options: Optional[MatchOptions]) -> Tuple[float, int, Dict[str, float]]:
-    min_score = options.get("min_score", DEFAULT_MIN_SCORE) if options else DEFAULT_MIN_SCORE
-    limit = options.get("limit", DEFAULT_MAX_RESULTS) if options else DEFAULT_MAX_RESULTS
+def _prepare_options(
+    options: Optional[MatchOptions],
+) -> Tuple[float, int, Dict[str, float]]:
+    min_score = (
+        options.get("min_score", DEFAULT_MIN_SCORE) if options else DEFAULT_MIN_SCORE
+    )
+    limit = (
+        options.get("limit", DEFAULT_MAX_RESULTS) if options else DEFAULT_MAX_RESULTS
+    )
     weights_input = DEFAULT_WEIGHTS.copy()
     if options and "weights" in options and options["weights"]:
         weights_input.update({k: float(v) for k, v in options["weights"].items()})
@@ -293,7 +314,9 @@ async def compute_matches(
         if not jobs:
             return []
 
-        cache_key = _build_cache_key(graduate_embedding, jobs, graduate_metadata, options)
+        cache_key = _build_cache_key(
+            graduate_embedding, jobs, graduate_metadata, options
+        )
         cached = await _get_from_cache(cache_key)
         if cached is not None:
             return cached
@@ -301,7 +324,9 @@ async def compute_matches(
         min_score, limit, weights = _prepare_options(options)
 
         grad_skills = graduate_metadata.get("skills") if graduate_metadata else None
-        grad_education = graduate_metadata.get("education") if graduate_metadata else None
+        grad_education = (
+            graduate_metadata.get("education") if graduate_metadata else None
+        )
         grad_experience_years = (
             float(graduate_metadata["experience_years"])
             if graduate_metadata and "experience_years" in graduate_metadata
@@ -317,9 +342,13 @@ async def compute_matches(
             if not job_id or embedding is None:
                 continue
 
-            embedding_score = float(np.clip(cosine_similarity(graduate_embedding, embedding), 0.0, 1.0))
+            embedding_score = float(
+                np.clip(cosine_similarity(graduate_embedding, embedding), 0.0, 1.0)
+            )
             skills_score = _skills_similarity(grad_skills, metadata.get("skills"))
-            education_score = _education_similarity(grad_education, metadata.get("education"))
+            education_score = _education_similarity(
+                grad_education, metadata.get("education")
+            )
             experience_score = _experience_similarity(
                 grad_experience_years,
                 metadata.get("experience_years"),
@@ -359,4 +388,3 @@ async def compute_matches(
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to compute matches")
         raise Exception(f"Failed to compute matches: {str(exc)}") from exc
-

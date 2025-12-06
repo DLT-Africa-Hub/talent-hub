@@ -19,7 +19,6 @@ export interface Graduate {
   salaryPerAnnum?: number;
 }
 
-
 const Graduates = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -55,26 +54,30 @@ const Graduates = () => {
 
   return (
     <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
-      <div className='flex flex-col gap-2.5'>
+      <div className="flex flex-col gap-2.5">
         <p className="text-[#1C1C1C] font-semibold text-[26px]">Graduates</p>
-        <p className='text-[#1C1C1CBF] font-medium text-[18px]'>Manage all registered graduates</p>
+        <p className="text-[#1C1C1CBF] font-medium text-[18px]">
+          Manage all registered graduates
+        </p>
       </div>
 
-      <div className='flex flex-col gap-[18px] w-full'>
-        <div className='flex gap-[20px] w-full'>
-          <div className='flex items-center border w-full border-fade rounded-[10px]'>
-            <p className='text-fade  p-[15px]'><SearchIcon /></p>
-            <div className='w-px h-[20px] bg-fade' />
-            <input 
-              type="text" 
-              placeholder='Search Graduates' 
+      <div className="flex flex-col gap-[18px] w-full">
+        <div className="flex gap-[20px] w-full">
+          <div className="flex items-center border w-full border-fade rounded-[10px]">
+            <p className="text-fade  p-[15px]">
+              <SearchIcon />
+            </p>
+            <div className="w-px h-[20px] bg-fade" />
+            <input
+              type="text"
+              placeholder="Search Graduates"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='w-full outline-none  text-[16px] p-[15px] placeholder:text-fade' 
+              className="w-full outline-none  text-[16px] p-[15px] placeholder:text-fade"
             />
           </div>
-          <div className='text-fade text-[20px] px-[20px] py-[15px] border border-fade rounded-[10px] cursor-pointer'>
-            <IoFilterOutline/>
+          <div className="text-fade text-[20px] px-[20px] py-[15px] border border-fade rounded-[10px] cursor-pointer">
+            <IoFilterOutline />
           </div>
         </div>
 
@@ -93,16 +96,16 @@ const Graduates = () => {
             description="No graduates have registered yet"
           />
         ) : (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[20px]'>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[20px]">
             {graduatesData.map((grad: Graduate) => (
-              <GraduateCard 
-                key={grad.id} 
-                id={grad.id} 
-                name={grad.name} 
-                role={grad.role} 
-                email={grad.email} 
-                matchScore={grad.matchScore} 
-                skills={grad.skills} 
+              <GraduateCard
+                key={grad.id}
+                id={grad.id}
+                name={grad.name}
+                role={grad.role}
+                email={grad.email}
+                matchScore={grad.matchScore}
+                skills={grad.skills}
                 avatar={grad.avatar}
                 salaryPerAnnum={grad.salaryPerAnnum}
               />
@@ -112,6 +115,6 @@ const Graduates = () => {
       </div>
     </div>
   );
-}
+};
 
-export default Graduates
+export default Graduates;

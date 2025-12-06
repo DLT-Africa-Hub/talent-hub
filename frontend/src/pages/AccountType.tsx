@@ -1,10 +1,8 @@
-
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PiGraduationCap, PiBuildingApartmentLight } from 'react-icons/pi';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../types/api';
-
 
 interface Role {
   role: string;
@@ -77,14 +75,13 @@ const AccountType: React.FC = () => {
     } catch (err) {
       const error = err as ApiError;
       setError(
-        error.response?.data?.message || 'Registration failed. Please try again.'
+        error.response?.data?.message ||
+          'Registration failed. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
-
-
 
   return (
     <div className="flex flex-col relative items-center justify-center h-screen bg-form bg-cover bg-center  md:py-[80px] md:px-[150px] font-inter">
@@ -171,7 +168,6 @@ const AccountType: React.FC = () => {
           }`}
           disabled={!selectedRole || isLoading}
           onClick={handleContinue}
-
         >
           {isLoading ? 'Registering...' : 'Continue'}
         </button>

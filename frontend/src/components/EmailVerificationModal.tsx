@@ -23,7 +23,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
 
   const handleRequestVerification = async () => {
     if (cooldown || loading) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -38,7 +38,9 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       console.error('Request verification error:', err);
       const error = err as ApiError;
       if (error.response?.status === 429) {
-        setError('Too many requests. Please wait a moment before trying again.');
+        setError(
+          'Too many requests. Please wait a moment before trying again.'
+        );
         setCooldown(true);
         setTimeout(() => {
           setCooldown(false);
@@ -111,7 +113,11 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             disabled={loading || cooldown}
             className="w-full bg-button text-white py-4 px-6 rounded-[10px] font-medium text-[16px] hover:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Sending...' : cooldown ? 'Please wait...' : 'Send Verification Email'}
+            {loading
+              ? 'Sending...'
+              : cooldown
+                ? 'Please wait...'
+                : 'Send Verification Email'}
           </button>
           {onClose && (
             <button
@@ -133,4 +139,3 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
 };
 
 export default EmailVerificationModal;
-

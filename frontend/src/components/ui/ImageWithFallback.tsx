@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { DEFAULT_JOB_IMAGE, DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
+import {
+  DEFAULT_JOB_IMAGE,
+  DEFAULT_PROFILE_IMAGE,
+} from '../../utils/job.utils';
 
 interface ImageWithFallbackProps {
   src: string;
@@ -36,14 +39,8 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
   };
 
   return (
-    <img
-      src={imgSrc}
-      alt={alt}
-      className={className}
-      onError={handleError}
-    />
+    <img src={imgSrc} alt={alt} className={className} onError={handleError} />
   );
 };
 
 export default ImageWithFallback;
-

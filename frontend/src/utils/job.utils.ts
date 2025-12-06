@@ -67,7 +67,10 @@ export const formatSalaryRange = (salary?: {
 };
 
 // Format salary per annum
-export const formatSalaryPerAnnum = (salaryPerAnnum?: number, currency: string = 'USD'): string => {
+export const formatSalaryPerAnnum = (
+  salaryPerAnnum?: number,
+  currency: string = 'USD'
+): string => {
   if (!salaryPerAnnum || salaryPerAnnum <= 0) return 'Not specified';
   const symbol = currency === 'USD' ? '$' : currency === 'NGN' ? '₦' : currency;
   // Format with commas (e.g., 50000 -> $50,000)
@@ -125,29 +128,30 @@ export const candidateStatusFilters: {
 export const mapApplicationStatusToCandidateStatus = (
   appStatus: string
 ): CandidateStatus => {
-  // Hired status
-  if (appStatus === 'accepted' || appStatus === 'hired') return 'hired';
-  
+  // Hired status - only when explicitly hired
+  if (appStatus === 'hired') return 'hired';
+
   // Pending status - when offer is sent but not yet accepted
   if (appStatus === 'offer_sent') return 'pending';
-  
+
   // Matched status - only when explicitly reviewed/shortlisted/interviewed
   // Having a match alone doesn't make it 'matched' - they need to be reviewed first
   if (['reviewed', 'shortlisted', 'interviewed'].includes(appStatus)) {
     return 'matched';
   }
-  
-  // Applied status - when status is 'pending' (default when someone applies)
-  // Even if they have a match, if status is still 'pending', they're 'applied' until reviewed
-  if (appStatus === 'pending' || !appStatus) {
+
+  // Applied status - when status is 'pending' or 'accepted' (default when someone applies)
+  // Note: 'accepted' application status should not exist - when accepting, status becomes 'offer_sent'
+  // But we handle it gracefully here just in case
+  if (appStatus === 'pending' || appStatus === 'accepted' || !appStatus) {
     return 'applied';
   }
-  
+
   // Rejected or withdrawn - still show as 'applied' for now (could add 'rejected' status later)
   if (appStatus === 'rejected' || appStatus === 'withdrawn') {
     return 'applied';
   }
-  
+
   return 'applied'; // Default fallback
 };
 
@@ -158,7 +162,10 @@ export const formatExperience = (years: number): string => {
 };
 
 // Format location
-export const formatLocation = (jobLocation?: string, workType?: string): string => {
+export const formatLocation = (
+  jobLocation?: string,
+  workType?: string
+): string => {
   if (!jobLocation) return 'Location not specified';
   const locationParts = jobLocation.split(',').map((s) => s.trim());
   const workTypeStr = workType ? `${workType} • ` : '';
@@ -202,7 +209,10 @@ export const formatNotificationDate = (dateInput: string | Date): string => {
 };
 
 // Get company name from notification (fallback logic)
-export const getCompanyName = (_notification: unknown, userRole?: string): string => {
+export const getCompanyName = (
+  _notification: unknown,
+  userRole?: string
+): string => {
   // For graduates: notifications might be about companies
   // For companies: notifications might be about candidates/applications
   if (userRole === 'graduate') {
@@ -224,4 +234,3 @@ export const mapNotificationType = (
     return 'application';
   return 'message'; // Default
 };
-

@@ -1,7 +1,14 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { BsTypeBold, BsTypeItalic, BsListUl, BsListOl, BsTypeH1, BsTypeH2 } from 'react-icons/bs';
+import {
+  BsTypeBold,
+  BsTypeItalic,
+  BsListUl,
+  BsListOl,
+  BsTypeH1,
+  BsTypeH2,
+} from 'react-icons/bs';
 
 interface RichTextEditorProps {
   value: string;
@@ -33,7 +40,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[120px] px-4 py-3',
+        class:
+          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[120px] px-4 py-3',
       },
     },
   });
@@ -75,7 +83,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div className="w-px h-6 bg-fade" />
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 1 }).run()
+            }
             className={`p-2 rounded hover:bg-[#E0E0E0] transition ${
               editor.isActive('heading', { level: 1 }) ? 'bg-[#DBFFC0]' : ''
             }`}
@@ -85,7 +95,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
             className={`p-2 rounded hover:bg-[#E0E0E0] transition ${
               editor.isActive('heading', { level: 2 }) ? 'bg-[#DBFFC0]' : ''
             }`}
@@ -125,4 +137,3 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 };
 
 export default RichTextEditor;
-

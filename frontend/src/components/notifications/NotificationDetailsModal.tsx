@@ -1,12 +1,10 @@
 import BaseModal from '../ui/BaseModal';
-import { Button } from '../ui';
 import { NotificationItem } from '../../types/notification';
 
 interface NotificationDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   notification: NotificationItem | null;
-  onViewAction?: (notification: NotificationItem) => void;
 }
 
 const headerStyles: Record<
@@ -48,7 +46,6 @@ const NotificationDetailsModal = ({
   isOpen,
   onClose,
   notification,
-  onViewAction,
 }: NotificationDetailsModalProps) => {
   if (!notification) {
     return null;
@@ -56,12 +53,6 @@ const NotificationDetailsModal = ({
 
   const { gradient, accent, iconBg } =
     headerStyles[notification.type] ?? headerStyles.job;
-
-  const handleView = () => {
-    if (notification && onViewAction) {
-      onViewAction(notification);
-    }
-  };
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md" className="p-0">
@@ -130,25 +121,6 @@ const NotificationDetailsModal = ({
               </span>
             )}
           </div>
-
-          <div className="flex flex-col md:flex-row gap-3 pt-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              className="w-full md:w-auto mx-0 p-4"
-            >
-              Close
-            </Button>
-            <Button
-              type="button"
-              onClick={handleView}
-              className="w-full md:w-auto mx-0 p-4"
-              disabled={!onViewAction}
-            >
-              View details
-            </Button>
-          </div>
         </div>
       </div>
     </BaseModal>
@@ -156,4 +128,3 @@ const NotificationDetailsModal = ({
 };
 
 export default NotificationDetailsModal;
-

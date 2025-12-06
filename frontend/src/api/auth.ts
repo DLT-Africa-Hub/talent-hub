@@ -1,6 +1,4 @@
-
 import api from './client';
-
 
 export const authApi = {
   login: async (email: string, password: string) => {
@@ -23,7 +21,10 @@ export const authApi = {
   },
 
   resetPassword: async (token: string, password: string) => {
-    const response = await api.post('/auth/reset-password', { token, password });
+    const response = await api.post('/auth/reset-password', {
+      token,
+      password,
+    });
     return response.data;
   },
 

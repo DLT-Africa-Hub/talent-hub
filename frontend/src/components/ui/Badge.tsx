@@ -119,4 +119,3 @@ export const getMatchBadgeLabel = (score: number): string => {
 };
 
 export default Badge;
-

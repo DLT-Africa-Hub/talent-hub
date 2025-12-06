@@ -69,7 +69,9 @@ const Companies = () => {
         name: user.email.split('@')[0], // Fallback to email prefix
         jobs: 0, // TODO: Fetch from company profile
         candidates: 0, // TODO: Fetch from company profile
-        status: user.emailVerified ? 'Active' : 'Pending' as CompanyRow['status'],
+        status: user.emailVerified
+          ? 'Active'
+          : ('Pending' as CompanyRow['status']),
         joined: user.createdAt,
       }));
     },
@@ -101,7 +103,9 @@ const Companies = () => {
     {
       header: 'Status',
       accessor: 'status',
-      render: (v: unknown) => <StatusBadge status={v as CompanyRow['status']} />,
+      render: (v: unknown) => (
+        <StatusBadge status={v as CompanyRow['status']} />
+      ),
       sortable: true,
       align: 'left',
     },

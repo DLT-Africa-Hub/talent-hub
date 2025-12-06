@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FaTrash, FaEye, FaUpload, FaFilePdf, FaTimes } from 'react-icons/fa';
 import { graduateApi } from '../../api/graduate';
 import cloudinaryApi from '../../api/cloudinary';
+import { useToastContext } from '../../context/ToastContext';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface CV {
   _id: string;
@@ -20,9 +22,11 @@ interface ResumeModalProps {
 
 const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
   const queryClient = useQueryClient();
+  const { error: showError } = useToastContext();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const {
     data: cvsData,
@@ -76,7 +80,7 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      alert(err?.response?.data?.message || 'Failed to delete CV');
+      showError(err?.response?.data?.message || 'Failed to delete CV');
       console.error('Delete mutation error:', err);
     },
     onSettled: (_, __, cv) => {
@@ -102,7 +106,7 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      alert(err?.response?.data?.message || 'Failed to update display CV');
+      showError(err?.response?.data?.message || 'Failed to update display CV');
     },
   });
 
@@ -213,12 +217,16 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
   };
 
   const handleDeleteCV = (cv: CV) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${cv.fileName}"? This will remove it from both Cloudinary and the database.`
-      )
-    ) {
-      deleteMutation.mutate(cv);
+    setDeleteConfirmId(cv._id);
+  };
+
+  const confirmDeleteCV = () => {
+    if (deleteConfirmId) {
+      const cvToDelete = cvs?.find((c) => c._id === deleteConfirmId);
+      if (cvToDelete) {
+        deleteMutation.mutate(cvToDelete);
+      }
+      setDeleteConfirmId(null);
     }
   };
 
@@ -399,6 +407,22 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        title="Delete CV"
+        message={
+          deleteConfirmId
+            ? `Are you sure you want to delete "${cvs?.find((c) => c._id === deleteConfirmId)?.fileName}"? This will remove it from both Cloudinary and the database.`
+            : ''
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmDeleteCV}
+        onCancel={() => setDeleteConfirmId(null)}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 };

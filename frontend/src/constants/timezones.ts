@@ -19,4 +19,3 @@ export const COMMON_TIMEZONES = [
   { value: 'Africa/Cairo', label: 'Cairo (EET)' },
   { value: 'Africa/Johannesburg', label: 'Johannesburg (SAST)' },
 ];
-

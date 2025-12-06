@@ -9,7 +9,10 @@ import { ApiError } from '../types/api';
  * Polls for unread count every 60 seconds when user is authenticated
  * Only polls unread count - full notifications list should be fetched on the Notifications page
  */
-export const useNotifications = (options?: { enabled?: boolean; fetchList?: boolean }) => {
+export const useNotifications = (options?: {
+  enabled?: boolean;
+  fetchList?: boolean;
+}) => {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const enabled = options?.enabled !== false && isAuthenticated;
@@ -70,7 +73,9 @@ export const useNotifications = (options?: { enabled?: boolean; fetchList?: bool
 
     const handleFocus = () => {
       // Only refetch unread count on focus, not the full list
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unreadCount'] });
+      queryClient.invalidateQueries({
+        queryKey: ['notifications', 'unreadCount'],
+      });
     };
 
     window.addEventListener('focus', handleFocus);
@@ -86,4 +91,3 @@ export const useNotifications = (options?: { enabled?: boolean; fetchList?: bool
     refetch,
   };
 };
-

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCompanyMatches, extractMatches } from '../../hooks/useCompanyData';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
@@ -8,14 +9,8 @@ import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
 import ScheduleInterviewModal from '../../components/company/ScheduleInterviewModal';
 import { CandidateProfile } from '../../types/candidates';
-import {
-  mapApplicationStatusToCandidateStatus,
-  formatExperience,
-  formatLocation,
-  getCandidateRank,
-  DEFAULT_PROFILE_IMAGE,
-} from '../../utils/job.utils';
-import { ApiMatch, ApiApplication } from '../../types/api';
+import { transformMatch } from '../../utils/candidate.utils';
+import { ApiMatch } from '../../types/api';
 
 const CompanyDashboard = () => {
   const [selectedCandidate, setSelectedCandidate] =
@@ -26,29 +21,10 @@ const CompanyDashboard = () => {
   const [isMultiSlotModalOpen, setIsMultiSlotModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch matches (Matched Professionals)
-  const { data: matchesResponse, isLoading: loadingMatches } = useQuery({
-    queryKey: ['companyMatches'],
-    queryFn: async () => {
-      const response = await companyApi.getAllMatches({
-        page: 1,
-        limit: 100,
-      });
-      return response;
-    },
-  });
-
-  // Fetch applications (Contract offers - those who applied)
-  const { data: applicationsResponse, isLoading: loadingApplications } =
-    useQuery({
-      queryKey: ['companyApplications'],
-      queryFn: async () => {
-        const response = await companyApi.getApplications({
-          page: 1,
-          limit: 100,
-        });
-        return response;
-      },
+  const { data: matchesResponse, isLoading: loadingMatches } =
+    useCompanyMatches({
+      page: 1,
+      limit: 100,
     });
 
   const scheduleInterviewMutation = useMutation({
@@ -102,152 +78,29 @@ const CompanyDashboard = () => {
     },
   });
 
-  // Transform matches to candidate profiles
-  const transformMatch = useCallback(
+  const transformMatchMemo = useCallback(
     (match: ApiMatch, index: number): CandidateProfile => {
-      const graduate = match.graduateId || {};
-      const job = match.jobId || {};
-
-      const fullName =
-        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
-
-      const matchScore = match.score
-        ? match.score > 1
-          ? Math.min(100, Math.round(match.score))
-          : Math.min(100, Math.round(match.score * 100))
-        : 0;
-
-      return {
-        id: match._id || `match-${index}`,
-        applicationId: undefined,
-        jobId: job._id?.toString?.() || job.id,
-        jobTitle: job.title,
-        companyName:
-          (job.companyId &&
-            typeof job.companyId === 'object' &&
-            'companyName' in job.companyId &&
-            (job.companyId as { companyName?: string }).companyName) ||
-          undefined,
-        name: fullName || 'Unknown Candidate',
-        role: job.title || graduate.position || 'Developer',
-        status: 'matched',
-        rank: getCandidateRank(graduate.rank),
-        statusLabel: 'Matched',
-        experience: formatExperience(graduate.expYears || 0),
-        location: formatLocation(job.location || graduate.location),
-        skills: (graduate.skills || []).slice(0, 3),
-        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
-        summary: graduate.summary,
-        cv:
-          typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
-        matchPercentage: matchScore,
-        jobType: job.jobType,
-        salary: job.salary,
-        directContact: job.directContact !== false, // Default to true
-      };
+      return transformMatch(match, index, {
+        includeCompanyName: true,
+        includeApplicationId: false,
+      });
     },
     []
   );
 
-  // Transform applications to candidate profiles
-  const transformApplication = useCallback(
-    (app: ApiApplication, index: number): CandidateProfile => {
-      const graduate = app.graduateId || {};
-      const job = app.jobId || {};
-
-      const candidateStatus = mapApplicationStatusToCandidateStatus(
-        app.status || ''
-      );
-
-      const fullName =
-        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
-
-      return {
-        id: app._id || index,
-        applicationId: app._id?.toString?.() || app.id,
-        jobId: job._id?.toString?.() || job.id,
-        jobTitle: job.title,
-        companyName:
-          (job.companyId &&
-            typeof job.companyId === 'object' &&
-            'companyName' in job.companyId &&
-            (job.companyId as { companyName?: string }).companyName) ||
-          undefined,
-        name: fullName || 'Unknown Candidate',
-        role: job.title || graduate.position || 'Developer',
-        status: candidateStatus,
-        rank: getCandidateRank(graduate.rank),
-        statusLabel:
-          candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
-        experience: formatExperience(graduate.expYears || 0),
-        location: formatLocation(job.location || graduate.location),
-        skills: (graduate.skills || []).slice(0, 3),
-        image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
-        summary: graduate.summary,
-        cv:
-          typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
-        matchPercentage: app.matchId?.score
-          ? app.matchId.score > 1
-            ? Math.min(100, Math.round(app.matchId.score))
-            : Math.min(100, Math.round(app.matchId.score * 100))
-          : undefined,
-        jobType: job.jobType,
-        salary: job.salary,
-        directContact: job.directContact !== false, // Default to true
-        interviewScheduledAt: app.interviewScheduledAt
-          ? typeof app.interviewScheduledAt === 'string'
-            ? app.interviewScheduledAt
-            : app.interviewScheduledAt.toISOString()
-          : undefined,
-        interviewRoomSlug: app.interviewRoomSlug,
-        interviewStatus: app.interviewScheduledAt ? 'scheduled' : undefined,
-      };
-    },
-    []
+  const matchesData = useMemo(
+    () => extractMatches(matchesResponse),
+    [matchesResponse]
   );
-
-  // Extract and transform matches
-  const matchesData = useMemo(() => {
-    if (!matchesResponse) return [];
-    if (Array.isArray(matchesResponse)) {
-      return matchesResponse;
-    }
-    if (matchesResponse?.matches && Array.isArray(matchesResponse.matches)) {
-      return matchesResponse.matches;
-    }
-    return [];
-  }, [matchesResponse]);
 
   const matchedCandidates = useMemo(() => {
     if (!matchesData || !Array.isArray(matchesData)) return [];
     return matchesData.map((match: ApiMatch, index: number) =>
-      transformMatch(match, index)
+      transformMatchMemo(match, index)
     );
-  }, [matchesData, transformMatch]);
+  }, [matchesData, transformMatchMemo]);
 
-  // Extract and transform applications
-  const applicationsData = useMemo(() => {
-    if (!applicationsResponse) return [];
-    if (Array.isArray(applicationsResponse)) {
-      return applicationsResponse;
-    }
-    if (
-      applicationsResponse?.applications &&
-      Array.isArray(applicationsResponse.applications)
-    ) {
-      return applicationsResponse.applications;
-    }
-    return [];
-  }, [applicationsResponse]);
-
-  const applicationCandidates = useMemo(() => {
-    if (!applicationsData || !Array.isArray(applicationsData)) return [];
-    return applicationsData.map((app: ApiApplication, index: number) =>
-      transformApplication(app, index)
-    );
-  }, [applicationsData, transformApplication]);
-
-  const loading = loadingMatches || loadingApplications;
+  const loading = loadingMatches;
 
   const handlePreview = (candidate: CandidateProfile) => {
     setSelectedCandidate(candidate);
@@ -277,14 +130,19 @@ const CompanyDashboard = () => {
     [scheduleInterviewMutation]
   );
 
-  // Handler to open multi-slot scheduling modal
   const handleSuggestTimeSlots = useCallback((candidate: CandidateProfile) => {
     setMultiSlotCandidate(candidate);
     setIsMultiSlotModalOpen(true);
-    setIsModalOpen(false); // Close the preview modal
+    setIsModalOpen(false);
   }, []);
 
-  // Handler for submitting multiple time slots
+  const handleViewCV = useCallback((candidate: CandidateProfile) => {
+    const cvUrl = candidate.cv;
+    if (cvUrl) {
+      window.open(cvUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, []);
+
   const handleSubmitTimeSlots = useCallback(
     async (
       candidate: CandidateProfile,
@@ -316,56 +174,31 @@ const CompanyDashboard = () => {
   return (
     <DashboardLayout>
       <div className="py-[24px] px-[24px]">
-        {/* Matched Professionals Section */}
-        <div className="flex flex-col gap-[20px] mb-[40px]">
-          <SectionHeader title="Matched Professionals" />
-          {matchedCandidates.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[20px]">
-              {matchedCandidates.map((candidate: CandidateProfile) => (
-                <CandidateCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  onPreview={handlePreview}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="No matches yet"
-              description="Candidates matched to your job postings will appear here."
-              variant="minimal"
-            />
-          )}
-        </div>
-
-        {/* Contract Offers Section (Applications) */}
-        <div className="flex flex-col gap-[20px]">
-          <SectionHeader title="Contract offers" />
-          {applicationCandidates.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[20px]">
-              {applicationCandidates.map((candidate: CandidateProfile) => (
-                <CandidateCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  onPreview={handlePreview}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="No applications yet"
-              description="Applications from candidates will appear here."
-              variant="minimal"
-            />
-          )}
-        </div>
+        <SectionHeader title="Matched Professionals" />
+        {matchedCandidates.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[20px]">
+            {matchedCandidates.map((candidate: CandidateProfile) => (
+              <CandidateCard
+                key={candidate.id}
+                candidate={candidate}
+                onPreview={handlePreview}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="No matches yet"
+            description="Candidates matched to your job postings will appear here."
+            variant="minimal"
+          />
+        )}
       </div>
 
-      {/* Candidate Preview Modal */}
       <CandidatePreviewModal
         isOpen={isModalOpen}
         candidate={selectedCandidate}
         onClose={handleCloseModal}
+        onViewCV={handleViewCV}
         onScheduleInterview={
           selectedCandidate?.applicationId ? handleScheduleInterview : undefined
         }
@@ -382,7 +215,6 @@ const CompanyDashboard = () => {
         }
       />
 
-      {/* Multi-Slot Scheduling Modal */}
       <ScheduleInterviewModal
         isOpen={isMultiSlotModalOpen}
         candidate={multiSlotCandidate}

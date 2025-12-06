@@ -4,7 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { messageApi } from '../api/message';
 import ChatModal from '../components/message/ChatModal';
-import { DEFAULT_COMPANY_IMAGE, DEFAULT_PROFILE_IMAGE } from '../utils/job.utils';
+import {
+  DEFAULT_COMPANY_IMAGE,
+  DEFAULT_PROFILE_IMAGE,
+} from '../utils/job.utils';
 import { LoadingSpinner } from '../index';
 import { SearchBar, EmptyState } from '../components/ui';
 import { ApiError } from '../types/api';
@@ -47,51 +50,77 @@ const Messages: React.FC = () => {
     let conversationsData: Record<string, unknown>[] = [];
     if (Array.isArray(messagesResponse)) {
       conversationsData = messagesResponse as Record<string, unknown>[];
-    } else if (messagesResponse?.conversations && Array.isArray(messagesResponse.conversations)) {
-      conversationsData = messagesResponse.conversations as Record<string, unknown>[];
-    } else if (messagesResponse?.messages && Array.isArray(messagesResponse.messages)) {
-      conversationsData = messagesResponse.messages as Record<string, unknown>[];
+    } else if (
+      messagesResponse?.conversations &&
+      Array.isArray(messagesResponse.conversations)
+    ) {
+      conversationsData = messagesResponse.conversations as Record<
+        string,
+        unknown
+      >[];
+    } else if (
+      messagesResponse?.messages &&
+      Array.isArray(messagesResponse.messages)
+    ) {
+      conversationsData = messagesResponse.messages as Record<
+        string,
+        unknown
+      >[];
     }
 
-    return conversationsData.map((conv: Record<string, unknown>): Conversation => {
-      let name = 'Unknown';
-      let role = '';
-      let image = DEFAULT_COMPANY_IMAGE;
+    return conversationsData.map(
+      (conv: Record<string, unknown>): Conversation => {
+        let name = 'Unknown';
+        let role = '';
+        let image = DEFAULT_COMPANY_IMAGE;
 
-      if (user?.role === 'graduate') {
-        // User is graduate, so show company info
-        const company = (conv.company || {}) as { companyName?: string; industry?: string };
-        name = company.companyName || 'Company';
-        role = company.industry || '';
-        image = DEFAULT_COMPANY_IMAGE; // Use default since no logo field
-      } else if (user?.role === 'company') {
-        // User is company, so show graduate info
-        const graduate = (conv.graduate || {}) as { firstName?: string; lastName?: string; position?: string; profilePictureUrl?: string };
-        const firstName = graduate.firstName || '';
-        const lastName = graduate.lastName || '';
-        name = `${firstName} ${lastName}`.trim() || 'Graduate';
-        role = graduate.position || '';
-        image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+        if (user?.role === 'graduate') {
+          // User is graduate, so show company info
+          const company = (conv.company || {}) as {
+            companyName?: string;
+            industry?: string;
+          };
+          name = company.companyName || 'Company';
+          role = company.industry || '';
+          image = DEFAULT_COMPANY_IMAGE; // Use default since no logo field
+        } else if (user?.role === 'company') {
+          // User is company, so show graduate info
+          const graduate = (conv.graduate || {}) as {
+            firstName?: string;
+            lastName?: string;
+            position?: string;
+            profilePictureUrl?: string;
+          };
+          const firstName = graduate.firstName || '';
+          const lastName = graduate.lastName || '';
+          name = `${firstName} ${lastName}`.trim() || 'Graduate';
+          role = graduate.position || '';
+          image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+        }
+
+        const lastMessageObj = (conv.lastMessage || {}) as {
+          text?: string;
+          message?: string;
+          createdAt?: string | Date;
+        };
+        const lastMessage = lastMessageObj.text || lastMessageObj.message || '';
+        const lastMessageTime = lastMessageObj.createdAt
+          ? new Date(lastMessageObj.createdAt)
+          : (conv.updatedAt as string | Date | undefined)
+            ? new Date(conv.updatedAt as string | Date)
+            : undefined;
+
+        return {
+          id: (conv._id || conv.id || '') as string,
+          name,
+          role,
+          image,
+          lastMessage,
+          lastMessageTime,
+          unreadCount: (conv.unreadCount || 0) as number,
+        };
       }
-
-      const lastMessageObj = (conv.lastMessage || {}) as { text?: string; message?: string; createdAt?: string | Date };
-      const lastMessage = lastMessageObj.text || lastMessageObj.message || '';
-      const lastMessageTime = lastMessageObj.createdAt
-        ? new Date(lastMessageObj.createdAt)
-        : (conv.updatedAt as string | Date | undefined)
-        ? new Date(conv.updatedAt as string | Date)
-        : undefined;
-
-      return {
-        id: (conv._id || conv.id || '') as string,
-        name,
-        role,
-        image,
-        lastMessage,
-        lastMessageTime,
-        unreadCount: (conv.unreadCount || 0) as number,
-      };
-    });
+    );
   }, [messagesResponse, user?.role]);
 
   const filteredConversations = useMemo(() => {
@@ -143,9 +172,7 @@ const Messages: React.FC = () => {
 
   useEffect(() => {
     if (id && conversations.length > 0) {
-      const conversationToOpen = conversations.find(
-        (conv) => conv.id === id
-      );
+      const conversationToOpen = conversations.find((conv) => conv.id === id);
       if (conversationToOpen && !isOpen) {
         openChat(conversationToOpen);
       }
@@ -155,7 +182,10 @@ const Messages: React.FC = () => {
   const error = useMemo(() => {
     if (!queryError) return null;
     const err = queryError as ApiError;
-    return err.response?.data?.message || 'Failed to load messages. Please try again.';
+    return (
+      err.response?.data?.message ||
+      'Failed to load messages. Please try again.'
+    );
   }, [queryError]);
 
   return (
@@ -179,9 +209,7 @@ const Messages: React.FC = () => {
         </div>
       )}
 
-      {loading && (
-        <LoadingSpinner message="Loading messages..." fullPage />
-      )}
+      {loading && <LoadingSpinner message="Loading messages..." fullPage />}
 
       {!loading && (
         <>
@@ -201,9 +229,10 @@ const Messages: React.FC = () => {
                         className="object-cover w-full h-full"
                         onError={(e) => {
                           // Fallback to default image if image fails to load
-                          e.currentTarget.src = user?.role === 'graduate' 
-                            ? DEFAULT_COMPANY_IMAGE 
-                            : DEFAULT_PROFILE_IMAGE;
+                          e.currentTarget.src =
+                            user?.role === 'graduate'
+                              ? DEFAULT_COMPANY_IMAGE
+                              : DEFAULT_PROFILE_IMAGE;
                         }}
                       />
                     </div>
@@ -232,7 +261,9 @@ const Messages: React.FC = () => {
                     )}
                     {(conversation.unreadCount || 0) > 0 && (
                       <span className="flex items-center justify-center min-w-[20px] h-[20px] px-[6px] rounded-full bg-button text-white text-[10px] font-semibold">
-                        {(conversation.unreadCount || 0) > 99 ? '99+' : conversation.unreadCount || 0}
+                        {(conversation.unreadCount || 0) > 99
+                          ? '99+'
+                          : conversation.unreadCount || 0}
                       </span>
                     )}
                   </div>
@@ -240,14 +271,17 @@ const Messages: React.FC = () => {
               ))}
             </div>
           ) : (
-            <EmptyState
-              title={searchQuery ? 'No messages found' : 'No messages yet'}
-              description={
-                searchQuery
-                  ? 'Try adjusting your search to find conversations.'
-                  : 'Your conversations will appear here once you start messaging.'
-              }
-            />
+            <div className="flex items-center justify-center w-full py-[60px]">
+              <EmptyState
+                title={searchQuery ? 'No messages found' : 'No messages yet'}
+                description={
+                  searchQuery
+                    ? 'Try adjusting your search to find conversations.'
+                    : 'Your conversations will appear here once you start messaging.'
+                }
+                variant="minimal"
+              />
+            </div>
           )}
         </>
       )}

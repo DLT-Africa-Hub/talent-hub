@@ -1,4 +1,11 @@
-export type RankOption = 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
+export type RankOption =
+  | 'A'
+  | 'B'
+  | 'C'
+  | 'D'
+  | 'A and B'
+  | 'B and C'
+  | 'C and D';
 
 interface RankSelectorProps {
   selectedRank: RankOption | '';
@@ -7,10 +14,10 @@ interface RankSelectorProps {
 
 // Rank score ranges based on assessment scoring
 const RANK_SCORE_RANGES: Record<string, string> = {
-  'A': '85-100%',
-  'B': '75-84%',
-  'C': '60-74%',
-  'D': '< 60%',
+  A: '85-100%',
+  B: '75-84%',
+  C: '60-74%',
+  D: '< 60%',
 };
 
 const RankSelector = ({ selectedRank, onRankSelect }: RankSelectorProps) => {
@@ -76,4 +83,3 @@ const RankSelector = ({ selectedRank, onRankSelect }: RankSelectorProps) => {
 };
 
 export default RankSelector;
-

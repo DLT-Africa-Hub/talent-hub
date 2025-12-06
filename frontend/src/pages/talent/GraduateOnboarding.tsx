@@ -76,10 +76,9 @@ const GraduateOnboarding: React.FC = () => {
         if (graduate) {
           const hasCompletedAssessment =
             graduate.assessmentData?.submittedAt != null;
-          navigate(
-            hasCompletedAssessment ? '/graduate' : '/assessment',
-            { replace: true }
-          );
+          navigate(hasCompletedAssessment ? '/graduate' : '/assessment', {
+            replace: true,
+          });
           return;
         }
 
@@ -143,7 +142,7 @@ const GraduateOnboarding: React.FC = () => {
           <p className="text-[16px] text-[#1C1C1CBF] mb-6">{accessError}</p>
           <button
             onClick={() => setRetryCount((prev) => prev + 1)}
-            className="w-full rounded-[12px] bg-button py-3 text-[16px] font-semibold text-white transition hover:bg-[#1B7700]"
+            className="w-full rounded-[12px] bg-button py-3 text-[16px] font-semibold text-white transition hover:bg-button"
           >
             Try again
           </button>
@@ -170,7 +169,6 @@ const GraduateOnboarding: React.FC = () => {
               Previous
             </div>
           )}
-          {/* ✅ Progress Bar */}
           <div className="flex flex-col md:items-center  gap-2.5 w-full">
             <p className="text-left text-[#1C1C1CBF] text-[18px] font-normal">
               Step {step + 1} of 4
@@ -185,7 +183,6 @@ const GraduateOnboarding: React.FC = () => {
           </div>
         </div>
 
-        {/* ✅ Form Steps */}
         {step === 0 && (
           <Personalnfo form={form} onChange={handleChange} onNext={nextStep} />
         )}

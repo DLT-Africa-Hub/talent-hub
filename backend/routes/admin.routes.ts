@@ -13,6 +13,11 @@ import {
   getHealthStatus,
   getDatabaseStats,
   getRankStatistics,
+  getGraduatesCount,
+  getCompanyCount,
+  getActiveJobsCount,
+  getApplicationActivityDetail,
+  getCompanyById,
 } from '../controllers/admin.controller';
 import {
   authenticate,
@@ -40,5 +45,11 @@ router.get('/user-activity', getUserActivityLogs);
 router.get('/health', getHealthStatus);
 router.get('/db-stats', getDatabaseStats);
 router.get('/rank-statistics', getRankStatistics);
+router.get('/talent-count', getGraduatesCount);
+router.get('/company-count', getCompanyCount);
+router.get('/active-jobs', getActiveJobsCount);
+router.get('/application-activity-detail', getApplicationActivityDetail);
+router.get('/get-a-company/:companyId', getCompanyById);
+
 
 export default router;

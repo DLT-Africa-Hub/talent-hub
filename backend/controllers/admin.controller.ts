@@ -558,3 +558,147 @@ export const getDatabaseStats = async (
     res.fail('Internal server error', 500);
   }
 };
+
+
+export const getGraduatesCount = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const total = await Graduate.countDocuments();
+
+    res.success({
+      total,
+    });
+  } catch (error) {
+    console.error('Get all graduates error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+export const getCompanyCount = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const total = await Company.countDocuments();
+
+    res.success({
+      total,
+    });
+  } catch (error) {
+    console.error('Get all graduates error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+export const getActiveJobsCount = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const total = await Job.countDocuments({ status: 'active' });
+
+    res.success({
+      total,
+    });
+  } catch (error) {
+    console.error('Get active jobs count error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+export const getApplicationActivityDetail = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { jobId, graduateId } = req.query;
+
+ 
+    if (!jobId || !graduateId) {
+      res.fail('jobId and graduateId are required', 400);
+      return;
+    }
+
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      res.fail('Invalid jobId', 400);
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(graduateId)) {
+      res.fail('Invalid graduateId', 400);
+      return;
+    }
+
+  
+    const graduate = await Graduate.findById(graduateId)
+      .select('firstName lastName')
+      .lean();
+
+    if (!graduate) {
+      res.fail('Graduate not found', 404);
+      return;
+    }
+
+
+    const job = await Job.findById(jobId)
+      .select('title companyId')
+      .populate('companyId', 'companyName')
+      .lean();
+
+    if (!job) {
+      res.fail('Job not found', 404);
+      return;
+    }
+
+   
+    const company = job.companyId as unknown as { companyName: string } | null;
+
+    if (!company) {
+      res.fail('Company not found', 404);
+      return;
+    }
+
+
+    const graduateName = `${graduate.firstName} ${graduate.lastName}`;
+
+    res.success({
+      graduateName,
+      jobTitle: job.title,
+      companyName: company.companyName,
+    });
+  } catch (error) {
+    console.error('Get application activity detail error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+export const getCompanyById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { companyId } = req.params;
+
+
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      res.fail('Invalid companyId', 400);
+      return;
+    }
+
+
+    const company = await Company.findById(companyId).lean();
+
+    if (!company) {
+      res.fail('Company not found', 404);
+      return;
+    }
+
+    res.success(company);
+  } catch (error) {
+    console.error('Get company by id error:', error);
+    res.fail('Internal server error', 500);
+  }
+};

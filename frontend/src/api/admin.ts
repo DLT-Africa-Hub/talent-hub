@@ -66,6 +66,29 @@ export const adminApi = {
     const response = await api.get('/admin/health');
     return response.data;
   },
+  getTalentCount: async () => {
+    const response = await api.get('/admin/talent-count');
+    console.log(response)
+    return response.data;
+  },
+  getCompanyCount: async () => {
+    const response = await api.get('/admin/company-count');
+    console.log(response.data)
+    return response.data;
+  },
+  getActiveJobsCount: async () => {
+    const response = await api.get('/admin/active-jobs');
+    return response.data;
+  
+  },
+  getApplicationActivityDetail: async (params?: { jobId?: string; graduateId?: string;}) => {
+    const response = await api.get('/admin/application-activity-detail', { params });
+    return response.data;
+  },
+  getCompanyById: async (companyId: string) => {
+    const response = await api.get(`/admin/get-a-company/${companyId}`);
+    return response.data;
+  },
 };
 
 export default adminApi;

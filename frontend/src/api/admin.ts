@@ -236,6 +236,11 @@ export const adminApi = {
     );
     return response.data;
   },
+
+  getTotalPostedJobs: async () => {
+    const response = await api.get('/admin/total-posted-jobs');
+    return response.data;
+  },
 };
 
 

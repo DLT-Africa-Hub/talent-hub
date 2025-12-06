@@ -3,14 +3,11 @@ import { LoadingSpinner } from '../../index';
 import StatsButton from '../../components/admin/dashboard/stats-button';
 import { IconType } from 'react-icons';
 import { FaBriefcase, FaBuilding, FaUserPlus, FaUsers } from 'react-icons/fa6';
-import { FiTrendingUp } from 'react-icons/fi';
-import { AiOutlineRobot } from 'react-icons/ai';
-import { MdPendingActions } from 'react-icons/md';
-import { GiBrain } from 'react-icons/gi';
 import ActivityItem, { ActivityItemProps } from '../../components/admin/dashboard/activity-list';
 import HiringCompany from '../../components/admin/dashboard/hiring-company';
 import adminApi from '@/api/admin';
 import { formatDistanceToNow } from 'date-fns';
+import { PiListChecksFill } from 'react-icons/pi';
 
 export interface CompanyStatsApi {
   _id: string;
@@ -51,6 +48,10 @@ const AdminDashboard = () => {
     queryKey: ['companyCount'],
     queryFn: adminApi.getCompanyCount,
   });
+  const { data: totalPostedJobs, isLoading: postedJobsLoading } = useQuery({
+    queryKey: ['totalJobCount'],
+    queryFn: adminApi.getTotalPostedJobs,
+  });
 
   const { data: activeJobsData, isLoading: activeJobsLoading } = useQuery({
     queryKey: ['activeJobsCount'],
@@ -70,11 +71,14 @@ const AdminDashboard = () => {
     });
 
   const isLoading =
+  postedJobsLoading ||
     talentLoading ||
     companyLoading ||
     activeJobsLoading ||
     activityLoading ||
     companiesStatsLoading;
+
+    console.log(totalPostedJobs)
 
   // Stats cards
   const stats: StatCard[] = [
@@ -92,7 +96,7 @@ const AdminDashboard = () => {
     },
     {
       title: 'Total Jobs Posted',
-      numbers: '—',
+      numbers: totalPostedJobs?.data?.total?.toLocaleString() || '0',
       analysis: 'All time',
       icon: FaBriefcase,
     },
@@ -100,7 +104,7 @@ const AdminDashboard = () => {
       title: 'Active Job Listings',
       numbers: activeJobsData?.data?.total?.toLocaleString() || '0',
       analysis: '+12% vs last month',
-      icon: FiTrendingUp,
+      icon: PiListChecksFill,
     },
     {
       title: 'New SignUps',
@@ -108,24 +112,7 @@ const AdminDashboard = () => {
       analysis: 'This week',
       icon: FaUserPlus,
     },
-    {
-      title: 'AI Match Rate',
-      numbers: '87%',
-      analysis: '+12% vs last month',
-      icon: AiOutlineRobot,
-    },
-    {
-      title: 'Pending Approvals',
-      numbers: '—',
-      analysis: 'Needs review',
-      icon: MdPendingActions,
-    },
-    {
-      title: 'AI Assessment',
-      numbers: '—',
-      analysis: '+12% vs last month',
-      icon: GiBrain,
-    },
+   
   ];
 
   // Activity logs

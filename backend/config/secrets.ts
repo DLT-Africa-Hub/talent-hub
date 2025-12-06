@@ -57,12 +57,14 @@ const jwtSecretFromEnv =
 // In production, this must be set via environment variable for security
 const getJwtSecret = (): string => {
   if (jwtSecretFromEnv) {
-    if (jwtSecretFromEnv.length < 32) {
+    // Trim whitespace (including newlines that might be in GitHub secrets)
+    const trimmedSecret = jwtSecretFromEnv.trim();
+    if (trimmedSecret.length < 32) {
       throw new Error(
-        `JWT_ACCESS_SECRET must be at least 32 characters long for security. Current length: ${jwtSecretFromEnv.length}. Please set a longer secret in your environment variables.`
+        `JWT_ACCESS_SECRET must be at least 32 characters long for security. Current length: ${trimmedSecret.length} (original: ${jwtSecretFromEnv.length}). Please set a longer secret in your environment variables.`
       );
     }
-    return jwtSecretFromEnv;
+    return trimmedSecret;
   }
 
   // Only allow default in development/test environments

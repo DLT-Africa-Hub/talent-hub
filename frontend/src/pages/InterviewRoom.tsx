@@ -152,7 +152,8 @@ const InterviewRoom = () => {
       }
       setVideoClient(undefined);
     };
-  }, [interview, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interview, user]); // videoClient is intentionally excluded - it's set inside the effect
 
   // Create and join call
   useEffect(() => {

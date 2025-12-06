@@ -81,8 +81,8 @@ export const extractApplications = (response: unknown): ApiApplication[] => {
     return response;
   }
   if (
-    typeof response === 'object' &&
     response !== null &&
+    typeof response === 'object' &&
     'applications' in response &&
     Array.isArray((response as { applications: unknown }).applications)
   ) {
@@ -100,8 +100,8 @@ export const extractMatches = (response: unknown): ApiMatch[] => {
     return response;
   }
   if (
-    typeof response === 'object' &&
     response !== null &&
+    typeof response === 'object' &&
     'matches' in response &&
     Array.isArray((response as { matches: unknown }).matches)
   ) {

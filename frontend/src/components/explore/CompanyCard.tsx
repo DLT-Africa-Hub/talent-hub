@@ -45,6 +45,7 @@ const BADGE_STYLES: Record<MatchVariant, { container: string; dot: string }> = {
   },
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const getMatchBadgeConfig = (score: number) => {
   const variant = getMatchBadgeVariant(score) as MatchVariant;
   return {

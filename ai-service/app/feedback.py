@@ -49,10 +49,20 @@ FEEDBACK_MAX_TOKENS: Final[int] = int(os.getenv("FEEDBACK_MAX_TOKENS", "900"))
 
 DEFAULT_LANGUAGE: Final[str] = os.getenv("FEEDBACK_DEFAULT_LANGUAGE", "en")
 DEFAULT_TEMPLATE: Dict[str, str] = {
-    "introduction": "Offer encouragement and summarise the graduate's current readiness.",
-    "skill_gaps": "Identify the most impactful skill gaps preventing success in the target role.",
-    "recommendations": "Provide specific, actionable steps the graduate can complete within the next 30-60 days.",
-    "formatting": "Respond with concise paragraphs and bullet lists where appropriate.",
+    "introduction": (
+        "Offer encouragement and summarise the graduate's current readiness."
+    ),
+    "skill_gaps": (
+        "Identify the most impactful skill gaps preventing success in "
+        "the target role."
+    ),
+    "recommendations": (
+        "Provide specific, actionable steps the graduate can complete "
+        "within the next 30-60 days."
+    ),
+    "formatting": (
+        "Respond with concise paragraphs and bullet lists where appropriate."
+    ),
 }
 
 
@@ -94,7 +104,7 @@ def _build_prompt(
         f"\nAdditional Context:\n{additional_context.strip()}\n"
         if additional_context and additional_context.strip()
         else ""
-    )
+    )  # noqa: E501
     prompt = f"""
 You are an expert career counsellor who communicates in {language.upper()}.
 Compare the graduate's background with the job requirements and produce an honest yet constructive review.
@@ -114,7 +124,7 @@ Follow these guidelines:
 - Introduction: {template['introduction']}
 - Skill Gaps: {template['skill_gaps']}
 - Recommendations: {template['recommendations']}
-- Formatting: {template['formatting']}
+- Formatting: {template['formatting']}  # noqa: E501
 
 Respond **only** with valid JSON using this schema:
 {{
@@ -166,9 +176,12 @@ def _parse_response(content: str, language: str) -> Dict[str, Any]:
     recommendations = normalise_list("recommendations")
 
     if not skill_gaps:
-        logger.info("Feedback response missing skill gaps; synthesising placeholder.")
+        logger.info(
+            "Feedback response missing skill gaps; synthesising placeholder."
+        )
         skill_gaps = [
-            f"No explicit skill gaps identified. Consider verifying requirements in {language.upper()}."
+            f"No explicit skill gaps identified. "
+            f"Consider verifying requirements in {language.upper()}."
         ]
 
     if not recommendations:
@@ -176,7 +189,8 @@ def _parse_response(content: str, language: str) -> Dict[str, Any]:
             "Feedback response missing recommendations; synthesising placeholder."
         )
         recommendations = [
-            f"Schedule a follow-up coaching session to determine concrete next steps ({language.upper()})."
+            f"Schedule a follow-up coaching session to determine "
+            f"concrete next steps ({language.upper()})."
         ]
 
     return {
@@ -196,7 +210,8 @@ async def _call_openai(prompt: str) -> str:
                 {
                     "role": "system",
                     "content": (
-                        "You are an expert career counsellor. Always respond with JSON that matches the requested schema."
+                        "You are an expert career counsellor. Always respond "
+                        "with JSON that matches the requested schema."
                     ),
                 },
                 {"role": "user", "content": prompt},

@@ -21,12 +21,12 @@
   },
   "lint-staged": {
     "backend/**/*.{ts,tsx}": [
-      "cd backend && npm run lint -- --fix",
-      "cd backend && npm run format"
+      "cd backend && pnpm run lint -- --fix",
+      "cd backend && pnpm run format"
     ],
     "frontend/**/*.{ts,tsx}": [
-      "cd frontend && npm run lint -- --fix",
-      "cd frontend && npm run format"
+      "cd frontend && pnpm run lint -- --fix",
+      "cd frontend && pnpm run format"
     ]
   }
 }

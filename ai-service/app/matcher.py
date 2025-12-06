@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import (
     Dict,
-    Iterable,
     List,
     MutableMapping,
     Optional,
@@ -116,7 +115,8 @@ def _validate_vector(vector: Sequence[float]) -> np.ndarray:
         raise ValueError("Embedding vector must be one-dimensional")
     if array.size != EMBEDDING_DIMENSION:
         raise ValueError(
-            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, got {array.size}"
+            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, "
+            f"got {array.size}"
         )
     return array
 

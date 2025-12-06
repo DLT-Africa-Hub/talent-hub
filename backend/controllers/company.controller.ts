@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import _ from 'lodash';
 import Company from '../models/Company.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
@@ -1274,7 +1275,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
   let matchingJobIds: mongoose.Types.ObjectId[] | null = null;
 
   if (search && typeof search === 'string' && search.trim()) {
-    const searchRegex = new RegExp(search.trim(), 'i');
+    const searchRegex = new RegExp(_.escapeRegExp(search.trim()), 'i');
 
     // Find matching graduates
     const matchingGraduates = await Graduate.find({
@@ -1443,7 +1444,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
   let matchingJobIds: mongoose.Types.ObjectId[] | null = null;
 
   if (search && typeof search === 'string' && search.trim()) {
-    const searchRegex = new RegExp(search.trim(), 'i');
+    const searchRegex = new RegExp(_.escapeRegExp(search.trim()), 'i');
 
     // Find matching graduates
     const matchingGraduates = await Graduate.find({
@@ -1825,15 +1826,6 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       (interview) => interview.status === 'scheduled'
     );
     if (scheduled) {
-      const now = new Date();
-      let interviewTime: Date | null = null;
-      
-      if (scheduled.scheduledAt) {
-        interviewTime = new Date(scheduled.scheduledAt);
-      } else if (scheduled.selectedTimeSlot?.date) {
-        interviewTime = new Date(scheduled.selectedTimeSlot.date);
-      }
-
       // If interview is scheduled (whether in past or future), prevent new scheduling
       // Only allow if the interview has been completed
       res.status(400).json({
@@ -2139,7 +2131,7 @@ export const getAvailableGraduates = async (
 
     // Search filter
     if (search && typeof search === 'string' && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+      const searchRegex = new RegExp(_.escapeRegExp(search.trim()), 'i');
       query.$or = [
         { firstName: searchRegex },
         { lastName: searchRegex },

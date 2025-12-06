@@ -118,7 +118,8 @@ def _validate_embedding_dimensions(embedding: Sequence[float]) -> None:
     length = len(embedding)
     if length != EMBEDDING_DIMENSION:
         raise EmbeddingError(
-            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, got {length}"
+            f"Embedding dimension mismatch: expected {EMBEDDING_DIMENSION}, "
+            f"got {length}"
         )
 
 
@@ -152,7 +153,8 @@ async def _fetch_embeddings_from_openai(texts: Sequence[str]) -> List[List[float
         data = response.data
         if len(data) != len(texts):
             raise EmbeddingError(
-                f"OpenAI response mismatch: expected {len(texts)} embeddings, got {len(data)}"
+                f"OpenAI response mismatch: expected {len(texts)} embeddings, "
+                f"got {len(data)}"
             )
 
         embeddings: List[List[float]] = []
@@ -165,7 +167,8 @@ async def _fetch_embeddings_from_openai(texts: Sequence[str]) -> List[List[float
 
     except RateLimitError as exc:
         logger.warning("OpenAI embedding request throttled: %s", exc)
-        # Check if this is actually a quota error (429 can mean either rate limit or quota)
+        # Check if this is actually a quota error
+        # (429 can mean either rate limit or quota)
         error_msg = str(exc)
 
         # Try to access error details from the exception

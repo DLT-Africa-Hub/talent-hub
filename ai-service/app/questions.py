@@ -13,7 +13,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict, Final, List, Optional, TypedDict
+from typing import Final, List, Optional, TypedDict
 
 from openai import (
     APIConnectionError,
@@ -70,9 +70,12 @@ def _build_prompt(
 ) -> str:
     skill_list = _serialise_skills(skills)
     return f"""
-You are an experienced technical interviewer. Draft {num_questions} multiple-choice questions in {language.upper()} that assess a graduate's proficiency with the following skills: {skill_list or "general web development"}.
+You are an experienced technical interviewer. Draft {num_questions} \
+multiple-choice questions in {language.upper()} that assess a graduate's \
+proficiency with the following skills: {skill_list or "general web development"}.
 
-Attempt number: {attempt}. Ensure this set differs from earlier attempts by varying the focus and wording.
+Attempt number: {attempt}. Ensure this set differs from earlier attempts \
+by varying the focus and wording.
 
 Guidelines:
 - Each question must emphasise one primary skill; reflect that in the "skill" field.

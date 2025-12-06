@@ -51,7 +51,8 @@ async def keep_alive_task():
                     )
                 else:
                     print(
-                        f"[Keep-Alive] Health check returned status {response.status_code}"
+                        f"[Keep-Alive] Health check returned status "
+                        f"{response.status_code}"
                     )
             except Exception as e:
                 print(f"[Keep-Alive] Error pinging health endpoint: {e}")
@@ -66,7 +67,8 @@ async def lifespan(app: FastAPI):
     # Startup: Start keep-alive task
     if KEEP_ALIVE_ENABLED:
         print(
-            f"[Keep-Alive] Starting keep-alive task (interval: {KEEP_ALIVE_INTERVAL}s, URL: {SERVICE_URL})"
+            f"[Keep-Alive] Starting keep-alive task "
+            f"(interval: {KEEP_ALIVE_INTERVAL}s, URL: {SERVICE_URL})"
         )
         keep_alive_task_instance = asyncio.create_task(keep_alive_task())
     else:

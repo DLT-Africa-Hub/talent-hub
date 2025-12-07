@@ -950,13 +950,13 @@ export const getCompanyDetails = async (
     const userId = company.userId;
     const user =
       userId &&
-        typeof userId === 'object' &&
-        !(userId instanceof mongoose.Types.ObjectId)
+      typeof userId === 'object' &&
+      !(userId instanceof mongoose.Types.ObjectId)
         ? (userId as {
-          email?: string;
-          emailVerified?: boolean;
-          lastLoginAt?: Date;
-        })
+            email?: string;
+            emailVerified?: boolean;
+            lastLoginAt?: Date;
+          })
         : null;
 
     res.success({
@@ -978,10 +978,10 @@ export const getCompanyDetails = async (
       },
       user: user
         ? {
-          email: user.email,
-          emailVerified: user.emailVerified,
-          lastLogin: user.lastLoginAt,
-        }
+            email: user.email,
+            emailVerified: user.emailVerified,
+            lastLogin: user.lastLoginAt,
+          }
         : null,
       jobs: jobs.map((job) => ({
         id: job._id.toString(),
@@ -1210,16 +1210,21 @@ export const getJobById = async (
             : null;
 
         const interview = app.interviewId as
-          | { _id?: mongoose.Types.ObjectId; status?: string; scheduledAt?: Date; durationMinutes?: number }
+          | {
+              _id?: mongoose.Types.ObjectId;
+              status?: string;
+              scheduledAt?: Date;
+              durationMinutes?: number;
+            }
           | mongoose.Types.ObjectId
           | null
           | undefined;
 
         const interviewStatus =
           interview &&
-            typeof interview === 'object' &&
-            !(interview instanceof mongoose.Types.ObjectId) &&
-            'status' in interview
+          typeof interview === 'object' &&
+          !(interview instanceof mongoose.Types.ObjectId) &&
+          'status' in interview
             ? interview.status
             : null;
 
@@ -1227,11 +1232,11 @@ export const getJobById = async (
           id: app._id.toString(),
           candidate: graduate
             ? {
-              id: graduate._id.toString(),
-              name: `${graduate.firstName} ${graduate.lastName}`,
-              email: email || 'No email',
-              profilePicture: graduate.profilePictureUrl,
-            }
+                id: graduate._id.toString(),
+                name: `${graduate.firstName} ${graduate.lastName}`,
+                email: email || 'No email',
+                profilePicture: graduate.profilePictureUrl,
+              }
             : null,
           status: app.status,
           interviewStatus: interviewStatus,
@@ -1264,7 +1269,10 @@ export const updateJobStatus = async (
       return;
     }
 
-    if (typeof status !== "string" || !['active', 'closed', 'draft'].includes(status)) {
+    if (
+      typeof status !== 'string' ||
+      !['active', 'closed', 'draft'].includes(status)
+    ) {
       res.fail('Invalid status. Must be active, closed, or draft', 400);
       return;
     }
@@ -1285,8 +1293,8 @@ export const updateJobStatus = async (
     const companyId = job.companyId;
     const companyName =
       companyId &&
-        typeof companyId === 'object' &&
-        !(companyId instanceof mongoose.Types.ObjectId)
+      typeof companyId === 'object' &&
+      !(companyId instanceof mongoose.Types.ObjectId)
         ? (companyId as { companyName: string }).companyName
         : 'Unknown';
 
@@ -1594,30 +1602,30 @@ export const getJobApplications = async (
         const graduateId = app.graduateId;
         const graduateData =
           graduateId &&
-            typeof graduateId === 'object' &&
-            !(graduateId instanceof mongoose.Types.ObjectId)
+          typeof graduateId === 'object' &&
+          !(graduateId instanceof mongoose.Types.ObjectId)
             ? (graduateId as {
-              _id: mongoose.Types.ObjectId;
-              firstName: string;
-              lastName: string;
-              email: string;
-              profilePictureUrl?: string;
-              rank?: string;
-              position?: string;
-            })
+                _id: mongoose.Types.ObjectId;
+                firstName: string;
+                lastName: string;
+                email: string;
+                profilePictureUrl?: string;
+                rank?: string;
+                position?: string;
+              })
             : null;
 
         return {
           id: app._id.toString(),
           candidate: graduateData
             ? {
-              id: graduateData._id.toString(),
-              name: `${graduateData.firstName} ${graduateData.lastName}`,
-              email: graduateData.email,
-              profilePicture: graduateData.profilePictureUrl,
-              rank: graduateData.rank,
-              position: graduateData.position,
-            }
+                id: graduateData._id.toString(),
+                name: `${graduateData.firstName} ${graduateData.lastName}`,
+                email: graduateData.email,
+                profilePicture: graduateData.profilePictureUrl,
+                rank: graduateData.rank,
+                position: graduateData.position,
+              }
             : null,
           status: app.status,
           resume: app.resume || null,
@@ -1684,8 +1692,8 @@ export const sendMessageToApplicant = async (
     const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
     const jobData =
       typeof job === 'object' &&
-        job &&
-        !(job instanceof mongoose.Types.ObjectId)
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
         ? job
         : null;
 
@@ -1702,8 +1710,8 @@ export const sendMessageToApplicant = async (
       | mongoose.Types.ObjectId;
     const graduateData =
       typeof graduate === 'object' &&
-        graduate &&
-        !(graduate instanceof mongoose.Types.ObjectId)
+      graduate &&
+      !(graduate instanceof mongoose.Types.ObjectId)
         ? graduate
         : null;
     if (!graduateData?.userId) {
@@ -1796,8 +1804,8 @@ export const scheduleInterviewForApplicant = async (
     const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
     const jobData =
       typeof job === 'object' &&
-        job &&
-        !(job instanceof mongoose.Types.ObjectId)
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
         ? job
         : null;
 
@@ -1814,8 +1822,8 @@ export const scheduleInterviewForApplicant = async (
       | mongoose.Types.ObjectId;
     const companyData =
       typeof company === 'object' &&
-        company &&
-        !(company instanceof mongoose.Types.ObjectId)
+      company &&
+      !(company instanceof mongoose.Types.ObjectId)
         ? company
         : null;
 
@@ -1829,8 +1837,8 @@ export const scheduleInterviewForApplicant = async (
       | mongoose.Types.ObjectId;
     const graduateData =
       typeof graduate === 'object' &&
-        graduate &&
-        !(graduate instanceof mongoose.Types.ObjectId)
+      graduate &&
+      !(graduate instanceof mongoose.Types.ObjectId)
         ? graduate
         : null;
 
@@ -2209,8 +2217,8 @@ export const suggestTimeSlotsForApplicant = async (
     const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
     const jobData =
       typeof job === 'object' &&
-        job &&
-        !(job instanceof mongoose.Types.ObjectId)
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
         ? job
         : null;
 
@@ -2227,8 +2235,8 @@ export const suggestTimeSlotsForApplicant = async (
       | mongoose.Types.ObjectId;
     const companyData =
       typeof company === 'object' &&
-        company &&
-        !(company instanceof mongoose.Types.ObjectId)
+      company &&
+      !(company instanceof mongoose.Types.ObjectId)
         ? company
         : null;
 
@@ -2242,8 +2250,8 @@ export const suggestTimeSlotsForApplicant = async (
       | mongoose.Types.ObjectId;
     const graduateData =
       typeof graduate === 'object' &&
-        graduate &&
-        !(graduate instanceof mongoose.Types.ObjectId)
+      graduate &&
+      !(graduate instanceof mongoose.Types.ObjectId)
         ? graduate
         : null;
 
@@ -2293,9 +2301,10 @@ export const suggestTimeSlotsForApplicant = async (
     // Create interview with pending_selection status
     const interview = new Interview({
       applicationId: application._id,
-      jobId: jobData._id instanceof mongoose.Types.ObjectId
-        ? jobData._id
-        : new mongoose.Types.ObjectId(String(jobData._id)),
+      jobId:
+        jobData._id instanceof mongoose.Types.ObjectId
+          ? jobData._id
+          : new mongoose.Types.ObjectId(String(jobData._id)),
       companyId,
       companyUserId,
       graduateId,
@@ -2326,7 +2335,8 @@ export const suggestTimeSlotsForApplicant = async (
     await application.save();
 
     // Send notification to graduate
-    const graduateName = `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim();
+    const graduateName =
+      `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim();
     const graduateUserIdString = graduateUserId.toString();
 
     try {
@@ -2407,7 +2417,7 @@ export const updateApplicationStatus = async (
       return;
     }
 
-    const validatedStatus = status as typeof validStatuses[number];
+    const validatedStatus = status as (typeof validStatuses)[number];
 
     // Get application with job info
     const application = await Application.findById(applicationId)
@@ -2434,8 +2444,8 @@ export const updateApplicationStatus = async (
     const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
     const jobData =
       typeof job === 'object' &&
-        job &&
-        !(job instanceof mongoose.Types.ObjectId)
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
         ? job
         : null;
 
@@ -2445,27 +2455,6 @@ export const updateApplicationStatus = async (
         403
       );
       return;
-    }
-
-    // Get company info for notifications
-    interface PopulatedCompany {
-      _id?: mongoose.Types.ObjectId;
-      userId?: mongoose.Types.ObjectId;
-      companyName?: string;
-    }
-    const companyIdFromJob =
-      jobData?.companyId instanceof mongoose.Types.ObjectId
-        ? jobData.companyId
-        : typeof jobData?.companyId === 'object' && jobData?.companyId
-          ? (jobData.companyId as { _id?: mongoose.Types.ObjectId })._id
-          : null;
-
-    let companyData: PopulatedCompany | null = null;
-    if (companyIdFromJob) {
-      const company = await Company.findById(companyIdFromJob)
-        .select('userId companyName')
-        .lean();
-      companyData = company as PopulatedCompany | null;
     }
 
     // Update application status
@@ -2484,7 +2473,9 @@ export const updateApplicationStatus = async (
     // If status is 'accepted', create and send offer
     if (validatedStatus === 'accepted') {
       try {
-        const { createAndSendOffer } = await import('../services/offer.service');
+        const { createAndSendOffer } = await import(
+          '../services/offer.service'
+        );
         await createAndSendOffer(applicationId, userId);
         // Reload to get updated status (offer service sets it to 'offer_sent')
         const reloaded = await Application.findById(applicationId).lean();
@@ -2530,8 +2521,8 @@ export const updateApplicationStatus = async (
         }
         const companyFromJob =
           jobData?.companyId &&
-            typeof jobData.companyId === 'object' &&
-            !(jobData.companyId instanceof mongoose.Types.ObjectId)
+          typeof jobData.companyId === 'object' &&
+          !(jobData.companyId instanceof mongoose.Types.ObjectId)
             ? (jobData.companyId as PopulatedCompany)
             : null;
 
@@ -2564,8 +2555,8 @@ export const updateApplicationStatus = async (
           | mongoose.Types.ObjectId;
         const graduateData =
           typeof graduate === 'object' &&
-            graduate &&
-            !(graduate instanceof mongoose.Types.ObjectId)
+          graduate &&
+          !(graduate instanceof mongoose.Types.ObjectId)
             ? graduate
             : null;
 
@@ -2598,7 +2589,8 @@ export const updateApplicationStatus = async (
               ? companyData.userId.toString()
               : String(companyData.userId);
           const graduateName = graduateData
-            ? `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim() || 'A candidate'
+            ? `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim() ||
+              'A candidate'
             : 'A candidate';
           await createNotification({
             userId: companyUserIdString,
@@ -2631,8 +2623,8 @@ export const updateApplicationStatus = async (
           | mongoose.Types.ObjectId;
         const graduateData =
           typeof graduate === 'object' &&
-            graduate &&
-            !(graduate instanceof mongoose.Types.ObjectId)
+          graduate &&
+          !(graduate instanceof mongoose.Types.ObjectId)
             ? graduate
             : null;
         if (graduateData?.userId) {
@@ -2661,15 +2653,12 @@ export const updateApplicationStatus = async (
       }
     }
 
-    res.success(
-      updatedApplication || application,
-      {
-        message:
-          validatedStatus === 'accepted'
-            ? 'Application accepted and offer sent successfully'
-            : 'Application status updated successfully',
-      }
-    );
+    res.success(updatedApplication || application, {
+      message:
+        validatedStatus === 'accepted'
+          ? 'Application accepted and offer sent successfully'
+          : 'Application status updated successfully',
+    });
   } catch (error) {
     console.error('Update application status error:', error);
     res.fail('Internal server error', 500);
@@ -2813,8 +2802,8 @@ export const getOfferById = async (
     const job = offer.jobId as PopulatedJob | mongoose.Types.ObjectId;
     const jobData =
       typeof job === 'object' &&
-        job &&
-        !(job instanceof mongoose.Types.ObjectId)
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
         ? job
         : null;
 
@@ -2842,14 +2831,28 @@ export const getAdminInterviews = async (
 
     const pagination = {
       page: Math.max(1, Number.parseInt(page as string, 10) || 1),
-      limit: Math.min(50, Math.max(1, Number.parseInt(limit as string, 10) || 10)),
+      limit: Math.min(
+        50,
+        Math.max(1, Number.parseInt(limit as string, 10) || 10)
+      ),
     };
 
     const validatedStatus = status
-      ? (['pending_selection', 'scheduled', 'in_progress', 'completed', 'cancelled'] as const).includes(
-        status as any
-      )
-        ? (status as 'pending_selection' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled')
+      ? (
+          [
+            'pending_selection',
+            'scheduled',
+            'in_progress',
+            'completed',
+            'cancelled',
+          ] as const
+        ).includes(status as any)
+        ? (status as
+            | 'pending_selection'
+            | 'scheduled'
+            | 'in_progress'
+            | 'completed'
+            | 'cancelled')
         : null
       : null;
 
@@ -2900,7 +2903,9 @@ export const getAdminInterviews = async (
         } else {
           // For other statuses with upcoming=true, require scheduledAt
           query.status = validatedStatus;
-          query.scheduledAt = { $gte: new Date(Date.now() - 6 * 60 * 60 * 1000) };
+          query.scheduledAt = {
+            $gte: new Date(Date.now() - 6 * 60 * 60 * 1000),
+          };
         }
       } else if (upcoming === 'false') {
         // For past, only include interviews that have a scheduledAt in the past
@@ -2969,21 +2974,21 @@ export const getAdminInterviews = async (
     const serializeAdminInterview = (interview: any) => {
       const graduate =
         typeof interview.graduateId === 'object' &&
-          interview.graduateId &&
-          !(interview.graduateId instanceof mongoose.Types.ObjectId)
+        interview.graduateId &&
+        !(interview.graduateId instanceof mongoose.Types.ObjectId)
           ? interview.graduateId
           : {};
       const job =
         typeof interview.jobId === 'object' &&
-          interview.jobId &&
-          !(interview.jobId instanceof mongoose.Types.ObjectId)
+        interview.jobId &&
+        !(interview.jobId instanceof mongoose.Types.ObjectId)
           ? interview.jobId
           : {};
       const companyInfo =
         job.companyId &&
-          typeof job.companyId === 'object' &&
-          !(job.companyId instanceof mongoose.Types.ObjectId) &&
-          'companyName' in job.companyId
+        typeof job.companyId === 'object' &&
+        !(job.companyId instanceof mongoose.Types.ObjectId) &&
+        'companyName' in job.companyId
           ? job.companyId
           : null;
 
@@ -2997,7 +3002,12 @@ export const getAdminInterviews = async (
 
       // For pending_selection interviews, use the first suggested slot date if scheduledAt is not available
       let scheduledAt = interview.scheduledAt;
-      if (!scheduledAt && interview.status === 'pending_selection' && interview.suggestedTimeSlots && interview.suggestedTimeSlots.length > 0) {
+      if (
+        !scheduledAt &&
+        interview.status === 'pending_selection' &&
+        interview.suggestedTimeSlots &&
+        interview.suggestedTimeSlots.length > 0
+      ) {
         scheduledAt = interview.suggestedTimeSlots[0].date;
       }
 
@@ -3006,7 +3016,11 @@ export const getAdminInterviews = async (
         applicationId,
         scheduledAt: scheduledAt,
         status: interview.status,
-        durationMinutes: interview.durationMinutes || (interview.suggestedTimeSlots && interview.suggestedTimeSlots[0]?.duration) || 30,
+        durationMinutes:
+          interview.durationMinutes ||
+          (interview.suggestedTimeSlots &&
+            interview.suggestedTimeSlots[0]?.duration) ||
+          30,
         roomSlug: interview.roomSlug,
         roomUrl: interview.roomUrl,
         job: {

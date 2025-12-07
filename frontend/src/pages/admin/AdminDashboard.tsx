@@ -141,7 +141,7 @@ const AdminDashboard = () => {
         return b.hired - a.hired;
       }) || [];
 
-      console.log(companiesStatsData)
+  console.log(companiesStatsData);
 
   if (isLoading) {
     return (

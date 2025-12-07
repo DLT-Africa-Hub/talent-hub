@@ -13,7 +13,6 @@ import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
 import { messageApi } from '../../api/message';
 import { useNotifications } from '../../hooks/useNotifications';
-import { FaArrowTrendUp } from 'react-icons/fa6';
 import { GoGear } from 'react-icons/go';
 
 interface Page {

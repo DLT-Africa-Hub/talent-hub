@@ -13,7 +13,6 @@ import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
 import { messageApi } from '../../api/message';
 import { useNotifications } from '../../hooks/useNotifications';
-import { FaArrowTrendUp } from 'react-icons/fa6';
 import { GoGear } from 'react-icons/go';
 
 interface Page {
@@ -51,7 +50,9 @@ const pagesByRole: Record<string, Page[]> = {
     },
     { page: 'Talents', link: 'admin/talents', icon: HiOutlineUsers },
     { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
-    { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
+    { page: 'Interviews', link: 'admin/interviews', icon: HiVideoCamera },
+    { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
+    // { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
     { page: 'Notifications', link: 'admin/notifications', icon: BiBell },
     { page: 'Settings', link: 'admin/settings', icon: GoGear },
   ],
@@ -152,11 +153,17 @@ const SideBar: React.FC = () => {
               }
             };
 
+            // Determine if this link should use exact matching
+            const shouldUseExactMatch =
+              page.link === 'graduate' ||
+              page.link === 'company' ||
+              page.link === 'admin';
+
             return (
               <NavLink
                 key={page.link}
                 to={to}
-                end={page.link === 'graduate' || page.link === 'company'}
+                end={shouldUseExactMatch}
                 onClick={handleNavClick}
                 className={({ isActive }) =>
                   `flex items-center justify-between text-[18px] gap-[10px] px-[12px] py-[12px] w-full rounded-[12px] transition-colors ${

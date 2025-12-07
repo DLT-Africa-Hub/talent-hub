@@ -7,6 +7,7 @@ import Match from '../models/Match.model';
 import Graduate from '../models/Graduate.model';
 import Application from '../models/Application.model';
 import Interview, { InterviewStatus } from '../models/Interview.model';
+import MessageModel from '../models/Message.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
 import { queueJobMatching } from '../services/aiMatching.service';
 import {
@@ -632,6 +633,8 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
 
   await job.save();
 
+  await Company.findByIdAndUpdate(company._id, { $inc: { postedJobs: 1 } });
+
   // Match graduates based on rank (automatic matching)
   // This happens before AI matching to ensure rank-based matches are created immediately
   if (job.status === 'active') {
@@ -685,6 +688,61 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
               .join('\n')
           : 'None';
 
+      // Helper function to format description for email (strip HTML and format nicely)
+      const formatDescriptionForEmail = (html: string): string => {
+        if (!html) return 'Not provided';
+
+        // Remove style and script tags
+        let text = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
+        // Replace common HTML elements with text equivalents
+        text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '$1\n\n');
+        text = text.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '$1\n\n');
+        text = text.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '$1\n');
+        text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+        text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, '  • $1\n');
+        text = text.replace(/<ul[^>]*>/gi, '\n');
+        text = text.replace(/<\/ul>/gi, '\n');
+        text = text.replace(/<ol[^>]*>/gi, '\n');
+        text = text.replace(/<\/ol>/gi, '\n');
+        text = text.replace(
+          /<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi,
+          '$2 ($1)'
+        );
+        text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '$1');
+        text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '$1');
+        text = text.replace(/<em[^>]*>(.*?)<\/em>/gi, '$1');
+        text = text.replace(/<i[^>]*>(.*?)<\/i>/gi, '$1');
+        text = text.replace(/<br[^>]*>/gi, '\n');
+        text = text.replace(/<div[^>]*>/gi, '\n');
+        text = text.replace(/<\/div>/gi, '');
+
+        // Remove all remaining HTML tags
+        text = text.replace(/<[^>]+>/g, '');
+
+        // Decode HTML entities
+        text = text
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&mdash;/g, '—')
+          .replace(/&ndash;/g, '–');
+
+        // Clean up whitespace
+        text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+        text = text.replace(/[ \t]+/g, ' ');
+        text = text.trim();
+
+        return text;
+      };
+
+      const formattedDescription =
+        formatDescriptionForEmail(validatedDescription);
+
       const jobDetailsText = `
 Job Title: ${validatedTitle}
 Company: ${company.companyName}
@@ -694,7 +752,7 @@ Preferred Rank: ${validatedPreferedRank}
 Salary: ${salaryText}
 
 Description:
-${validatedDescription}
+${formattedDescription}
 
 Required Skills:
 ${validatedSkills.map((skill) => `- ${skill}`).join('\n')}
@@ -723,6 +781,33 @@ Job ID: ${jobId}
             text: `A new job posting has been created that requires admin handling.\n\n${jobDetailsText}\n\nAs the admin, you will:\n- Review and manage all applications\n- Schedule interview processes\n- Vet all applicants\n- Notify the company about the best candidates\n\nPlease access the admin panel to begin managing this job.`,
           },
         });
+      }
+
+      // Create a chat message from company to first admin to initiate discussion
+      if (adminUsers.length > 0) {
+        try {
+          const firstAdmin = adminUsers[0];
+          const firstAdminId =
+            firstAdmin._id instanceof mongoose.Types.ObjectId
+              ? firstAdmin._id
+              : new mongoose.Types.ObjectId(String(firstAdmin._id));
+
+          const companyUserIdObj = new mongoose.Types.ObjectId(companyUserId);
+
+          await MessageModel.create({
+            senderId: companyUserIdObj,
+            receiverId: firstAdminId,
+            message: `Hello! We've just posted a new job: "${validatedTitle}". Since we've selected DLT Africa to handle applications, we'd like to discuss the details and any specific requirements you might need. Please let us know if you have any questions or need additional information about this position.`,
+            type: 'text',
+            applicationId: jobId, // Using applicationId field to store jobId for linking
+          });
+        } catch (messageError) {
+          console.error(
+            'Failed to create chat message for job posting:',
+            messageError
+          );
+          // Don't fail the job creation if message creation fails
+        }
       }
     }
   } catch (error) {
@@ -1069,6 +1154,62 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
               .join('\n')
           : 'None';
 
+      // Format description for email (strip HTML and format nicely)
+      const formatDescriptionForEmail = (html: string): string => {
+        if (!html) return 'Not provided';
+
+        // Remove style and script tags
+        let text = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
+        // Replace common HTML elements with text equivalents
+        text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '$1\n\n');
+        text = text.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '$1\n\n');
+        text = text.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '$1\n');
+        text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+        text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, '  • $1\n');
+        text = text.replace(/<ul[^>]*>/gi, '\n');
+        text = text.replace(/<\/ul>/gi, '\n');
+        text = text.replace(/<ol[^>]*>/gi, '\n');
+        text = text.replace(/<\/ol>/gi, '\n');
+        text = text.replace(
+          /<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi,
+          '$2 ($1)'
+        );
+        text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '$1');
+        text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '$1');
+        text = text.replace(/<em[^>]*>(.*?)<\/em>/gi, '$1');
+        text = text.replace(/<i[^>]*>(.*?)<\/i>/gi, '$1');
+        text = text.replace(/<br[^>]*>/gi, '\n');
+        text = text.replace(/<div[^>]*>/gi, '\n');
+        text = text.replace(/<\/div>/gi, '');
+
+        // Remove all remaining HTML tags
+        text = text.replace(/<[^>]+>/g, '');
+
+        // Decode HTML entities
+        text = text
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&mdash;/g, '—')
+          .replace(/&ndash;/g, '–')
+          .replace(/&amp;/g, '&');
+
+        // Clean up whitespace
+        text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+        text = text.replace(/[ \t]+/g, ' ');
+        text = text.trim();
+
+        return text;
+      };
+
+      const formattedDescription = formatDescriptionForEmail(
+        job.description || ''
+      );
+
       const jobDetailsText = `
 Job Title: ${job.title}
 Company: ${company.companyName}
@@ -1078,7 +1219,7 @@ Preferred Rank: ${job.preferedRank}
 Salary: ${salaryText}
 
 Description:
-${job.description}
+${formattedDescription}
 
 Required Skills:
 ${job.requirements?.skills?.map((skill: string) => `- ${skill}`).join('\n') || 'None'}
@@ -1112,6 +1253,32 @@ Job ID: ${job._id}
             text: `A job posting has been updated to require admin handling.\n\n${jobDetailsText}\n\nAs the admin, you will:\n- Review and manage all applications\n- Schedule interview processes\n- Vet all applicants\n- Notify the company about the best candidates\n\nPlease access the admin panel to begin managing this job.`,
           },
         });
+      }
+
+      // Create a chat message from company to first admin to initiate discussion
+      if (adminUsers.length > 0) {
+        try {
+          const firstAdmin = adminUsers[0];
+          const firstAdminId =
+            firstAdmin._id instanceof mongoose.Types.ObjectId
+              ? firstAdmin._id
+              : new mongoose.Types.ObjectId(String(firstAdmin._id));
+
+          const companyUserIdObj = new mongoose.Types.ObjectId(userId);
+
+          await MessageModel.create({
+            senderId: companyUserIdObj,
+            receiverId: firstAdminId,
+            message: `Hello! We've updated our job posting "${job.title}" to have DLT Africa handle applications. We'd like to discuss the details and any specific requirements you might need. Please let us know if you have any questions or need additional information about this position.`,
+            type: 'text',
+          });
+        } catch (messageError) {
+          console.error(
+            'Failed to create chat message for job update:',
+            messageError
+          );
+          // Don't fail the job update if message creation fails
+        }
       }
     } catch (error) {
       console.error('Failed to send admin notification for job update:', error);
@@ -2250,7 +2417,11 @@ export const scheduleInterview = async (
   application.interviewLink = roomUrl;
   application.interviewRoomSlug = roomSlug;
   application.interviewId = interviewId;
-  application.status = 'interviewed';
+  // Set status to 'shortlisted' when interview is scheduled, not 'interviewed'
+  // 'interviewed' should only be set after the interview is completed
+  if (application.status === 'pending' || application.status === 'reviewed') {
+    application.status = 'shortlisted';
+  }
   if (!application.reviewedAt) {
     application.reviewedAt = new Date();
   }

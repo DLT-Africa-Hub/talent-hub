@@ -210,13 +210,28 @@ export const formatNotificationDate = (dateInput: string | Date): string => {
 
 // Get company name from notification (fallback logic)
 export const getCompanyName = (
-  _notification: unknown,
+  notification: { type?: string } | unknown,
   userRole?: string
 ): string => {
+  // For system notifications, show "System"
+  if (
+    notification &&
+    typeof notification === 'object' &&
+    'type' in notification
+  ) {
+    if (notification.type === 'system') {
+      return 'System';
+    }
+  }
+
   // For graduates: notifications might be about companies
   // For companies: notifications might be about candidates/applications
+  // For admins: show appropriate name based on notification type
   if (userRole === 'graduate') {
     return 'Company';
+  }
+  if (userRole === 'admin') {
+    return 'Talent Hub';
   }
   return 'Talent Match';
 };
@@ -225,7 +240,8 @@ export const getCompanyName = (
 export const mapNotificationType = (
   type: string,
   relatedType?: string | null
-): 'job' | 'message' | 'match' | 'application' | 'interview' => {
+): 'job' | 'message' | 'match' | 'application' | 'interview' | 'system' => {
+  if (type === 'system') return 'system';
   if (type === 'interview' || relatedType === 'interview') return 'interview';
   if (type === 'job_alert' || relatedType === 'job') return 'job';
   if (type === 'message') return 'message';

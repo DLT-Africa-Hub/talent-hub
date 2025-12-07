@@ -96,6 +96,35 @@ const Messages: React.FC = () => {
           name = `${firstName} ${lastName}`.trim() || 'Graduate';
           role = graduate.position || '';
           image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+        } else if (user?.role === 'admin') {
+          // User is admin, so show company or graduate info based on conversation
+          const company = (conv.company || {}) as {
+            companyName?: string;
+            industry?: string;
+          };
+          const graduate = (conv.graduate || {}) as {
+            firstName?: string;
+            lastName?: string;
+            position?: string;
+            profilePictureUrl?: string;
+          };
+
+          // Prefer company if available, otherwise show graduate
+          if (company.companyName) {
+            name = company.companyName || 'Company';
+            role = company.industry || '';
+            image = DEFAULT_COMPANY_IMAGE;
+          } else if (graduate.firstName || graduate.lastName) {
+            const firstName = graduate.firstName || '';
+            const lastName = graduate.lastName || '';
+            name = `${firstName} ${lastName}`.trim() || 'Graduate';
+            role = graduate.position || '';
+            image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+          } else {
+            name = 'User';
+            role = '';
+            image = DEFAULT_PROFILE_IMAGE;
+          }
         }
 
         const lastMessageObj = (conv.lastMessage || {}) as {

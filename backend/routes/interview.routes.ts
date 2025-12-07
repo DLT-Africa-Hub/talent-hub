@@ -13,7 +13,7 @@ import {
 const router: IRouter = Router();
 
 router.use(authenticate);
-router.use(authorize('company', 'graduate'));
+router.use(authorize('company', 'graduate', 'admin'));
 router.use(requireEmailVerification);
 
 // Use apiLimiter (100 req/15min) instead of strictLimiter (50 req/15min)

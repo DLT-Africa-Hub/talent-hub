@@ -2029,7 +2029,7 @@ export const getInterviews = async (
 
     // First, update any interviews that have passed their end time to 'completed'
     const now = new Date();
-    await Interview.updateMany(
+    const completedInterviews = await Interview.updateMany(
       {
         graduateId: graduate._id,
         status: { $in: ['scheduled', 'in_progress'] },
@@ -2052,6 +2052,26 @@ export const getInterviews = async (
         },
       }
     );
+
+    // Update application status to 'interviewed' for completed interviews
+    if (completedInterviews.modifiedCount > 0) {
+      const interviewsToUpdate = await Interview.find({
+        graduateId: graduate._id,
+        status: 'completed',
+        endedAt: { $gte: new Date(now.getTime() - 1000) }, // Just completed
+      }).select('applicationId');
+
+      const applicationIds = interviewsToUpdate
+        .map((iv) => iv.applicationId)
+        .filter((id) => id);
+
+      if (applicationIds.length > 0) {
+        await Application.updateMany(
+          { _id: { $in: applicationIds } },
+          { $set: { status: 'interviewed' } }
+        );
+      }
+    }
 
     const [interviews, total] = await Promise.all([
       Interview.find(query)

@@ -28,9 +28,14 @@ interface LocalFile {
 interface Props {
   onChange?: (files: UploadedFile[]) => void;
   value?: UploadedFile[];
+  onFileUploaded?: (file: File) => void;
 }
 
-const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
+const ResumeInput: React.FC<Props> = ({
+  onChange,
+  value = [],
+  onFileUploaded,
+}) => {
   const [localFiles, setLocalFiles] = useState<LocalFile[]>(
     () =>
       (value || []).map((v, i) => ({
@@ -233,6 +238,11 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                 : p
             )
           );
+
+          // Call onFileUploaded callback if provided
+          if (onFileUploaded) {
+            onFileUploaded(local.file);
+          }
         } else {
           console.error('Cloudinary upload failed:', xhr.status, resp);
           setLocalFiles((prev) =>
@@ -340,10 +350,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                 className="flex items-center justify-between p-3 bg-[#F9F9F9] border border-fade rounded-lg"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <FileIcon
-                    size={18}
-                    className="text-[#1C1C1C] shrink-0"
-                  />
+                  <FileIcon size={18} className="text-[#1C1C1C] shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#1C1C1C] truncate">
                       {f.name}

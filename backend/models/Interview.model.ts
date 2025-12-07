@@ -233,4 +233,41 @@ InterviewSchema.index({ status: 1, scheduledAt: 1 });
 InterviewSchema.index({ graduateId: 1, status: 1 }); // For pending_selection queries
 InterviewSchema.index({ selectionDeadline: 1, status: 1 }); // For deadline monitoring
 
+// Update application status to 'interviewed' when interview is completed
+InterviewSchema.post('findOneAndUpdate', async function (doc) {
+  if (doc && doc.status === 'completed' && doc.applicationId) {
+    try {
+      const Application = mongoose.model('Application');
+      await Application.findByIdAndUpdate(doc.applicationId, {
+        $set: { status: 'interviewed' },
+      });
+    } catch (error) {
+      console.error(
+        'Error updating application status after interview completion:',
+        error
+      );
+    }
+  }
+});
+
+InterviewSchema.post('save', async function (doc) {
+  if (
+    doc.isModified('status') &&
+    doc.status === 'completed' &&
+    doc.applicationId
+  ) {
+    try {
+      const Application = mongoose.model('Application');
+      await Application.findByIdAndUpdate(doc.applicationId, {
+        $set: { status: 'interviewed' },
+      });
+    } catch (error) {
+      console.error(
+        'Error updating application status after interview completion:',
+        error
+      );
+    }
+  }
+});
+
 export default mongoose.model<IInterview>('Interview', InterviewSchema);

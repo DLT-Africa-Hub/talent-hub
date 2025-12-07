@@ -2,78 +2,91 @@ import React from 'react';
 import { Graduate } from '../../../pages/admin/Graduates';
 import { ImageWithFallback } from '../../ui';
 import { formatSalaryPerAnnum } from '../../../utils/job.utils';
+import { CiLocationOn } from 'react-icons/ci';
+import { GiRank2 } from 'react-icons/gi';
 
-const GraduateCard: React.FC<Graduate> = ({
+interface Props extends Graduate {
+  onClick?: () => void;
+}
+
+const GraduateCard: React.FC<Props> = ({
   name,
-  role,
-  email,
-  matchScore,
+  position,
+  rank,
+  expLevel,
   skills,
-  avatar,
+  profilePictureUrl,
+  location,
   salaryPerAnnum,
+  onClick,
 }) => {
-  const progressWidth = `${matchScore}%`;
-
   return (
-    <div className="flex flex-col border border-fade rounded-[10px] bg-white p-[20px] gap-[32px] max-w-[367px]">
-      <div className="flex flex-col gap-[18px]">
-        <div className="flex items-center gap-[18px]">
-          <ImageWithFallback
-            src={avatar}
-            alt={name}
-            className="w-[63px] h-[63px] rounded-[10px]"
-          />
-          <div className="flex flex-col gap-[8px] font-inter">
-            <p className="font-semibold text-[24px] ">{name}</p>
-            <p className="text-[16px] text-[#1C1C1CBF] font-sf ">{role}</p>
-          </div>
+    <div className="flex flex-col border border-fade rounded-[10px] bg-white p-[20px] gap-[24px] max-w-[367px]">
+      <div className="flex items-center gap-[18px]">
+        <ImageWithFallback
+          src={profilePictureUrl || ''}
+          alt={name}
+          className="w-[63px] h-[63px] rounded-[10px]"
+        />
+        <div className="flex flex-col gap-[4px] font-inter">
+          <p className="font-semibold text-[20px]">{name || 'no name'}</p>
+          <p className="text-[14px] text-[#1C1C1CBF]">{position}</p>
         </div>
-        <p className="text-[14px] text-[#1C1C1CBF] font-sf ">{email}</p>
+      </div>
+      <div className="flex justify-between">
+        <div className="flex flex-col gap-1">
+          <p className="text-[14px] flex items-center gap-1 text-[#1C1C1CBF]">
+            <GiRank2 />
+            {expLevel}
+          </p>
+          {location && (
+            <p className="text-[14px] flex items-center gap-1 text-[#1C1C1CBF]">
+              <CiLocationOn />
+              {location}
+            </p>
+          )}
+        </div>
+        {rank && (
+          <p className="text-[14px] border-2 border-button text-button bg-fade text-center self-start p-1.5 rounded-[20px]">
+            Rank: {rank}
+          </p>
+        )}
       </div>
 
-      <div className="flex flex-col gap-[10px]">
-        <div className="flex flex-col gap-[10px]">
-          <div className="flex w-full items-center justify-between">
-            <p className="text-[#1C1C1CBF] text-[14px] font-sf">Match Score</p>
-            <p className="text-button text-[14px] font-sf">{matchScore}%</p>
-          </div>
-
-          <div className="w-full bg-[#D9D9D9] rounded-[10px] h-[10px]">
-            <div
-              className="h-full bg-button rounded-[10px]"
-              style={{ width: progressWidth }}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-[10px]">
-          <p className="text-[#1C1C1CBF] text-[14px] font-sf">Skills</p>
-          <div className="flex items-center flex-wrap gap-[6px]">
-            {skills.map((skill) => (
+      {skills.length > 0 && (
+        <div className="flex flex-col gap-[6px]">
+          <p className="text-[14px] text-[#1C1C1CBF]">Skills</p>
+          <div className="flex flex-wrap gap-[6px]">
+            {skills.slice(0, 6).map((skill) => (
               <div
                 key={skill}
-                className="border-button border p-[10px] rounded-[10px] bg-[#EFFFE2] text-button"
+                className="border-button border p-[8px] rounded-[10px] bg-[#EFFFE2] text-button text-[12px]"
               >
                 {skill}
               </div>
             ))}
+            {skills.length > 6 && (
+              <div className="border-button border p-[8px] rounded-[10px] bg-[#EFFFE2] text-button text-[12px]">
+                +{skills.length - 6} more
+              </div>
+            )}
           </div>
         </div>
-        {salaryPerAnnum && (
-          <div className="flex flex-col gap-[10px]">
-            <div className="flex w-full items-center justify-between">
-              <p className="text-[#1C1C1CBF] text-[14px] font-sf">
-                Expected Salary
-              </p>
-              <p className="text-button text-[14px] font-sf">
-                {formatSalaryPerAnnum(salaryPerAnnum)}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
-      <button className="bg-button text-white p-[18px] rounded-[10px]">
+      {salaryPerAnnum && (
+        <div className="flex w-full justify-between">
+          <p className="text-[14px] text-[#1C1C1CBF]">Expected Salary</p>
+          <p className="text-button text-[14px]">
+            {formatSalaryPerAnnum(salaryPerAnnum)}
+          </p>
+        </div>
+      )}
+
+      <button
+        className="bg-button text-white p-[14px] rounded-[10px]"
+        onClick={onClick}
+      >
         View Profile
       </button>
     </div>

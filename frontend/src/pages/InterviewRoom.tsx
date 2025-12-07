@@ -9,9 +9,20 @@ import {
   SpeakerLayout,
   CallControls,
   StreamTheme,
+  VideoPreview,
+  DeviceSettings,
+  useCallStateHooks,
+  CallingState,
+  Icon,
+  createSoundDetector,
 } from '@stream-io/video-react-sdk';
 import { createStreamClient } from '../utils/streamClient';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
+import interviewApi from '../api/interview';
+import { Button, PageLoader } from '../components/ui';
+import ErrorState from '../components/ui/ErrorState';
+import { useAuth } from '../context/AuthContext';
+import { Mic, Webcam } from 'lucide-react';
 
 // Custom styles to position call controls at bottom
 const callControlsStyle = `
@@ -24,11 +35,253 @@ const callControlsStyle = `
     z-index: 50 !important;
   }
 `;
-import interviewApi from '../api/interview';
-import { Button, PageLoader } from '../components/ui';
-import ErrorState from '../components/ui/ErrorState';
-import { useAuth } from '../context/AuthContext';
-import { ApiError } from '../types/api';
+
+// Audio Volume Indicator Component
+function AudioVolumeIndicator() {
+  const { useMicrophoneState } = useCallStateHooks();
+  const { isEnabled, mediaStream } = useMicrophoneState();
+  const [audioLevel, setAudioLevel] = useState(0);
+
+  useEffect(() => {
+    if (!isEnabled || !mediaStream) return;
+
+    const disposeSoundDetector = createSoundDetector(
+      mediaStream,
+      ({ audioLevel }) => setAudioLevel(audioLevel),
+      { detectionFrequencyInMs: 80, destroyStreamOnStop: false }
+    );
+
+    return () => {
+      disposeSoundDetector().catch(console.error);
+    };
+  }, [isEnabled, mediaStream]);
+
+  if (!isEnabled) return null;
+
+  return (
+    <div className="flex w-72 items-center gap-3 rounded-md bg-slate-900 p-4">
+      <Icon icon="mic" />
+      <div className="h-1.5 flex-1 rounded-md bg-white">
+        <div
+          className="h-full w-full origin-left bg-blue-500"
+          style={{
+            transform: `scaleX(${audioLevel / 100})`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Permission Prompt Component
+function PermissionPrompt() {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="flex items-center gap-3">
+        <Webcam size={40} />
+        <Mic size={40} />
+      </div>
+      <p className="text-center">
+        Please allow access to your microphone and camera to join the call
+      </p>
+    </div>
+  );
+}
+
+// Setup UI Component
+function SetupUI({
+  call,
+  onSetupComplete,
+  isJoining = false,
+}: {
+  call: Call;
+  onSetupComplete: () => void;
+  isJoining?: boolean;
+}) {
+  const { useMicrophoneState, useCameraState } = useCallStateHooks();
+  const micState = useMicrophoneState();
+  const camState = useCameraState();
+  const [micCamDisabled, setMicCamDisabled] = useState(false);
+
+  useEffect(() => {
+    if (micCamDisabled) {
+      call.camera.disable();
+      call.microphone.disable();
+    } else {
+      call.camera.enable();
+      call.microphone.enable();
+    }
+  }, [micCamDisabled, call]);
+
+  if (!micState.hasBrowserPermission || !camState.hasBrowserPermission) {
+    return <PermissionPrompt />;
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 p-8">
+      <h1 className="text-center text-2xl font-bold text-white">Setup</h1>
+      <VideoPreview />
+      <div className="flex h-16 items-center gap-3">
+        <AudioVolumeIndicator />
+        <DeviceSettings />
+      </div>
+      <label className="flex items-center gap-2 font-medium text-white">
+        <input
+          type="checkbox"
+          checked={micCamDisabled}
+          onChange={(e) => setMicCamDisabled(e.target.checked)}
+          className="rounded"
+        />
+        Join with mic and camera off
+      </label>
+      <Button onClick={onSetupComplete} disabled={isJoining}>
+        {isJoining ? 'Joining...' : 'Join meeting'}
+      </Button>
+    </div>
+  );
+}
+
+// Call UI Component
+function CallUI() {
+  const { useCallCallingState } = useCallStateHooks();
+  const callingState = useCallCallingState();
+
+  if (callingState !== CallingState.JOINED) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <PageLoader message="Joining call..." />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <style>{callControlsStyle}</style>
+      <SpeakerLayout />
+      <CallControls />
+    </>
+  );
+}
+
+// Meeting Screen Component
+function MeetingScreen({
+  call,
+  navigate,
+  user,
+}: {
+  call: Call;
+  navigate: (path: string | number) => void;
+  user: any;
+}) {
+  const { useCallEndedAt, useCallStartsAt } = useCallStateHooks();
+  const callEndedAt = useCallEndedAt();
+  const callStartsAt = useCallStartsAt();
+  const [setupComplete, setSetupComplete] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  async function handleSetupComplete() {
+    setIsJoining(true);
+    setJoinError(null);
+    try {
+      await call.join({ create: true });
+      setSetupComplete(true);
+    } catch (error) {
+      console.error('Failed to join call:', error);
+      const errorMessage =
+        error && typeof error === 'object' && 'message' in error
+          ? typeof error.message === 'string'
+            ? error.message
+            : 'Failed to join the call. Please try again.'
+          : 'Failed to join the call. Please try again.';
+      setJoinError(errorMessage);
+    } finally {
+      setIsJoining(false);
+    }
+  }
+
+  const callIsInFuture = callStartsAt && new Date(callStartsAt) > new Date();
+  const callHasEnded = !!callEndedAt;
+
+  if (callHasEnded) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white gap-6">
+        <p className="font-bold text-xl">This meeting has ended</p>
+        <Button
+          onClick={() => {
+            const destination =
+              user?.role === 'admin'
+                ? '/admin'
+                : user?.role === 'company'
+                  ? '/company'
+                  : user?.role === 'graduate'
+                    ? '/graduate'
+                    : '/';
+            navigate(destination);
+          }}
+        >
+          Back to dashboard
+        </Button>
+      </div>
+    );
+  }
+
+  if (callIsInFuture) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white gap-6">
+        <p className="my-3">
+          This meeting has not started yet. It will start at{' '}
+          <span className="font-bold">
+            {callStartsAt?.toLocaleString(undefined, {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })}
+          </span>
+        </p>
+        <Button
+          onClick={() => {
+            const destination =
+              user?.role === 'admin'
+                ? '/admin'
+                : user?.role === 'company'
+                  ? '/company'
+                  : user?.role === 'graduate'
+                    ? '/graduate'
+                    : '/';
+            navigate(destination);
+          }}
+        >
+          Back to dashboard
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 h-full">
+      {setupComplete ? (
+        <CallUI />
+      ) : (
+        <>
+          {joinError && (
+            <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 text-center">
+              {joinError}
+            </div>
+          )}
+          <SetupUI
+            call={call}
+            onSetupComplete={handleSetupComplete}
+            isJoining={isJoining}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 const InterviewRoom = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -87,19 +340,29 @@ const InterviewRoom = () => {
               // Cache the token (Stream tokens expire in 1 hour)
               tokenCacheRef.current = {
                 token,
-                expiresAt: Date.now() + 55 * 60 * 1000, // Cache for 55 minutes (token valid for 1 hour)
+                expiresAt: Date.now() + 55 * 60 * 1000,
               };
 
               break; // Success, exit retry loop
             } catch (error) {
-              const apiError = error as {
-                response?: { status?: number };
-                code?: string;
-                message?: string;
+              // Type guard for error with response property
+              const hasResponse = (
+                err: unknown
+              ): err is { response?: { status?: number } } => {
+                return (
+                  typeof err === 'object' && err !== null && 'response' in err
+                );
+              };
+
+              // Type guard for error with code/message properties
+              const hasErrorProperties = (
+                err: unknown
+              ): err is { code?: string; message?: string } => {
+                return typeof err === 'object' && err !== null;
               };
 
               // If it's a 429 (rate limit), wait before retrying
-              if (apiError.response?.status === 429) {
+              if (hasResponse(error) && error.response?.status === 429) {
                 if (attempt < maxRetries - 1) {
                   // Exponential backoff: wait 2^attempt seconds
                   const waitTime = Math.pow(2, attempt) * 1000;
@@ -118,9 +381,11 @@ const InterviewRoom = () => {
 
               // Network/CORS errors
               if (
-                apiError.code === 'ERR_NETWORK' ||
-                apiError.message?.includes('CORS') ||
-                apiError.message === 'Network Error'
+                hasErrorProperties(error) &&
+                (error.code === 'ERR_NETWORK' ||
+                  (typeof error.message === 'string' &&
+                    (error.message.includes('CORS') ||
+                      error.message === 'Network Error')))
               ) {
                 const errorMsg =
                   'Cannot connect to server. Please check if the backend is running and CORS is configured correctly.';
@@ -170,30 +435,11 @@ const InterviewRoom = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interview, user]); // videoClient is intentionally excluded - it's set inside the effect
 
-  // Create and join call
+  // Create call (but don't join yet - wait for setup)
   useEffect(() => {
     if (!videoClient || !interview?.roomSlug) return;
 
     const myCall = videoClient.call('default', interview.roomSlug);
-
-    myCall.join({ create: true }).catch((err) => {
-      console.error('Failed to join the call', err);
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to join the call';
-      if (
-        errorMessage.includes('rate limit') ||
-        errorMessage.includes('Too many requests')
-      ) {
-        setStreamError(
-          'Too many requests. Please wait a moment and refresh the page.'
-        );
-      } else if (errorMessage.includes('token')) {
-        setStreamError('Authentication error. Please refresh the page.');
-      } else {
-        setStreamError('Failed to join the call. Please try again.');
-      }
-    });
-
     setCall(myCall);
 
     return () => {
@@ -214,6 +460,7 @@ const InterviewRoom = () => {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   }, [interview?.scheduledAt]);
 
@@ -222,15 +469,34 @@ const InterviewRoom = () => {
   }
 
   if (error || !interview) {
-    const fallbackDestination =
-      user?.role === 'company' ? '/company' : '/graduate';
+    const getFallbackDestination = () => {
+      if (user?.role === 'admin') return '/admin';
+      if (user?.role === 'company') return '/company';
+      if (user?.role === 'graduate') return '/graduate';
+      return '/';
+    };
+    const fallbackDestination = getFallbackDestination();
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-4 gap-4">
         <ErrorState
           title="Unable to load interview"
           message={
-            (error as ApiError)?.response?.data?.message ||
-            (error as Error)?.message ||
+            (error &&
+            typeof error === 'object' &&
+            'response' in error &&
+            error.response &&
+            typeof error.response === 'object' &&
+            'data' in error.response &&
+            error.response.data &&
+            typeof error.response.data === 'object' &&
+            'message' in error.response.data &&
+            typeof error.response.data.message === 'string'
+              ? error.response.data.message
+              : error && typeof error === 'object' && 'message' in error
+                ? typeof error.message === 'string'
+                  ? error.message
+                  : 'Please check the link and try again.'
+                : 'Please check the link and try again.') ||
             'Please check the link and try again.'
           }
           variant="fullPage"
@@ -256,9 +522,17 @@ const InterviewRoom = () => {
           <StreamVideo client={videoClient}>
             <StreamTheme>
               <StreamCall call={call}>
-                <style>{callControlsStyle}</style>
-                <SpeakerLayout />
-                <CallControls onLeave={() => navigate(-1)} />
+                <MeetingScreen
+                  call={call}
+                  navigate={(path) => {
+                    if (typeof path === 'number') {
+                      navigate(path);
+                    } else {
+                      navigate(path);
+                    }
+                  }}
+                  user={user}
+                />
               </StreamCall>
             </StreamTheme>
           </StreamVideo>
@@ -333,7 +607,17 @@ const InterviewRoom = () => {
         <div className="flex flex-col gap-3">
           <Button
             variant="secondary"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              const destination =
+                user?.role === 'admin'
+                  ? '/admin'
+                  : user?.role === 'company'
+                    ? '/company'
+                    : user?.role === 'graduate'
+                      ? '/graduate'
+                      : '/';
+              navigate(destination);
+            }}
             className="w-full"
           >
             Back to dashboard

@@ -234,7 +234,9 @@ function App() {
               <Route
                 path="/interviews/:slug"
                 element={
-                  <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                  <ProtectedRoute
+                    allowedRoles={['company', 'graduate', 'admin']}
+                  >
                     <EmailVerificationGuard>
                       <InterviewRoom />
                     </EmailVerificationGuard>
@@ -285,7 +287,9 @@ function App() {
               <Route
                 path="/messages"
                 element={
-                  <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                  <ProtectedRoute
+                    allowedRoles={['company', 'graduate', 'admin']}
+                  >
                     <EmailVerificationGuard>
                       <Layout>
                         <Messages />
@@ -324,7 +328,9 @@ function App() {
               <Route
                 path="/notifications"
                 element={
-                  <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                  <ProtectedRoute
+                    allowedRoles={['company', 'graduate', 'admin']}
+                  >
                     <EmailVerificationGuard>
                       <Layout>
                         <Notifications />
@@ -353,16 +359,15 @@ function App() {
                 element={<ExplorePreviewRedirect />}
               />
               <Route
-                path="/admin"
+                path="/admin/notifications"
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <Layout>
-                      <AdminDashboard />
+                      <Notifications />
                     </Layout>
                   </ProtectedRoute>
                 }
               />
-
               <Route
                 path="/admin/companies"
                 element={
@@ -389,6 +394,28 @@ function App() {
                   <ProtectedRoute allowedRoles={['admin']}>
                     <Layout>
                       <Jobs />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/interviews"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <EmailVerificationGuard>
+                      <Layout>
+                        <Interviews />
+                      </Layout>
+                    </EmailVerificationGuard>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <AdminDashboard />
                     </Layout>
                   </ProtectedRoute>
                 }

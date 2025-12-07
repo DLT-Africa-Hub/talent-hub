@@ -1,14 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { HiChevronDown } from 'react-icons/hi2';
+import { Plus } from 'lucide-react';
 import Modal from '../auth/Modal';
 import { Button, Input, Select } from '../ui';
-import RichTextEditor from '../ui/RichTextEditor';
+import JobDescriptionModal from './JobDescriptionModal';
 import RankSelector, {
   RankOption,
 } from '../onboarding/companyOnboarding/job/RankSelector';
 import { skills } from '../../utils/material.utils';
 import { companyApi } from '../../api/company';
 import { CURRENCIES } from '../../utils/job.utils';
+
+
+// Helper to remove all HTML tags thoroughly
+function stripHtmlTags(input: string): string {
+  let previous: string;
+  do {
+    previous = input;
+    input = input.replace(/<[^>]*>/g, '');
+  } while (input !== previous);
+  return input;
+}
 
 type JobCreationStep = 'details' | 'rank' | 'success';
 
@@ -70,6 +82,7 @@ const JobCreationModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState<string | null>(null);
+  const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);
   const skillsDropdownRef = useRef<HTMLDivElement>(null);
 
   const resetState = () => {
@@ -417,15 +430,59 @@ const JobCreationModal = ({
         )}
       </div>
 
-      <RichTextEditor
-        label="Job Description"
+      <div className="flex flex-col gap-2">
+        <label className="text-[#1C1C1C] text-[16px] font-medium">
+          Job Description <span className="text-red-500">*</span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setIsDescriptionModalOpen(true)}
+          className={`w-full py-4 px-4 border rounded-xl text-left transition-all ${
+            formData.description
+              ? 'border-button bg-button/5 hover:bg-button/10'
+              : 'border-fade bg-white hover:bg-[#F8F8F8] border-dashed'
+          }`}
+        >
+          {formData.description ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-[#1C1C1C]">
+                <span className="text-[14px] font-medium">
+                  Description added
+                </span>
+                <span className="text-[12px] text-[#1C1C1C80]">
+                  (Click to edit)
+                </span>
+              </div>
+              <div className="text-[13px] text-[#1C1C1C80] line-clamp-2">
+                {stripHtmlTags(formData.description)
+                  .replace(/&nbsp;/g, ' ')
+                  .trim()
+                  .substring(0, 150)}
+                {stripHtmlTags(formData.description).length > 150 &&
+                  '...'}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-[#1C1C1C80]">
+              <Plus size={20} className="text-button" />
+              <span className="text-[15px]">Add Description</span>
+            </div>
+          )}
+        </button>
+        {!formData.description && (
+          <p className="text-[12px] text-[#1C1C1C80]">
+            Click to add a detailed job description with formatting options
+          </p>
+        )}
+      </div>
+
+      <JobDescriptionModal
+        isOpen={isDescriptionModalOpen}
+        onClose={() => setIsDescriptionModalOpen(false)}
         value={formData.description}
-        onChange={(html) =>
-          setFormData((prev) => ({ ...prev, description: html }))
+        onChange={(description) =>
+          setFormData((prev) => ({ ...prev, description }))
         }
-        placeholder="Describe the role, responsibilities, and requirements"
-        required
-        rows={6}
       />
 
       {/* Contact Preference Section */}

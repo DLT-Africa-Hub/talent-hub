@@ -25,6 +25,7 @@ export { default as FormField } from './FormField';
 export { default as SectionHeader } from './SectionHeader';
 export { default as ImageWithFallback } from './ImageWithFallback';
 export { default as ActionButtonGroup } from './ActionButtonGroup';
+export { default as Modal } from './modal';
 export { ToastContainer } from './Toast';
 export type { Toast, ToastType } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';

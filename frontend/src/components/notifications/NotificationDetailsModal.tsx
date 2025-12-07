@@ -40,6 +40,11 @@ const headerStyles: Record<
     accent: 'text-[#1B45A0]',
     iconBg: 'bg-[#1B45A022]',
   },
+  system: {
+    gradient: 'bg-[#F0F0F0]',
+    accent: 'text-[#1C1C1C]',
+    iconBg: 'bg-[#1C1C1C22]',
+  },
 };
 
 const NotificationDetailsModal = ({

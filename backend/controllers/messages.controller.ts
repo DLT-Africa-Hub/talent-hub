@@ -82,7 +82,19 @@ export const getConversation = async (req: Request, res: Response) => {
       ],
     })
       .sort({ createdAt: 1 })
-      .lean();
+      .lean()
+      .then((msgs) =>
+        msgs.map((msg) => ({
+          ...msg,
+          _id: msg._id.toString(),
+          senderId: msg.senderId.toString(),
+          receiverId: msg.receiverId.toString(),
+          applicationId: msg.applicationId
+            ? msg.applicationId.toString()
+            : undefined,
+          offerId: msg.offerId ? msg.offerId.toString() : undefined,
+        }))
+      );
 
     await MessageModel.updateMany(
       {

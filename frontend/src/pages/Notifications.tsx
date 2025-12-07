@@ -57,12 +57,16 @@ const Notifications: React.FC = () => {
           : new Date();
       const displayDate = formatNotificationDate(createdAt);
       const companyName = getCompanyName(notif, user?.role);
-      const notificationType = mapNotificationType(notif.type, notif.relatedType);
-      
+      const notificationType = mapNotificationType(
+        notif.type,
+        notif.relatedType
+      );
+
       // Use system icon for system notifications, otherwise use default company image
-      const notificationImage = notificationType === 'system' 
-        ? 'https://cdn-icons-png.flaticon.com/512/1828/1828427.png' // System/gear icon
-        : DEFAULT_COMPANY_IMAGE;
+      const notificationImage =
+        notificationType === 'system'
+          ? 'https://cdn-icons-png.flaticon.com/512/1828/1828427.png' // System/gear icon
+          : DEFAULT_COMPANY_IMAGE;
 
       return {
         id: notif.id,

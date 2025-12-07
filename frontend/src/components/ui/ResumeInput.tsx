@@ -31,7 +31,11 @@ interface Props {
   onFileUploaded?: (file: File) => void;
 }
 
-const ResumeInput: React.FC<Props> = ({ onChange, value = [], onFileUploaded }) => {
+const ResumeInput: React.FC<Props> = ({
+  onChange,
+  value = [],
+  onFileUploaded,
+}) => {
   const [localFiles, setLocalFiles] = useState<LocalFile[]>(
     () =>
       (value || []).map((v, i) => ({
@@ -346,10 +350,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [], onFileUploaded }) 
                 className="flex items-center justify-between p-3 bg-[#F9F9F9] border border-fade rounded-lg"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <FileIcon
-                    size={18}
-                    className="text-[#1C1C1C] shrink-0"
-                  />
+                  <FileIcon size={18} className="text-[#1C1C1C] shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#1C1C1C] truncate">
                       {f.name}

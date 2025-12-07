@@ -108,7 +108,7 @@ const Messages: React.FC = () => {
             position?: string;
             profilePictureUrl?: string;
           };
-          
+
           // Prefer company if available, otherwise show graduate
           if (company.companyName) {
             name = company.companyName || 'Company';

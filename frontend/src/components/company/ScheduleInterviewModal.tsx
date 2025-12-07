@@ -189,16 +189,38 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                     {index + 1}.
                   </span>
 
-                  <Input
-                    type="datetime-local"
-                    value={slot.date}
-                    onChange={(e) =>
-                      updateTimeSlot(slot.id, 'date', e.target.value)
-                    }
-                    className="flex-1"
-                    required
-                    placeholder="Select date & time"
-                  />
+                  <div className="flex-1">
+                    <Input
+                      type="datetime-local"
+                      value={slot.date}
+                      onChange={(e) =>
+                        updateTimeSlot(slot.id, 'date', e.target.value)
+                      }
+                      className="w-full"
+                      required
+                      placeholder="Select date & time"
+                      step="900"
+                    />
+                    {slot.date && (
+                      <p className="text-xs text-[#1C1C1C80] mt-1">
+                        {(() => {
+                          try {
+                            const date = new Date(slot.date);
+                            return date.toLocaleString(undefined, {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            });
+                          } catch {
+                            return '';
+                          }
+                        })()}
+                      </p>
+                    )}
+                  </div>
 
                   <select
                     value={slot.duration}

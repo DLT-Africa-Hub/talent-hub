@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { companyApi } from '../api/company';
 import { graduateApi } from '../api/graduate';
+import { adminApi } from '../api/admin';
 import {
   Button,
   EmptyState,
@@ -60,6 +61,7 @@ const formatDateTime = (value?: string) => {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
   });
 };
 
@@ -70,6 +72,7 @@ const Interviews = () => {
   const userRole = user?.role;
   const isCompany = userRole === ROLE_COMPANY;
   const isGraduate = userRole === ROLE_GRADUATE;
+  const isAdmin = userRole === 'admin';
   const [selectingInterviewId, setSelectingInterviewId] = useState<
     string | null
   >(null);
@@ -80,6 +83,13 @@ const Interviews = () => {
     queryFn: async () => {
       if (isCompany) {
         return companyApi.getInterviews({
+          page: 1,
+          limit: 100,
+          upcoming: 'true',
+        });
+      }
+      if (isAdmin) {
+        return adminApi.getInterviews({
           page: 1,
           limit: 100,
           upcoming: 'true',
@@ -105,6 +115,13 @@ const Interviews = () => {
     queryFn: async ({ pageParam = 1 }) => {
       if (isCompany) {
         return companyApi.getInterviews({
+          page: pageParam,
+          limit: 5,
+          upcoming: 'false',
+        });
+      }
+      if (isAdmin) {
+        return adminApi.getInterviews({
           page: pageParam,
           limit: 5,
           upcoming: 'false',
@@ -168,31 +185,79 @@ const Interviews = () => {
 
   const pendingInterviews: PendingInterview[] = pendingData?.interviews ?? [];
 
-  // Upcoming interviews from the query
+  // Upcoming interviews from the query - filter out completed ones
   const upcoming = useMemo(() => {
     const interviews = (data?.interviews ?? []) as InterviewRecord[];
-    return interviews.sort(
-      (a, b) =>
-        new Date(a.scheduledAt || 0).getTime() -
-        new Date(b.scheduledAt || 0).getTime()
-    );
+    const now = Date.now();
+    return interviews
+      .filter((interview) => {
+        // Filter out completed interviews
+        if (interview.status === 'completed') return false;
+
+        // Filter out interviews that have passed their end time
+        if (interview.scheduledAt) {
+          const scheduledTime = new Date(interview.scheduledAt).getTime();
+          const durationMs = (interview.durationMinutes || 30) * 60 * 1000;
+          const endTime = scheduledTime + durationMs;
+          if (!Number.isNaN(scheduledTime) && endTime < now) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.scheduledAt || 0).getTime() -
+          new Date(b.scheduledAt || 0).getTime()
+      );
   }, [data?.interviews]);
 
-  // Past interviews from infinite query (flatten pages)
+  // Past interviews from infinite query (flatten pages) + completed from upcoming
   const past = useMemo(() => {
-    if (!pastData?.pages) return [];
     const allPast: InterviewRecord[] = [];
-    pastData.pages.forEach((page) => {
-      if (page.interviews) {
-        allPast.push(...(page.interviews as InterviewRecord[]));
+
+    // Add interviews from past query
+    if (pastData?.pages) {
+      pastData.pages.forEach((page) => {
+        if (page.interviews) {
+          allPast.push(...(page.interviews as InterviewRecord[]));
+        }
+      });
+    }
+
+    // Add completed interviews from upcoming query
+    const interviews = (data?.interviews ?? []) as InterviewRecord[];
+    const now = Date.now();
+    interviews.forEach((interview) => {
+      // Include if status is completed
+      if (interview.status === 'completed') {
+        allPast.push(interview);
+        return;
+      }
+
+      // Include if interview has passed its end time
+      if (interview.scheduledAt) {
+        const scheduledTime = new Date(interview.scheduledAt).getTime();
+        const durationMs = (interview.durationMinutes || 30) * 60 * 1000;
+        const endTime = scheduledTime + durationMs;
+        if (!Number.isNaN(scheduledTime) && endTime < now) {
+          allPast.push(interview);
+        }
       }
     });
-    return allPast.sort(
+
+    // Remove duplicates (in case an interview appears in both queries)
+    const uniquePast = Array.from(
+      new Map(allPast.map((item) => [item.id, item])).values()
+    );
+
+    return uniquePast.sort(
       (a, b) =>
         new Date(b.scheduledAt || 0).getTime() -
         new Date(a.scheduledAt || 0).getTime()
     );
-  }, [pastData?.pages]);
+  }, [pastData?.pages, data?.interviews]);
 
   // Intersection observer for infinite scrolling
   const observerTarget = useRef<HTMLDivElement>(null);
@@ -245,8 +310,30 @@ const Interviews = () => {
     const joinable = canJoinInterview(interview.scheduledAt, isPast);
     const counterpartName = isCompany
       ? interview.participant?.name || 'Candidate'
-      : interview.job?.companyName || 'Company';
-    const actionLabel = isCompany ? 'Start Interview' : 'Join Interview';
+      : isAdmin
+        ? interview.participant?.name || 'Candidate'
+        : interview.job?.companyName || 'Company';
+    const actionLabel =
+      isCompany || isAdmin ? 'Start Interview' : 'Join Interview';
+
+    // Determine display status: if interview is in the past, show "completed"
+    const getDisplayStatus = () => {
+      if (isPast) {
+        return 'completed';
+      }
+      // Check if scheduledAt is in the past (even if not marked as past in query)
+      if (interview.scheduledAt) {
+        const scheduledTime = new Date(interview.scheduledAt).getTime();
+        const durationMs = (interview.durationMinutes || 30) * 60 * 1000;
+        const endTime = scheduledTime + durationMs;
+        if (!Number.isNaN(scheduledTime) && endTime < Date.now()) {
+          return 'completed';
+        }
+      }
+      return interview.status;
+    };
+
+    const displayStatus = getDisplayStatus();
 
     return (
       <div
@@ -255,7 +342,7 @@ const Interviews = () => {
       >
         <div className="flex flex-col gap-1">
           <p className="text-sm text-[#1C1C1C80]">
-            {isCompany ? 'Candidate' : 'Company'}
+            {isCompany || isAdmin ? 'Candidate' : 'Company'}
           </p>
           <p className="text-lg font-semibold text-[#1C1C1C]">
             {counterpartName}
@@ -269,9 +356,17 @@ const Interviews = () => {
           <span className="px-3 py-1 rounded-full bg-[#F8F8F8] border border-fade">
             {formatDateTime(interview.scheduledAt)}
           </span>
-          {interview.status && (
-            <span className="px-3 py-1 rounded-full bg-[#E8F1FF] text-[#1B5F77] border border-[#1B5F7722]">
-              {interview.status.replace('_', ' ')}
+          {displayStatus && (
+            <span
+              className={`px-3 py-1 rounded-full border ${
+                displayStatus === 'completed'
+                  ? 'bg-green-100 text-green-800 border-green-200'
+                  : displayStatus === 'pending_selection'
+                    ? 'bg-purple-100 text-purple-800 border-purple-200'
+                    : 'bg-[#E8F1FF] text-[#1B5F77] border-[#1B5F7722]'
+              }`}
+            >
+              {displayStatus.replace('_', ' ')}
             </span>
           )}
           {interview.job?.location && (

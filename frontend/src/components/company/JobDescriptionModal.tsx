@@ -79,4 +79,3 @@ const JobDescriptionModal = ({
 };
 
 export default JobDescriptionModal;
-

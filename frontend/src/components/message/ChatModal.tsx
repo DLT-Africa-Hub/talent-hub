@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState, FormEvent, useMemo } from 'react';
+import { useEffect, useRef, useState, FormEvent, useMemo } from 'react';
 import { FiX } from 'react-icons/fi';
 import { AiOutlineSend } from 'react-icons/ai';
 import { GrAttachment } from 'react-icons/gr';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { messageApi } from '../../api/message';
 import { graduateApi } from '../../api/graduate';
 import { companyApi } from '../../api/company';
+import { adminApi } from '../../api/admin';
 import { useAuth } from '../../context/AuthContext';
 import { useToastContext } from '../../context/ToastContext';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -36,6 +38,108 @@ interface ChatModalProps {
   onClose: () => void;
 }
 
+// Component to render message with clickable job titles
+const MessageContent: React.FC<{
+  message: string;
+  jobId?: string;
+  userRole?: string;
+}> = ({ message, jobId, userRole }) => {
+  const navigate = useNavigate();
+
+  // Extract job title from message (text in quotes)
+  const extractJobTitle = (msg: string): string | null => {
+    const match = msg.match(/"([^"]+)"/);
+    return match ? match[1] : null;
+  };
+
+  const jobTitle = extractJobTitle(message);
+
+  // Search for job by title if jobId is not provided
+  const { data: jobSearchResult } = useQuery({
+    queryKey: ['jobSearchByTitle', jobTitle],
+    queryFn: async () => {
+      if (!jobTitle || userRole !== 'admin' || jobId) return null;
+      try {
+        const response = await adminApi.getAllJobs({ q: jobTitle, limit: 1 });
+        const jobs = response.data || [];
+        if (jobs.length > 0) {
+          const job = jobs[0];
+          // Extract job ID - handle both id and _id formats
+          return job.id || (job._id ? String(job._id) : null);
+        }
+        return null;
+      } catch (error) {
+        console.error('Error searching for job:', error);
+        return null;
+      }
+    },
+    enabled: !!jobTitle && userRole === 'admin' && !jobId,
+  });
+
+  // Use provided jobId or search result
+  const resolvedJobId = jobId || jobSearchResult;
+
+  const handleJobTitleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Job title clicked', { resolvedJobId, userRole, jobTitle });
+    if (resolvedJobId && userRole === 'admin') {
+      // Navigate to admin jobs page and store jobId to open modal
+      navigate('/admin/jobs', { state: { openJobId: resolvedJobId } });
+    }
+  };
+
+  // Parse message to find job title in quotes and make it clickable
+  const renderMessage = () => {
+    // Check if message contains quoted text (job title pattern)
+    const hasQuotedText = /"[^"]+"/.test(message);
+
+    // Only make clickable if:
+    // 1. Message contains quoted text (job title)
+    // 2. We have a resolvedJobId (either from applicationId or search)
+    // 3. User is admin
+    if (!hasQuotedText || !resolvedJobId || userRole !== 'admin') {
+      return <span>{message}</span>;
+    }
+
+    // Match text in quotes (job title)
+    const parts = message.split(/"([^"]+)"/);
+    if (parts.length <= 1) {
+      // No quotes found, return as-is
+      return <span>{message}</span>;
+    }
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          // Odd indices are the quoted text (job titles)
+          if (index % 2 === 1) {
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={handleJobTitleClick}
+                className="inline-block text-blue-600 hover:text-blue-800 hover:underline font-semibold cursor-pointer px-0 py-0 bg-transparent border-0 outline-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                style={{
+                  animation: 'blink 1.5s ease-in-out infinite',
+                  pointerEvents: 'auto',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'rgba(37, 99, 235, 0.5)',
+                }}
+              >
+                "{part}"
+              </button>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </>
+    );
+  };
+
+  return <div>{renderMessage()}</div>;
+};
+
 const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const { user } = useAuth();
   const { success, error: showError } = useToastContext();
@@ -46,6 +150,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const [isUploadingSignedOffer, setIsUploadingSignedOffer] = useState(false);
   const [isConfirmingHire, setIsConfirmingHire] = useState(false);
   const [showConfirmHireDialog, setShowConfirmHireDialog] = useState(false);
+  const [showMarkHiredDialog, setShowMarkHiredDialog] = useState(false);
   const signedOfferInputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -63,7 +168,15 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       return Array.isArray(response) ? response : [];
     },
     enabled: !!company?.id,
-    refetchInterval: 3000,
+    refetchInterval: 5000, // Reduced from 3000 to reduce rate limiting
+    retry: (failureCount, error) => {
+      // Don't retry on 429 errors
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 429) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   // Find offerId or applicationId from messages
@@ -153,15 +266,62 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       refetchInterval: 5000, // Refetch every 5 seconds to check for status updates
     });
 
+  // Fetch offer details by offerId (for admins)
+  const { data: offerDataForAdmin, isLoading: isLoadingOfferForAdmin } =
+    useQuery({
+      queryKey: ['offer-admin', offerId],
+      queryFn: async () => {
+        if (!offerId) return null;
+        try {
+          const response = await adminApi.getOfferById(offerId);
+          // Admin API returns { success: true, data: offer } or { offer }
+          return response.data || response.offer || response;
+        } catch (error) {
+          // Don't log 429 errors (rate limiting) as they're expected
+          const axiosError = error as { response?: { status?: number } };
+          if (axiosError.response?.status !== 429) {
+            console.error('Error fetching offer by ID for admin:', error);
+          }
+          return null;
+        }
+      },
+      enabled: !!offerId && user?.role === 'admin',
+      refetchInterval: (query) => {
+        // Only refetch if we have data and it's not in a terminal state
+        const offer = query.state.data as any;
+        if (
+          offer &&
+          (offer.status === 'accepted' ||
+            offer.status === 'hired' ||
+            offer.status === 'rejected')
+        ) {
+          return false; // Don't refetch if offer is in terminal state
+        }
+        return 10000; // Refetch every 10 seconds for pending/signed offers
+      },
+      retry: (failureCount, error) => {
+        // Don't retry on 429 errors
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 429) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+    });
+
   // Use offer from appropriate source based on user role
   const offer =
     user?.role === 'company'
       ? offerDataForCompany || null
-      : offerDataById || offerDataByApp || null;
+      : user?.role === 'admin'
+        ? offerDataForAdmin || null
+        : offerDataById || offerDataByApp || null;
   const isLoadingOffer =
     user?.role === 'company'
       ? isLoadingOfferForCompany
-      : isLoadingOfferById || isLoadingOfferByApp;
+      : user?.role === 'admin'
+        ? isLoadingOfferForAdmin
+        : isLoadingOfferById || isLoadingOfferByApp;
 
   const handleUploadSignedOffer = async (file: File) => {
     const offerIdToUpload = offer?._id || offer?.id || offerId;
@@ -245,7 +405,13 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
 
     setIsConfirmingHire(true);
     try {
-      await companyApi.confirmHire(offerIdToConfirm.toString());
+      // For admins, update application status to 'hired' directly
+      // For companies, use the confirmHire endpoint which also updates offer status
+      if (user?.role === 'admin' && applicationId) {
+        await adminApi.updateApplicationStatus(applicationId, 'hired');
+      } else {
+        await companyApi.confirmHire(offerIdToConfirm.toString());
+      }
 
       // Invalidate and refetch all queries to refresh data immediately
       await Promise.all([
@@ -271,6 +437,10 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
           queryKey: ['companyCandidates'],
           exact: false,
         }),
+        queryClient.invalidateQueries({
+          queryKey: ['adminJob'],
+          exact: false,
+        }),
       ]);
 
       // Refetch immediately to ensure UI updates
@@ -289,6 +459,58 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     } finally {
       setIsConfirmingHire(false);
     }
+  };
+
+  // Mutation for marking applicant as hired (without offer)
+  const markHiredMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      // Use admin API if user is admin, otherwise use company API
+      if (user?.role === 'admin') {
+        return await adminApi.updateApplicationStatus(applicationId, 'hired');
+      }
+      return await companyApi.updateApplicationStatus(applicationId, 'hired');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['conversation', company?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({
+        queryKey: ['companyApplications'],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['companyCandidates'],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['adminJob'],
+        exact: false,
+      });
+      success('Applicant marked as hired successfully!');
+      setShowMarkHiredDialog(false);
+    },
+    onError: (error: unknown) => {
+      console.error('Mark hired error:', error);
+      showError('Failed to mark applicant as hired. Please try again.');
+    },
+  });
+
+  const handleMarkHired = () => {
+    if (!applicationId) {
+      showError('Application ID not found. Cannot mark as hired.');
+      return;
+    }
+    setShowMarkHiredDialog(true);
+  };
+
+  const confirmMarkHired = () => {
+    if (!applicationId) {
+      showError('Application ID not found. Cannot mark as hired.');
+      setShowMarkHiredDialog(false);
+      return;
+    }
+    markHiredMutation.mutate(applicationId);
   };
 
   useEffect(() => {
@@ -559,9 +781,28 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
                         ? 'bg-[#5CFF0D20] text-[#1C1C1C]'
                         : 'bg-fade text-[#1C1C1C]'
                     }`}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex flex-col gap-1">
-                      <div>{msg.message}</div>
+                      <MessageContent
+                        message={msg.message}
+                        jobId={
+                          msg.applicationId
+                            ? typeof msg.applicationId === 'string'
+                              ? msg.applicationId
+                              : typeof msg.applicationId === 'object' &&
+                                  msg.applicationId !== null
+                                ? '_id' in msg.applicationId
+                                  ? String(
+                                      (msg.applicationId as { _id: unknown })
+                                        ._id
+                                    )
+                                  : String(msg.applicationId)
+                                : String(msg.applicationId)
+                            : undefined
+                        }
+                        userRole={user?.role}
+                      />
 
                       {/* Display file attachment */}
                       {msg.fileUrl && msg.fileName && (
@@ -732,41 +973,43 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
           </div>
         )}
 
-        {user?.role === 'company' && offer && offer.status === 'signed' && (
-          <div className="px-4 py-3 border-t border-fade bg-[#EFFFE2]">
-            <div className="flex flex-col gap-3">
-              <div className="flex-1">
-                <p className="text-[14px] font-semibold text-[#1C1C1C] mb-1">
-                  Contract Signed
-                </p>
-                <p className="text-[12px] text-[#1C1C1C80]">
-                  The candidate has uploaded their signed offer document.
-                  Preview the contract before confirming the hire.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {offer.signedDocumentUrl && (
-                  <a
-                    href={offer.signedDocumentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-white border-2 border-[#5CFF0D] text-[#5CFF0D] font-semibold text-[14px] rounded-[20px] hover:bg-[#F0FFF0] transition-colors whitespace-nowrap flex items-center gap-2"
+        {(user?.role === 'company' || user?.role === 'admin') &&
+          offer &&
+          offer.status === 'signed' && (
+            <div className="px-4 py-3 border-t border-fade bg-[#EFFFE2]">
+              <div className="flex flex-col gap-3">
+                <div className="flex-1">
+                  <p className="text-[14px] font-semibold text-[#1C1C1C] mb-1">
+                    Contract Signed
+                  </p>
+                  <p className="text-[12px] text-[#1C1C1C80]">
+                    The candidate has uploaded their signed offer document.
+                    Preview the contract before confirming the hire.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {offer.signedDocumentUrl && (
+                    <a
+                      href={offer.signedDocumentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-white border-2 border-[#5CFF0D] text-[#5CFF0D] font-semibold text-[14px] rounded-[20px] hover:bg-[#F0FFF0] transition-colors whitespace-nowrap flex items-center gap-2"
+                    >
+                      <span>📄</span>
+                      Preview Contract
+                    </a>
+                  )}
+                  <button
+                    onClick={handleConfirmHire}
+                    disabled={isConfirmingHire}
+                    className="px-4 py-2 bg-[#5CFF0D] text-white font-semibold text-[14px] rounded-[20px] hover:bg-[#4DE600] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                   >
-                    <span>📄</span>
-                    Preview Contract
-                  </a>
-                )}
-                <button
-                  onClick={handleConfirmHire}
-                  disabled={isConfirmingHire}
-                  className="px-4 py-2 bg-[#5CFF0D] text-white font-semibold text-[14px] rounded-[20px] hover:bg-[#4DE600] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                >
-                  {isConfirmingHire ? 'Confirming...' : 'Confirm Hire'}
-                </button>
+                    {isConfirmingHire ? 'Confirming...' : 'Confirm Hire'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {user?.role === 'company' && offer && offer.status === 'accepted' && (
           <div className="px-4 py-3 border-t border-fade bg-[#E8F5E9]">
@@ -784,6 +1027,32 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
             </div>
           </div>
         )}
+
+        {/* Mark as Hired button for companies and admins (only when offer has been sent and accepted) - This is a fallback if confirmHire wasn't used */}
+        {(user?.role === 'company' || user?.role === 'admin') &&
+          applicationId &&
+          offer &&
+          offer.status === 'accepted' && (
+            <div className="px-4 py-3 border-t border-fade bg-[#F5F5F5]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-[14px] font-semibold text-[#1C1C1C] mb-1">
+                    Mark as Hired
+                  </p>
+                  <p className="text-[12px] text-[#1C1C1C80]">
+                    Mark this applicant as hired. The offer has been accepted.
+                  </p>
+                </div>
+                <button
+                  onClick={handleMarkHired}
+                  disabled={markHiredMutation.isPending}
+                  className="px-4 py-2 bg-[#5CFF0D] text-white font-semibold text-[14px] rounded-[20px] hover:bg-[#4DE600] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                >
+                  {markHiredMutation.isPending ? 'Marking...' : 'Mark as Hired'}
+                </button>
+              </div>
+            </div>
+          )}
 
         {/* Show rejected status */}
         {user?.role === 'graduate' && offer && offer.status === 'rejected' && (
@@ -857,6 +1126,18 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
         onConfirm={confirmHireAction}
         onCancel={() => setShowConfirmHireDialog(false)}
         isLoading={isConfirmingHire}
+      />
+
+      <ConfirmDialog
+        isOpen={showMarkHiredDialog}
+        title="Mark as Hired"
+        message="Are you sure you want to mark this applicant as hired? This will update the application status to 'hired'."
+        confirmText="Mark as Hired"
+        cancelText="Cancel"
+        variant="info"
+        onConfirm={confirmMarkHired}
+        onCancel={() => setShowMarkHiredDialog(false)}
+        isLoading={markHiredMutation.isPending}
       />
     </div>
   );

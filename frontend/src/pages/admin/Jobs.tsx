@@ -1,7 +1,8 @@
 // pages/admin/Jobs.tsx - Updated to use modal
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { SearchIcon, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { IoFilterOutline } from 'react-icons/io5';
 import JobItemComponent from '../../components/admin/jobs/job-item';
@@ -11,9 +12,6 @@ import { formatSalaryRange, getSalaryType } from '../../utils/job.utils';
 import { ApiJob } from '../../types/api';
 import { toast } from 'react-hot-toast';
 import JobDetailsModal from '@/components/admin/jobs/job-modal';
-
-
-
 
 export interface JobItem {
   id: string;
@@ -36,6 +34,7 @@ interface FilterState {
 
 const Jobs = () => {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -47,6 +46,16 @@ const Jobs = () => {
   });
   const [page, setPage] = useState(1);
   const limit = 20;
+
+  // Check if we need to open a job from navigation state
+  useEffect(() => {
+    const state = location.state as { openJobId?: string } | null;
+    if (state?.openJobId) {
+      setSelectedJobId(state.openJobId);
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const {
     data: jobsResponse,
@@ -71,8 +80,13 @@ const Jobs = () => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ jobId, status }: { jobId: string; status: 'active' | 'closed' | 'draft' }) =>
-      adminApi.updateJobStatus(jobId, status),
+    mutationFn: ({
+      jobId,
+      status,
+    }: {
+      jobId: string;
+      status: 'active' | 'closed' | 'draft';
+    }) => adminApi.updateJobStatus(jobId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminJobs'] });
       toast.success('Job status updated successfully');
@@ -93,44 +107,45 @@ const Jobs = () => {
     },
   });
 
-  const jobs: JobItem[] = jobsResponse?.data?.map((job: ApiJob) => {
-    const salaryRange = formatSalaryRange(job.salary);
-    const salaryType = job.jobType ? getSalaryType(job.jobType) : 'Annual';
-    const salary =
-      salaryRange === 'Not specified'
-        ? 'Not specified'
-        : `${salaryRange} ${salaryType}`;
+  const jobs: JobItem[] =
+    jobsResponse?.data?.map((job: ApiJob) => {
+      const salaryRange = formatSalaryRange(job.salary);
+      const salaryType = job.jobType ? getSalaryType(job.jobType) : 'Annual';
+      const salary =
+        salaryRange === 'Not specified'
+          ? 'Not specified'
+          : `${salaryRange} ${salaryType}`;
 
-    const postedDate = job.createdAt ? new Date(job.createdAt) : new Date();
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - postedDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const postedAt =
-      diffDays === 1
-        ? '1 day ago'
-        : diffDays < 7
-          ? `${diffDays} days ago`
-          : diffDays < 30
-            ? `${Math.ceil(diffDays / 7)} weeks ago`
-            : `${Math.ceil(diffDays / 30)} months ago`;
+      const postedDate = job.createdAt ? new Date(job.createdAt) : new Date();
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - postedDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const postedAt =
+        diffDays === 1
+          ? '1 day ago'
+          : diffDays < 7
+            ? `${diffDays} days ago`
+            : diffDays < 30
+              ? `${Math.ceil(diffDays / 7)} weeks ago`
+              : `${Math.ceil(diffDays / 30)} months ago`;
 
-    return {
-      id: job._id?.toString() || job.id,
-      title: job.title,
-      company: job.companyId?.companyName || 'Unknown Company',
-      location: job.location || 'Not specified',
-      status:
-        job.status === 'active'
-          ? ('Active' as const)
-          : job.status === 'closed' || job.status === 'inactive'
-            ? ('Closed' as const)
-            : ('Active' as const),
-      applicants: job.applicantsCount || 0,
-      views: job.views || 0,
-      salary,
-      postedAt,
-    };
-  }) || [];
+      return {
+        id: job._id?.toString() || job.id,
+        title: job.title,
+        company: job.companyId?.companyName || 'Unknown Company',
+        location: job.location || 'Not specified',
+        status:
+          job.status === 'active'
+            ? ('Active' as const)
+            : job.status === 'closed' || job.status === 'inactive'
+              ? ('Closed' as const)
+              : ('Active' as const),
+        applicants: job.applicantsCount || 0,
+        views: job.views || 0,
+        salary,
+        postedAt,
+      };
+    }) || [];
 
   const pagination = jobsResponse?.pagination;
 
@@ -151,11 +166,18 @@ const Jobs = () => {
 
   const handleStatusToggle = (jobId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'closed' : 'active';
-    updateStatusMutation.mutate({ jobId, status: newStatus as 'active' | 'closed' });
+    updateStatusMutation.mutate({
+      jobId,
+      status: newStatus as 'active' | 'closed',
+    });
   };
 
   const handleDelete = (jobId: string) => {
-    if (window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+    if (
+      window.confirm(
+        'Are you sure you want to delete this job? This action cannot be undone.'
+      )
+    ) {
       deleteJobMutation.mutate(jobId);
     }
   };
@@ -217,7 +239,9 @@ const Jobs = () => {
                   </label>
                   <select
                     value={filters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange('status', e.target.value)
+                    }
                     className="w-full p-2 border border-fade rounded-lg outline-none"
                   >
                     <option value="">All Status</option>
@@ -233,7 +257,9 @@ const Jobs = () => {
                   </label>
                   <select
                     value={filters.jobType}
-                    onChange={(e) => handleFilterChange('jobType', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange('jobType', e.target.value)
+                    }
                     className="w-full p-2 border border-fade rounded-lg outline-none"
                   >
                     <option value="">All Types</option>
@@ -250,7 +276,9 @@ const Jobs = () => {
                   </label>
                   <select
                     value={filters.preferedRank}
-                    onChange={(e) => handleFilterChange('preferedRank', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange('preferedRank', e.target.value)
+                    }
                     className="w-full p-2 border border-fade rounded-lg outline-none"
                   >
                     <option value="">All Ranks</option>
@@ -271,7 +299,9 @@ const Jobs = () => {
                   <input
                     type="text"
                     value={filters.location}
-                    onChange={(e) => handleFilterChange('location', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange('location', e.target.value)
+                    }
                     placeholder="Enter location"
                     className="w-full p-2 border border-fade rounded-lg outline-none"
                   />
@@ -293,8 +323,9 @@ const Jobs = () => {
           <div className="flex gap-4 text-sm text-gray-600">
             {pagination && (
               <span>
-                Showing {(page - 1) * limit + 1}-{Math.min(page * limit, pagination.total)} of{' '}
-                {pagination.total} jobs
+                Showing {(page - 1) * limit + 1}-
+                {Math.min(page * limit, pagination.total)} of {pagination.total}{' '}
+                jobs
               </span>
             )}
           </div>
@@ -351,7 +382,9 @@ const Jobs = () => {
                             ? 'bg-orange-500 hover:bg-orange-600'
                             : 'bg-green-500 hover:bg-green-600'
                         } text-white rounded-lg transition-colors`}
-                        title={job.status === 'Active' ? 'Close Job' : 'Activate Job'}
+                        title={
+                          job.status === 'Active' ? 'Close Job' : 'Activate Job'
+                        }
                       >
                         {job.status === 'Active' ? (
                           <XCircle size={16} />
@@ -388,7 +421,9 @@ const Jobs = () => {
                     Page {page} of {pagination.pages}
                   </span>
                   <button
-                    onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
+                    onClick={() =>
+                      setPage((p) => Math.min(pagination.pages, p + 1))
+                    }
                     disabled={page === pagination.pages}
                     className="px-4 py-2 border border-fade rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                   >

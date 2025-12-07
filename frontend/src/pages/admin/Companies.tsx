@@ -13,7 +13,6 @@ import { adminApi } from '../../api/admin';
 import { LoadingSpinner, EmptyState } from '../../components/ui';
 import CompanyDetailsModal from '@/components/admin/company/company-modal';
 
-
 type CompanyRow = {
   id: string;
   name: string;
@@ -59,7 +58,9 @@ function StatusBadge({ status }: { status: CompanyRow['status'] }) {
 const Companies = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
+    null
+  );
   const [filters, setFilters] = useState<FilterState>({
     industry: '',
     minSize: '',
@@ -88,8 +89,10 @@ const Companies = () => {
 
       if (searchQuery) params.q = searchQuery;
       if (appliedFilters.industry) params.industry = appliedFilters.industry;
-      if (appliedFilters.minSize) params.minSize = parseInt(appliedFilters.minSize);
-      if (appliedFilters.maxSize) params.maxSize = parseInt(appliedFilters.maxSize);
+      if (appliedFilters.minSize)
+        params.minSize = parseInt(appliedFilters.minSize);
+      if (appliedFilters.maxSize)
+        params.maxSize = parseInt(appliedFilters.maxSize);
       if (appliedFilters.location) params.location = appliedFilters.location;
 
       return await adminApi.getAllCompanies(params);
@@ -114,7 +117,9 @@ const Companies = () => {
     setAppliedFilters(emptyFilters);
   };
 
-  const activeFilterCount = Object.values(appliedFilters).filter(v => v !== '').length;
+  const activeFilterCount = Object.values(appliedFilters).filter(
+    (v) => v !== ''
+  ).length;
 
   const columns: Column<CompanyRow>[] = [
     {
@@ -146,7 +151,9 @@ const Companies = () => {
       header: 'Size',
       accessor: 'size',
       render: (v: unknown) => (
-        <span className="text-sm text-gray-600">{(v as number).toLocaleString()} employees</span>
+        <span className="text-sm text-gray-600">
+          {(v as number).toLocaleString()} employees
+        </span>
       ),
       sortable: true,
       align: 'left',
@@ -231,7 +238,9 @@ const Companies = () => {
                     type="text"
                     placeholder="e.g., Technology"
                     value={filters.industry}
-                    onChange={(e) => setFilters({ ...filters, industry: e.target.value })}
+                    onChange={(e) =>
+                      setFilters({ ...filters, industry: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -243,7 +252,9 @@ const Companies = () => {
                     type="number"
                     placeholder="Min employees"
                     value={filters.minSize}
-                    onChange={(e) => setFilters({ ...filters, minSize: e.target.value })}
+                    onChange={(e) =>
+                      setFilters({ ...filters, minSize: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -255,7 +266,9 @@ const Companies = () => {
                     type="number"
                     placeholder="Max employees"
                     value={filters.maxSize}
-                    onChange={(e) => setFilters({ ...filters, maxSize: e.target.value })}
+                    onChange={(e) =>
+                      setFilters({ ...filters, maxSize: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -267,7 +280,9 @@ const Companies = () => {
                     type="text"
                     placeholder="e.g., San Francisco"
                     value={filters.location}
-                    onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                    onChange={(e) =>
+                      setFilters({ ...filters, location: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>

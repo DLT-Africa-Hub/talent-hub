@@ -14,12 +14,7 @@ import { LoadingSpinner, EmptyState } from '@/components/ui';
 
 import { FaRegCheckCircle } from 'react-icons/fa';
 import adminApi from '@/api/admin';
-import Table, {Column} from '@/components/ui/Table';
-
-
-
-
-
+import Table, { Column } from '@/components/ui/Table';
 
 type JobRow = {
   id: string;
@@ -45,7 +40,11 @@ type CompanyDetailsModalProps = {
   onClose: () => void;
 };
 
-function StatusBadge({ status }: { status: 'Active' | 'Pending' | 'Suspended' }) {
+function StatusBadge({
+  status,
+}: {
+  status: 'Active' | 'Pending' | 'Suspended';
+}) {
   const base =
     'inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ring-1 ring-inset';
   if (status === 'Active')
@@ -67,9 +66,15 @@ function StatusBadge({ status }: { status: 'Active' | 'Pending' | 'Suspended' })
   );
 }
 
-const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModalProps) => {
+const CompanyDetailsModal = ({
+  companyId,
+  isOpen,
+  onClose,
+}: CompanyDetailsModalProps) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'applications'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'jobs' | 'applications'
+  >('overview');
 
   // Fetch company details
   const { data, isLoading, error } = useQuery({
@@ -86,7 +91,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
       return await adminApi.toggleCompanyStatus(companyId, active);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companyDetails', companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['companyDetails', companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ['adminCompanies'] });
     },
   });
@@ -209,7 +216,8 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     {data.data.company.name}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    Joined {new Date(data.data.company.joined).toLocaleDateString()}
+                    Joined{' '}
+                    {new Date(data.data.company.joined).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -221,7 +229,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     disabled={toggleStatusMutation.isPending}
                     className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
                   >
-                    {toggleStatusMutation.isPending ? 'Processing...' : 'Suspend'}
+                    {toggleStatusMutation.isPending
+                      ? 'Processing...'
+                      : 'Suspend'}
                   </button>
                 ) : (
                   <button
@@ -229,7 +239,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     disabled={toggleStatusMutation.isPending}
                     className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
                   >
-                    {toggleStatusMutation.isPending ? 'Processing...' : 'Activate'}
+                    {toggleStatusMutation.isPending
+                      ? 'Processing...'
+                      : 'Activate'}
                   </button>
                 )}
                 <button
@@ -249,7 +261,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     <PiBriefcaseLight className="text-lg text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-semibold">{data.data.stats.totalJobs}</p>
+                    <p className="text-xl font-semibold">
+                      {data.data.stats.totalJobs}
+                    </p>
                     <p className="text-xs text-gray-500">Total Jobs</p>
                   </div>
                 </div>
@@ -261,7 +275,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     <FaRegCheckCircle className="text-lg text-green-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-semibold">{data.data.stats.activeJobs}</p>
+                    <p className="text-xl font-semibold">
+                      {data.data.stats.activeJobs}
+                    </p>
                     <p className="text-xs text-gray-500">Active Jobs</p>
                   </div>
                 </div>
@@ -273,7 +289,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     <PiUsersThreeLight className="text-lg text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-semibold">{data.data.stats.totalApplications}</p>
+                    <p className="text-xl font-semibold">
+                      {data.data.stats.totalApplications}
+                    </p>
                     <p className="text-xs text-gray-500">Applications</p>
                   </div>
                 </div>
@@ -285,7 +303,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                     <FaRegClock className="text-lg text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-semibold">{data.data.stats.pendingApplications}</p>
+                    <p className="text-xl font-semibold">
+                      {data.data.stats.pendingApplications}
+                    </p>
                     <p className="text-xs text-gray-500">Pending</p>
                   </div>
                 </div>
@@ -317,13 +337,17 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                 <div className="grid grid-cols-2 gap-6">
                   {/* Company Info */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-base font-semibold mb-3">Company Information</h3>
+                    <h3 className="text-base font-semibold mb-3">
+                      Company Information
+                    </h3>
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
                         <PiBuildingApartmentLight className="text-lg text-gray-400 mt-1" />
                         <div>
                           <p className="text-xs text-gray-500">Industry</p>
-                          <p className="text-sm font-medium">{data.data.company.industry}</p>
+                          <p className="text-sm font-medium">
+                            {data.data.company.industry}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
@@ -365,11 +389,15 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
 
                   {/* User Info */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-base font-semibold mb-3">Account Information</h3>
+                    <h3 className="text-base font-semibold mb-3">
+                      Account Information
+                    </h3>
                     <div className="space-y-3">
                       <div>
                         <p className="text-xs text-gray-500">Email</p>
-                        <p className="text-sm font-medium">{data.data.user.email}</p>
+                        <p className="text-sm font-medium">
+                          {data.data.user.email}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Email Verified</p>
@@ -381,7 +409,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
                         <div>
                           <p className="text-xs text-gray-500">Last Login</p>
                           <p className="text-sm font-medium">
-                            {new Date(data.data.user.lastLogin).toLocaleString()}
+                            {new Date(
+                              data.data.user.lastLogin
+                            ).toLocaleString()}
                           </p>
                         </div>
                       )}
@@ -390,7 +420,9 @@ const CompanyDetailsModal = ({ companyId, isOpen, onClose }: CompanyDetailsModal
 
                   {/* Description */}
                   <div className="bg-gray-50 p-4 rounded-lg col-span-2">
-                    <h3 className="text-base font-semibold mb-3">Company Description</h3>
+                    <h3 className="text-base font-semibold mb-3">
+                      Company Description
+                    </h3>
                     <p className="text-sm text-gray-700 whitespace-pre-line">
                       {data.data.company.description}
                     </p>

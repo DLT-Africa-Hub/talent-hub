@@ -51,6 +51,7 @@ const pagesByRole: Record<string, Page[]> = {
     },
     { page: 'Talents', link: 'admin/talents', icon: HiOutlineUsers },
     { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
+    { page: 'Interviews', link: 'admin/interviews', icon: HiVideoCamera },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
     { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
     { page: 'Notifications', link: 'admin/notifications', icon: BiBell },
@@ -154,9 +155,9 @@ const SideBar: React.FC = () => {
             };
 
             // Determine if this link should use exact matching
-            const shouldUseExactMatch = 
-              page.link === 'graduate' || 
-              page.link === 'company' || 
+            const shouldUseExactMatch =
+              page.link === 'graduate' ||
+              page.link === 'company' ||
               page.link === 'admin';
 
             return (

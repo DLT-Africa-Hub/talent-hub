@@ -3,7 +3,9 @@ import { LoadingSpinner } from '../../index';
 import StatsButton from '../../components/admin/dashboard/stats-button';
 import { IconType } from 'react-icons';
 import { FaBriefcase, FaBuilding, FaUserPlus, FaUsers } from 'react-icons/fa6';
-import ActivityItem, { ActivityItemProps } from '../../components/admin/dashboard/activity-list';
+import ActivityItem, {
+  ActivityItemProps,
+} from '../../components/admin/dashboard/activity-list';
 import HiringCompany from '../../components/admin/dashboard/hiring-company';
 import adminApi from '@/api/admin';
 import { formatDistanceToNow } from 'date-fns';
@@ -71,14 +73,14 @@ const AdminDashboard = () => {
     });
 
   const isLoading =
-  postedJobsLoading ||
+    postedJobsLoading ||
     talentLoading ||
     companyLoading ||
     activeJobsLoading ||
     activityLoading ||
     companiesStatsLoading;
 
-    console.log(totalPostedJobs)
+  console.log(totalPostedJobs);
 
   // Stats cards
   const stats: StatCard[] = [
@@ -112,7 +114,6 @@ const AdminDashboard = () => {
       analysis: 'This week',
       icon: FaUserPlus,
     },
-   
   ];
 
   // Activity logs

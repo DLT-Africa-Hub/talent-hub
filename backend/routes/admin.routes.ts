@@ -6,7 +6,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
-  
+
   // Job Management
   getAllJobs,
   getJobById,
@@ -18,7 +18,7 @@ import {
 
   // Match Management
   getAllMatches,
-  
+
   // Statistics
   getAIStats,
   getSystemStats,
@@ -30,22 +30,28 @@ import {
   getCompanyCount,
   getActiveJobsCount,
   getApplicationActivityDetail,
-  
+
   // Company Management
   getCompanyById,
   companiesStatsProvider,
   getAllCompanies,
   getCompanyDetails,
   toggleCompanyStatus,
-  
+
   // Graduate Management
   getAllGraduates,
   getGraduateById,
-  
+
   // Application Management
   sendMessageToApplicant,
+  sendMessageToGraduate,
+  updateApplicationStatus,
   scheduleInterviewForApplicant,
+  suggestTimeSlotsForApplicant,
   getTotalPostedJobs,
+  getAdminInterviews,
+  // Offer Management
+  getOfferById,
 } from '../controllers/admin.controller';
 
 import {
@@ -114,7 +120,26 @@ router.get('/graduates/:graduateId', getGraduateById);
 // APPLICATION MANAGEMENT ROUTES
 // ============================================
 router.post('/applications/:applicationId/message', sendMessageToApplicant);
-router.post('/applications/:applicationId/schedule-interview', scheduleInterviewForApplicant);
+router.put('/applications/:applicationId/status', updateApplicationStatus);
+router.post(
+  '/applications/:applicationId/schedule-interview',
+  scheduleInterviewForApplicant
+);
+router.post(
+  '/applications/:applicationId/suggest-time-slots',
+  suggestTimeSlotsForApplicant
+);
+router.post('/graduates/:graduateId/message', sendMessageToGraduate);
+
+// ============================================
+// INTERVIEW MANAGEMENT ROUTES
+// ============================================
+router.get('/interviews', getAdminInterviews);
+
+// ============================================
+// OFFER MANAGEMENT ROUTES
+// ============================================
+router.get('/offers/:offerId', getOfferById);
 
 // ============================================
 // STATISTICS & MONITORING ROUTES

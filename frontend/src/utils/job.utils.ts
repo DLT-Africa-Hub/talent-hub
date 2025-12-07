@@ -214,12 +214,16 @@ export const getCompanyName = (
   userRole?: string
 ): string => {
   // For system notifications, show "System"
-  if (notification && typeof notification === 'object' && 'type' in notification) {
+  if (
+    notification &&
+    typeof notification === 'object' &&
+    'type' in notification
+  ) {
     if (notification.type === 'system') {
       return 'System';
     }
   }
-  
+
   // For graduates: notifications might be about companies
   // For companies: notifications might be about candidates/applications
   // For admins: show appropriate name based on notification type

@@ -37,7 +37,7 @@ export const getInterviewBySlug = async (
   const interview = await Interview.findOne({ roomSlug: slug })
     .populate({
       path: 'jobId',
-      select: 'title location jobType companyId',
+      select: 'title location jobType companyId directContact',
       populate: {
         path: 'companyId',
         select: 'companyName',
@@ -51,12 +51,21 @@ export const getInterviewBySlug = async (
       path: 'graduateId',
       select: 'firstName lastName profilePictureUrl rank position',
     })
+    .populate({
+      path: 'createdBy',
+      select: 'role _id',
+    })
     .lean();
 
   if (!interview) {
     res.status(404).json({ message: 'Interview not found' });
     return;
   }
+
+  // Get user role to check if admin
+  const User = (await import('../models/User.model')).default;
+  const currentUser = await User.findById(userId).select('role').lean();
+  const isAdmin = currentUser?.role === 'admin';
 
   const companyUserId =
     interview.companyUserId instanceof mongoose.Types.ObjectId
@@ -70,7 +79,42 @@ export const getInterviewBySlug = async (
   const isCompanyParticipant = companyUserId === userId;
   const isGraduateParticipant = graduateUserId === userId;
 
-  if (!isCompanyParticipant && !isGraduateParticipant) {
+  // Check if admin created this interview or if job is admin-managed
+  const job = interview.jobId as
+    | { directContact?: boolean }
+    | mongoose.Types.ObjectId
+    | null;
+  const jobData =
+    typeof job === 'object' &&
+    job &&
+    !(job instanceof mongoose.Types.ObjectId) &&
+    'directContact' in job
+      ? job
+      : null;
+  const isAdminManagedJob = jobData?.directContact === false;
+
+  const creator = interview.createdBy as
+    | { _id?: mongoose.Types.ObjectId; role?: string }
+    | mongoose.Types.ObjectId
+    | null;
+  const creatorData =
+    creator &&
+    typeof creator === 'object' &&
+    !(creator instanceof mongoose.Types.ObjectId) &&
+    'role' in creator
+      ? creator
+      : null;
+  const isCreatedByAdmin =
+    creatorData?.role === 'admin' &&
+    creatorData._id &&
+    creatorData._id.toString() === userId;
+
+  // Admin is authorized if:
+  // 1. They are an admin AND the job is admin-managed, OR
+  // 2. They created the interview
+  const isAdminAuthorized = isAdmin && (isAdminManagedJob || isCreatedByAdmin);
+
+  if (!isCompanyParticipant && !isGraduateParticipant && !isAdminAuthorized) {
     res
       .status(403)
       .json({ message: 'You do not have access to this interview' });
@@ -78,12 +122,12 @@ export const getInterviewBySlug = async (
   }
 
   const interviewData = interview as Record<string, any>;
-  const job = (interviewData.jobId as Record<string, any>) || {};
+  const jobDataForResponse = (interviewData.jobId as Record<string, any>) || {};
   const companyInfo =
-    (job.companyId &&
-      typeof job.companyId === 'object' &&
-      'companyName' in job.companyId &&
-      job.companyId) ||
+    (jobDataForResponse.companyId &&
+      typeof jobDataForResponse.companyId === 'object' &&
+      'companyName' in jobDataForResponse.companyId &&
+      jobDataForResponse.companyId) ||
     (interviewData.companyId &&
       typeof interviewData.companyId === 'object' &&
       'companyName' in interviewData.companyId &&
@@ -95,14 +139,29 @@ export const getInterviewBySlug = async (
     graduate.lastName || ''
   }`.trim();
 
-  const participantRole = isCompanyParticipant ? 'company' : 'graduate';
+  const participantRole = isCompanyParticipant
+    ? 'company'
+    : isAdminAuthorized
+      ? 'admin'
+      : 'graduate';
   const participantDisplayName =
     participantRole === 'company'
       ? companyInfo?.companyName || 'Company'
-      : graduateName || 'Candidate';
+      : participantRole === 'admin'
+        ? 'Admin'
+        : graduateName || 'Candidate';
+
+  // For pending_selection interviews, use first suggested slot date if scheduledAt is not available
+  const interviewScheduledAt =
+    interview.scheduledAt ||
+    (interview.status === 'pending_selection' &&
+    interview.suggestedTimeSlots &&
+    interview.suggestedTimeSlots.length > 0
+      ? interview.suggestedTimeSlots[0].date
+      : new Date());
 
   const joinWindowStartsAt = new Date(
-    new Date(interview.scheduledAt).getTime() - 10 * 60 * 1000
+    new Date(interviewScheduledAt).getTime() - 10 * 60 * 1000
   );
 
   res.json({
@@ -111,17 +170,17 @@ export const getInterviewBySlug = async (
       applicationId: interviewData.applicationId
         ? interviewData.applicationId.toString()
         : undefined,
-      scheduledAt: interviewData.scheduledAt,
+      scheduledAt: interviewData.scheduledAt || interviewScheduledAt,
       status: interviewData.status,
       durationMinutes: interviewData.durationMinutes,
       roomSlug: interviewData.roomSlug,
       roomUrl: interviewData.roomUrl,
       provider: interviewData.provider,
       job: {
-        id: job._id?.toString?.(),
-        title: job.title,
-        location: job.location,
-        jobType: job.jobType,
+        id: jobDataForResponse._id?.toString?.(),
+        title: jobDataForResponse.title,
+        location: jobDataForResponse.location,
+        jobType: jobDataForResponse.jobType,
       },
       company: {
         id:
@@ -582,7 +641,11 @@ export const selectTimeSlot = async (
     })
     .populate({
       path: 'jobId',
-      select: 'title',
+      select: 'title directContact',
+    })
+    .populate({
+      path: 'createdBy',
+      select: 'role',
     });
 
   if (!interview) {
@@ -674,7 +737,9 @@ export const selectTimeSlot = async (
     const company = interview.companyId as
       | { companyName?: string }
       | mongoose.Types.ObjectId;
-    const job = interview.jobId as { title?: string } | mongoose.Types.ObjectId;
+    const job = interview.jobId as
+      | { title?: string; directContact?: boolean }
+      | mongoose.Types.ObjectId;
     const companyName =
       typeof company === 'object' &&
       company &&
@@ -682,13 +747,32 @@ export const selectTimeSlot = async (
       'companyName' in company
         ? company.companyName
         : undefined;
-    const jobTitle =
+    const jobData =
       typeof job === 'object' &&
       job &&
       !(job instanceof mongoose.Types.ObjectId) &&
       'title' in job
-        ? job.title
-        : undefined;
+        ? job
+        : null;
+    const jobTitle = jobData?.title;
+    const isAdminManaged = jobData?.directContact === false;
+
+    // Get the creator (admin or company user) - need to fetch it since it wasn't populated
+    let isCreatedByAdmin = false;
+    let adminUserId: string | null = null;
+    if (interview.createdBy) {
+      const User = (await import('../models/User.model')).default;
+      const creator = await User.findById(interview.createdBy)
+        .select('_id role')
+        .lean();
+      if (creator && creator.role === 'admin') {
+        isCreatedByAdmin = true;
+        adminUserId =
+          creator._id instanceof mongoose.Types.ObjectId
+            ? creator._id.toString()
+            : String(creator._id);
+      }
+    }
 
     const formattedDate = formatDateInTimezone(
       selectedSlot.date,
@@ -706,27 +790,47 @@ export const selectTimeSlot = async (
     const graduateName =
       `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
 
-    // Notify company
+    // Notify admin (if admin-managed) or company (if company-managed)
     try {
-      const companyUserId =
-        updatedInterview.companyUserId instanceof mongoose.Types.ObjectId
-          ? updatedInterview.companyUserId.toString()
-          : String(updatedInterview.companyUserId);
+      if (isAdminManaged && isCreatedByAdmin && adminUserId) {
+        // Notify admin who created the interview
+        await createNotification({
+          userId: adminUserId,
+          type: 'interview',
+          title: 'Interview Time Confirmed',
+          message: `${graduateName || 'A candidate'} has selected a time slot for their interview: ${formattedDate}.`,
+          relatedId: updatedInterview._id as mongoose.Types.ObjectId,
+          relatedType: 'interview',
+          email: {
+            subject: `Interview Confirmed: ${jobTitle || 'Position'}`,
+            text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
+          },
+        });
+      } else {
+        // Notify company user
+        const companyUserId =
+          updatedInterview.companyUserId instanceof mongoose.Types.ObjectId
+            ? updatedInterview.companyUserId.toString()
+            : String(updatedInterview.companyUserId);
 
-      await createNotification({
-        userId: companyUserId,
-        type: 'interview',
-        title: 'Interview Time Confirmed',
-        message: `${graduateName || 'A candidate'} has selected a time slot for their interview: ${formattedDate}.`,
-        relatedId: updatedInterview._id as mongoose.Types.ObjectId,
-        relatedType: 'interview',
-        email: {
-          subject: `Interview Confirmed: ${jobTitle || 'Position'}`,
-          text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
-        },
-      });
+        await createNotification({
+          userId: companyUserId,
+          type: 'interview',
+          title: 'Interview Time Confirmed',
+          message: `${graduateName || 'A candidate'} has selected a time slot for their interview: ${formattedDate}.`,
+          relatedId: updatedInterview._id as mongoose.Types.ObjectId,
+          relatedType: 'interview',
+          email: {
+            subject: `Interview Confirmed: ${jobTitle || 'Position'}`,
+            text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
+          },
+        });
+      }
     } catch (error) {
-      console.error('Failed to send interview confirmation to company:', error);
+      console.error(
+        'Failed to send interview confirmation notification:',
+        error
+      );
     }
 
     // Notify graduate (confirmation)

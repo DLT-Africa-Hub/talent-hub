@@ -11,6 +11,17 @@ import { skills } from '../../utils/material.utils';
 import { companyApi } from '../../api/company';
 import { CURRENCIES } from '../../utils/job.utils';
 
+
+// Helper to remove all HTML tags thoroughly
+function stripHtmlTags(input: string): string {
+  let previous: string;
+  do {
+    previous = input;
+    input = input.replace(/<[^>]*>/g, '');
+  } while (input !== previous);
+  return input;
+}
+
 type JobCreationStep = 'details' | 'rank' | 'success';
 
 interface JobFormData {
@@ -443,12 +454,11 @@ const JobCreationModal = ({
                 </span>
               </div>
               <div className="text-[13px] text-[#1C1C1C80] line-clamp-2">
-                {formData.description
-                  .replace(/<[^>]*>/g, '') // Strip HTML tags
+                {stripHtmlTags(formData.description)
                   .replace(/&nbsp;/g, ' ')
                   .trim()
                   .substring(0, 150)}
-                {formData.description.replace(/<[^>]*>/g, '').length > 150 &&
+                {stripHtmlTags(formData.description).length > 150 &&
                   '...'}
               </div>
             </div>

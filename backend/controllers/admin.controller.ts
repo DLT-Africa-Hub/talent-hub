@@ -704,7 +704,7 @@ export const companiesStatsProvider = async (
 
     const [companies, total] = await Promise.all([
       Company.find(filters)
-        .select('_id postedJobs hiredCandidates')
+        .select('_id postedJobs hiredCandidates companyName')
         .sort({ postedJobs: -1 })
         .skip(skip)
         .limit(limit)
@@ -1264,7 +1264,7 @@ export const updateJobStatus = async (
       return;
     }
 
-    if (!['active', 'closed', 'draft'].includes(status)) {
+    if (typeof status !== "string" || !['active', 'closed', 'draft'].includes(status)) {
       res.fail('Invalid status. Must be active, closed, or draft', 400);
       return;
     }

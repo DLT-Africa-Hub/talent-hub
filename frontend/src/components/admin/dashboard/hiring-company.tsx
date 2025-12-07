@@ -7,6 +7,7 @@ interface HiringCompanyProp {
 }
 
 const HiringCompany: React.FC<HiringCompanyProp> = ({ name, jobs, hired }) => {
+  console.log(name)
   return (
     <div className="bg-linear-to-tr text-[#1C1C1CBF] from-[#DBFFC0] to-[#83997380] p-5 rounded-[10px] flex flex-col gap-4">
       <p className="font-semibold text-[18px]">{name}</p>

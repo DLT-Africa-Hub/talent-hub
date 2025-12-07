@@ -374,12 +374,52 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                         <h3 className="text-lg font-semibold mb-4">
                           Job Description
                         </h3>
-                        <div
-                          className="prose max-w-none text-sm"
-                          dangerouslySetInnerHTML={{
-                            __html: jobData.data.job.description,
-                          }}
-                        />
+                        {(() => {
+                          let description =
+                            jobData.data.job.descriptionHtml ||
+                            jobData.data.job.description ||
+                            'No description provided';
+                          
+                          // Decode HTML entities (handles &lt; &gt; &amp; &nbsp; etc.)
+                          const decodeHtmlEntities = (str: string): string => {
+                            const textarea = document.createElement('textarea');
+                            textarea.innerHTML = str;
+                            return textarea.value;
+                          };
+                          
+                          // Decode HTML entities first
+                          description = decodeHtmlEntities(description);
+                          
+                          // Check if description contains HTML tags after decoding
+                          const hasHtmlTags = /<[a-z][\s\S]*>/i.test(description);
+                          
+                          if (hasHtmlTags) {
+                            return (
+                              <div
+                                className="prose prose-sm max-w-none text-gray-700 
+                                  prose-headings:text-gray-900 prose-headings:font-semibold
+                                  prose-p:text-gray-700 prose-p:leading-relaxed prose-p:my-3
+                                  prose-strong:text-gray-900 prose-strong:font-semibold
+                                  prose-em:text-gray-700 prose-em:italic
+                                  prose-ul:text-gray-700 prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6
+                                  prose-ol:text-gray-700 prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6
+                                  prose-li:text-gray-700 prose-li:my-1
+                                  prose-a:text-blue-600 prose-a:underline
+                                  prose-h1:text-2xl prose-h1:font-bold prose-h1:my-4
+                                  prose-h2:text-xl prose-h2:font-semibold prose-h2:my-3"
+                                dangerouslySetInnerHTML={{
+                                  __html: description,
+                                }}
+                              />
+                            );
+                          } else {
+                            return (
+                              <p className="text-sm text-gray-700 whitespace-pre-line">
+                                {description}
+                              </p>
+                            );
+                          }
+                        })()}
                       </div>
 
                       {/* Requirements */}

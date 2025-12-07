@@ -153,11 +153,17 @@ const SideBar: React.FC = () => {
               }
             };
 
+            // Determine if this link should use exact matching
+            const shouldUseExactMatch = 
+              page.link === 'graduate' || 
+              page.link === 'company' || 
+              page.link === 'admin';
+
             return (
               <NavLink
                 key={page.link}
                 to={to}
-                end={page.link === 'graduate' || page.link === 'company'}
+                end={shouldUseExactMatch}
                 onClick={handleNavClick}
                 className={({ isActive }) =>
                   `flex items-center justify-between text-[18px] gap-[10px] px-[12px] py-[12px] w-full rounded-[12px] transition-colors ${

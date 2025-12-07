@@ -57,7 +57,7 @@ const GraduateCard: React.FC<Props> = ({
         <div className="flex flex-col gap-[6px]">
           <p className="text-[14px] text-[#1C1C1CBF]">Skills</p>
           <div className="flex flex-wrap gap-[6px]">
-            {skills.map((skill) => (
+            {skills.slice(0, 6).map((skill) => (
               <div
                 key={skill}
                 className="border-button border p-[8px] rounded-[10px] bg-[#EFFFE2] text-button text-[12px]"
@@ -65,6 +65,11 @@ const GraduateCard: React.FC<Props> = ({
                 {skill}
               </div>
             ))}
+            {skills.length > 6 && (
+              <div className="border-button border p-[8px] rounded-[10px] bg-[#EFFFE2] text-button text-[12px]">
+                +{skills.length - 6} more
+              </div>
+            )}
           </div>
         </div>
       )}

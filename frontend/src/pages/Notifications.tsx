@@ -27,7 +27,7 @@ const Notifications: React.FC = () => {
     isLoading: loading,
     error: queryError,
   } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', user?.role],
     queryFn: async () => {
       const response = await notificationApi.getNotifications({
         page: 1,
@@ -35,6 +35,7 @@ const Notifications: React.FC = () => {
       });
       return response.notifications || [];
     },
+    enabled: !!user,
   });
 
   const markAsReadMutation = useMutation({
@@ -56,15 +57,21 @@ const Notifications: React.FC = () => {
           : new Date();
       const displayDate = formatNotificationDate(createdAt);
       const companyName = getCompanyName(notif, user?.role);
+      const notificationType = mapNotificationType(notif.type, notif.relatedType);
+      
+      // Use system icon for system notifications, otherwise use default company image
+      const notificationImage = notificationType === 'system' 
+        ? 'https://cdn-icons-png.flaticon.com/512/1828/1828427.png' // System/gear icon
+        : DEFAULT_COMPANY_IMAGE;
 
       return {
         id: notif.id,
-        type: mapNotificationType(notif.type, notif.relatedType),
+        type: notificationType,
         title: notif.title,
         description: notif.message,
         company: {
           name: companyName,
-          image: DEFAULT_COMPANY_IMAGE,
+          image: notificationImage,
         },
         createdAt,
         displayDate,
@@ -232,7 +239,9 @@ const Notifications: React.FC = () => {
               description={
                 query
                   ? 'Try adjusting your search to find notifications.'
-                  : 'You will receive notifications about matches, applications, and messages here.'
+                  : user?.role === 'admin'
+                    ? 'You will receive system notifications and updates here.'
+                    : 'You will receive notifications about matches, applications, and messages here.'
               }
               variant="minimal"
             />

@@ -1190,13 +1190,13 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
         // Decode HTML entities
         text = text
           .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'")
           .replace(/&mdash;/g, '—')
-          .replace(/&ndash;/g, '–');
+          .replace(/&ndash;/g, '–')
+          .replace(/&amp;/g, '&');
 
         // Clean up whitespace
         text = text.replace(/\n\s*\n\s*\n/g, '\n\n');

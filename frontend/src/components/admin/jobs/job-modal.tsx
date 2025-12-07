@@ -16,6 +16,7 @@ import {
   Check,
   X as XIcon,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { adminApi } from '../../../api/admin';
 import { LoadingSpinner, EmptyState, Button } from '../../ui';
 import { toast } from 'react-hot-toast';
@@ -467,6 +468,8 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                           );
 
                           if (hasHtmlTags) {
+                            // Sanitize HTML before rendering to prevent XSS attacks
+                            const sanitizedDescription = DOMPurify.sanitize(description);
                             return (
                               <div
                                 className="prose prose-sm max-w-none text-gray-700 
@@ -481,7 +484,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                                   prose-h1:text-2xl prose-h1:font-bold prose-h1:my-4
                                   prose-h2:text-xl prose-h2:font-semibold prose-h2:my-3"
                                 dangerouslySetInnerHTML={{
-                                  __html: description,
+                                  __html: sanitizedDescription,
                                 }}
                               />
                             );

@@ -2417,6 +2417,12 @@ export const updateApplicationStatus = async (
       return;
     }
 
+    // Runtime check: ensure status is strictly a string
+    if (typeof status !== 'string') {
+      res.fail('Status must be a string', 400);
+      return;
+    }
+
     const validatedStatus = status as (typeof validStatuses)[number];
 
     // Get application with job info
@@ -2457,6 +2463,12 @@ export const updateApplicationStatus = async (
       return;
     }
 
+    // Runtime check: if notes is provided, it must be a string
+    if (notes !== undefined && typeof notes !== 'string') {
+      res.fail('Notes must be a string if provided', 400);
+      return;
+    }
+
     // Update application status
     const updatedApplication = await Application.findByIdAndUpdate(
       applicationId,
@@ -2464,7 +2476,7 @@ export const updateApplicationStatus = async (
         status: validatedStatus,
         reviewedAt: new Date(),
         ...(notes !== undefined && {
-          notes: typeof notes === 'string' ? notes.trim() : undefined,
+          notes: notes.trim(),
         }),
       },
       { new: true }

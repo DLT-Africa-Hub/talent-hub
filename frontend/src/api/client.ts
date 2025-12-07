@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { authApi } from './auth';
+import { isTokenExpiringSoon } from '../utils/token.utils';
 
 const API_BASE_URL =
   import.meta.env.VITE_APP_API_URL || 'http://localhost:3090/api/v1';
@@ -34,6 +35,7 @@ const getRefreshToken = (): string | null => {
 };
 
 let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
 let failedQueue: Array<{
   resolve: (value?: any) => void;
   reject: (error?: any) => void;
@@ -52,11 +54,74 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = getSessionToken();
+
+    // Check if token is expiring soon and refresh proactively
+    if (token && isTokenExpiringSoon(token)) {
+      const refreshToken = getRefreshToken();
+      const currentPath = window.location.pathname;
+
+      // Only refresh if we have a refresh token and we're not on auth pages
+      if (
+        refreshToken &&
+        !currentPath.includes('/login') &&
+        !currentPath.includes('/register')
+      ) {
+        // If already refreshing, wait for that refresh to complete
+        if (isRefreshing && refreshPromise) {
+          try {
+            const newToken = await refreshPromise;
+            if (newToken) {
+              config.headers.Authorization = `Bearer ${newToken}`;
+              return config;
+            }
+          } catch {
+            // If refresh failed, continue with old token - response interceptor will handle 401
+          }
+        } else if (!isRefreshing) {
+          // Start refresh
+          isRefreshing = true;
+          refreshPromise = (async () => {
+            try {
+              const response = await authApi.refreshToken(refreshToken);
+              const { accessToken, refreshToken: newRefreshToken } = response;
+
+              if (accessToken) {
+                sessionStorage.setItem('token', accessToken);
+                if (newRefreshToken) {
+                  sessionStorage.setItem('refreshToken', newRefreshToken);
+                }
+                return accessToken;
+              }
+              return null;
+            } catch (refreshError) {
+              console.warn('Proactive token refresh failed:', refreshError);
+              return null;
+            } finally {
+              isRefreshing = false;
+              refreshPromise = null;
+            }
+          })();
+
+          try {
+            const newToken = await refreshPromise;
+            if (newToken) {
+              config.headers.Authorization = `Bearer ${newToken}`;
+              return config;
+            }
+          } catch {
+            // Continue with old token if refresh fails
+          }
+        }
+      }
+    }
+
+    // Use current token (or newly refreshed token)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => {
@@ -143,17 +208,38 @@ api.interceptors.response.use(
       } catch (refreshError) {
         isRefreshing = false;
         processQueue(refreshError, null);
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
-        sessionStorage.removeItem('refreshToken');
 
-        // Only redirect if we're not already on the login/register page
-        if (
-          !currentPath.includes('/login') &&
-          !currentPath.includes('/register')
-        ) {
-          window.location.href = '/login';
+        // Log the error for debugging
+        const error = refreshError as AxiosError;
+        console.error('Token refresh failed:', {
+          error: refreshError,
+          message: error.response?.data
+            ? (error.response.data as { message?: string }).message
+            : error.message,
+          status: error.response?.status,
+          path: currentPath,
+        });
+
+        // Only clear tokens and redirect if refresh truly failed
+        // Don't clear if it's a network error - user might come back online
+        const isNetworkError = !error.response;
+        const isAuthError =
+          error.response?.status === 401 || error.response?.status === 403;
+
+        if (isAuthError || !isNetworkError) {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+          sessionStorage.removeItem('refreshToken');
+
+          // Only redirect if we're not already on the login/register page
+          if (
+            !currentPath.includes('/login') &&
+            !currentPath.includes('/register')
+          ) {
+            window.location.href = '/login';
+          }
         }
+
         return Promise.reject(refreshError);
       }
     }

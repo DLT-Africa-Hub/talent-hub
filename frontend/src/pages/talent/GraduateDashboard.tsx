@@ -183,7 +183,7 @@ const GraduateDashboard = () => {
 
       {!loading && (
         <>
-          <div className="flex flex-col gap-[20px] w-full md:gap-[30px] mt-[20px]">
+          <div className="flex flex-col gap-[20px] w-full md:gap-[30px] pt-[15px]">
             <SectionHeader title="AI Matched Opportunities" />
 
             {availableOpportunities.length > 0 ? (

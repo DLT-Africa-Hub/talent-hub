@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { authApi } from '../api/auth';
 import { AuthResponsePayload, AuthUser as User } from '../types/auth';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 
 interface AuthContextType {
   user: User | null;
@@ -41,6 +42,9 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+
+  // Use token refresh hook to periodically refresh tokens
+  useTokenRefresh();
 
   // Load user from localStorage on mount
   useEffect(() => {

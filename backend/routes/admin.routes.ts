@@ -45,6 +45,7 @@ import {
   // Application Management
   sendMessageToApplicant,
   scheduleInterviewForApplicant,
+  getTotalPostedJobs,
 } from '../controllers/admin.controller';
 
 import {
@@ -128,5 +129,7 @@ router.get('/talent-count', getGraduatesCount);
 router.get('/company-count', getCompanyCount);
 router.get('/active-jobs', getActiveJobsCount);
 router.get('/application-activity-detail', getApplicationActivityDetail);
+
+router.get('/total-posted-jobs', getTotalPostedJobs);
 
 export default router;

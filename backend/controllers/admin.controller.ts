@@ -1982,3 +1982,30 @@ export const scheduleInterviewForApplicant = async (
     res.fail('Internal server error', 500);
   }
 };
+
+export const getTotalPostedJobs = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+
+    const result = await Company.aggregate<{ totalPostedJobs: number }>([
+      {
+        $group: {
+          _id: null,
+          totalPostedJobs: { $sum: '$postedJobs' },
+        },
+      },
+    ]);
+
+    const totalPostedJobs = result[0]?.totalPostedJobs ?? 0;
+
+    res.success({
+      total: totalPostedJobs,
+     
+    });
+  } catch (error) {
+    console.error('Get total posted jobs error:', error);
+    res.fail('Internal server error', 500);
+  }
+};

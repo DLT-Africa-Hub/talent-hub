@@ -5,8 +5,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { IconType } from 'react-icons';
 import { BiBell } from 'react-icons/bi';
 import { useAuth } from '../../context/AuthContext';
-import { PiUsersThreeLight } from 'react-icons/pi';
+import { PiBuildingApartmentLight, PiUsersThreeLight } from 'react-icons/pi';
 import { useNotifications } from '../../hooks/useNotifications';
+import { HiOutlineUsers, HiVideoCamera } from 'react-icons/hi';
 
 interface Page {
   page: string;
@@ -21,20 +22,35 @@ const MobileNav = () => {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
 
-  const dashboardLink = user?.role === 'company' ? 'company' : 'graduate';
+  const dashboardLink =
+    user?.role === 'admin'
+      ? 'admin'
+      : user?.role === 'company'
+        ? 'company'
+        : 'graduate';
 
   const allPages: Page[] = [
     { page: 'Dashboard', link: dashboardLink, icon: RiHomeSmile2Line },
     { page: 'Candidates', link: 'candidates', icon: PiUsersThreeLight },
     { page: 'Explore', link: 'explore', icon: BsSearch },
+    { page: 'Explore', link: 'company/explore', icon: BsSearch },
     { page: 'Applications', link: 'applications', icon: LuBriefcase },
     { page: 'Notifications', link: 'notifications', icon: BiBell },
     { page: 'Jobs', link: 'jobs', icon: LuBriefcase },
+    { page: 'Interviews', link: 'interviews', icon: HiVideoCamera },
+    {
+      page: 'Companies',
+      link: 'admin/companies',
+      icon: PiBuildingApartmentLight,
+    },
+    { page: 'Talents', link: 'admin/talents', icon: HiOutlineUsers },
+    { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
   ];
 
   const rolePagesMap: Record<string, string[]> = {
-    company: [dashboardLink, 'candidates', 'explore', 'jobs'],
-    graduate: ['graduate', 'explore', 'applications'],
+    company: [dashboardLink, 'candidates', 'company/explore', 'jobs'],
+    graduate: ['graduate', 'explore', 'applications', 'interviews'],
+    admin: [dashboardLink, 'admin/talents', 'admin/companies', 'admin/jobs'],
   };
 
   const allowed =

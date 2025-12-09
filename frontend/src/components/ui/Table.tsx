@@ -302,8 +302,9 @@ export default function Table<T extends Record<string, unknown>>({
 
       {/* Pagination */}
       {pageSize && pageSize > 0 && (
-        <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
+        <div className="px-4 py-3 bg-gray-50 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* RESULTS INFO */}
+          <div className="text-sm text-gray-700 text-center md:text-left">
             Showing{' '}
             <span className="font-medium">
               {Math.min((page - 1) * pageSize + 1, resolvedData.length)}
@@ -316,14 +317,17 @@ export default function Table<T extends Record<string, unknown>>({
             results
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* CONTROLS */}
+          <div className="flex flex-wrap justify-center md:justify-end items-center gap-2">
+            {/* First & Prev (hide First on mobile) */}
             <button
-              className="px-3 py-1 rounded border disabled:opacity-50"
+              className="hidden md:inline-flex px-3 py-1 rounded border disabled:opacity-50"
               onClick={() => setPage(1)}
               disabled={page === 1}
             >
               First
             </button>
+
             <button
               className="px-3 py-1 rounded border disabled:opacity-50"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -331,20 +335,29 @@ export default function Table<T extends Record<string, unknown>>({
             >
               Prev
             </button>
-            <span className="text-sm">Page</span>
-            <input
-              type="number"
-              min={1}
-              max={totalPages}
-              value={page}
-              onChange={(e) =>
-                setPage(
-                  Math.min(Math.max(1, Number(e.target.value || 1)), totalPages)
-                )
-              }
-              className="w-16 px-2 py-1 border rounded text-sm"
-            />
-            <span className="text-sm">of {totalPages}</span>
+
+            {/* PAGE INPUT */}
+            <div className="flex items-center gap-1">
+              <span className="text-sm hidden sm:inline">Page</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={page}
+                onChange={(e) =>
+                  setPage(
+                    Math.min(
+                      Math.max(1, Number(e.target.value || 1)),
+                      totalPages
+                    )
+                  )
+                }
+                className="w-14 sm:w-16 px-2 py-1 border rounded text-sm text-center"
+              />
+              <span className="text-sm">/ {totalPages}</span>
+            </div>
+
+            {/* Next & Last (hide Last on mobile) */}
             <button
               className="px-3 py-1 rounded border disabled:opacity-50"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -352,8 +365,9 @@ export default function Table<T extends Record<string, unknown>>({
             >
               Next
             </button>
+
             <button
-              className="px-3 py-1 rounded border disabled:opacity-50"
+              className="hidden md:inline-flex px-3 py-1 rounded border disabled:opacity-50"
               onClick={() => setPage(totalPages)}
               disabled={page === totalPages}
             >

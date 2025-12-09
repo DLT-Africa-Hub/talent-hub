@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { messageApi } from '../api/message';
@@ -11,6 +11,7 @@ import {
 import { LoadingSpinner } from '../index';
 import { SearchBar, EmptyState } from '../components/ui';
 import { ApiError } from '../types/api';
+import { HiVideoCamera } from 'react-icons/hi';
 
 interface Conversation {
   id: string;
@@ -75,27 +76,67 @@ const Messages: React.FC = () => {
         let image = DEFAULT_COMPANY_IMAGE;
 
         if (user?.role === 'graduate') {
-          // User is graduate, so show company info
+          // Check for company first
           const company = (conv.company || {}) as {
             companyName?: string;
             industry?: string;
           };
-          name = company.companyName || 'Company';
-          role = company.industry || '';
-          image = DEFAULT_COMPANY_IMAGE; // Use default since no logo field
+
+          // Check for admin
+          const admin = (conv.admin || {}) as {
+            email?: string;
+            username?: string;
+            profilePictureUrl?: string;
+          };
+
+          // Show company if available, otherwise show admin
+          if (company.companyName) {
+            name = company.companyName || 'Company';
+            role = company.industry || '';
+            image = DEFAULT_COMPANY_IMAGE;
+          } else if (admin.email || admin.username) {
+            name = admin.username || 'Administrator';
+            role = 'Administrator';
+            image = admin.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+          } else {
+            name = 'User';
+            role = '';
+            image = DEFAULT_PROFILE_IMAGE;
+          }
         } else if (user?.role === 'company') {
-          // User is company, so show graduate info
+          // Check for graduate first
           const graduate = (conv.graduate || {}) as {
             firstName?: string;
             lastName?: string;
             position?: string;
             profilePictureUrl?: string;
           };
-          const firstName = graduate.firstName || '';
-          const lastName = graduate.lastName || '';
-          name = `${firstName} ${lastName}`.trim() || 'Graduate';
-          role = graduate.position || '';
-          image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+
+          // Check for admin
+          const admin = (conv.admin || {}) as {
+            email?: string;
+            username?: string;
+            profilePictureUrl?: string;
+          };
+
+          console.log(admin);
+
+          // Show graduate if available, otherwise show admin
+          if (graduate.firstName || graduate.lastName) {
+            const firstName = graduate.firstName || '';
+            const lastName = graduate.lastName || '';
+            name = `${firstName} ${lastName}`.trim() || 'Graduate';
+            role = graduate.position || '';
+            image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+          } else if (admin.email) {
+            name = admin.username || '';
+            role = 'Administrator';
+            image = admin.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
+          } else {
+            name = 'User';
+            role = '';
+            image = DEFAULT_PROFILE_IMAGE;
+          }
         } else if (user?.role === 'admin') {
           // User is admin, so show company or graduate info based on conversation
           const company = (conv.company || {}) as {
@@ -230,6 +271,13 @@ const Messages: React.FC = () => {
             className="self-end"
           />
         </div>
+        <Link
+          to="/interviews"
+          className="tex-[14px] lg:hidden self-end flex items-center gap-1 border border-button text-button p-2.5 rounded-[10px] "
+        >
+          <p>Interviews</p>
+          <HiVideoCamera />
+        </Link>
       </div>
 
       {error && (

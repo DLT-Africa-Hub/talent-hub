@@ -66,7 +66,7 @@ const FloatingNavbar = () => {
                     </button>
                   </DropdownMenuTrigger>
 
-                  <DropdownMenuContent className="w-56 bg-[#00000033]">
+                  <DropdownMenuContent className="w-56 ">
                     <DropdownMenuLabel className="">
                       Navigation
                     </DropdownMenuLabel>

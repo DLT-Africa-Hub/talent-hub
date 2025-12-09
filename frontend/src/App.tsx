@@ -301,7 +301,9 @@ function App() {
               <Route
                 path="/interviews"
                 element={
-                  <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                  <ProtectedRoute
+                    allowedRoles={['company', 'graduate', 'admin']}
+                  >
                     <EmailVerificationGuard>
                       <Layout>
                         <Interviews />
@@ -358,16 +360,7 @@ function App() {
                 path="/explore-preview/:id"
                 element={<ExplorePreviewRedirect />}
               />
-              <Route
-                path="/admin/notifications"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Layout>
-                      <Notifications />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/admin/companies"
                 element={
@@ -395,18 +388,6 @@ function App() {
                     <Layout>
                       <Jobs />
                     </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/interviews"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <EmailVerificationGuard>
-                      <Layout>
-                        <Interviews />
-                      </Layout>
-                    </EmailVerificationGuard>
                   </ProtectedRoute>
                 }
               />

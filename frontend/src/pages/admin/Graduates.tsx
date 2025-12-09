@@ -100,7 +100,7 @@ const Graduates: React.FC = () => {
   ].filter(Boolean).length;
 
   return (
-    <div className="py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
+    <div className=" pb-[100px] py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
       {/* Header */}
       <div className="flex flex-col gap-2.5">
         <p className="text-[#1C1C1C] font-semibold text-[26px]">Graduates</p>

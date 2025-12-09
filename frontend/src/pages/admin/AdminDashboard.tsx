@@ -152,7 +152,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
+    <div className="py-[20px] px-[20px] pb-[100px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
       <p className="text-[#1C1C1C] font-semibold text-[26px]">Dashboard</p>
 
       {/* Stats cards */}

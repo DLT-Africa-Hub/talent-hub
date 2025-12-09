@@ -1,11 +1,12 @@
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
-import { Link, useLocation } from 'react-router-dom';
-import { BiBell } from 'react-icons/bi';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { BiBell, BiLogOut, BiUser } from 'react-icons/bi';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useQuery } from '@tanstack/react-query';
 import { companyApi } from '../../api/company';
 import { graduateApi } from '../../api/graduate';
+import { useState, useRef, useEffect } from 'react';
 
 interface Page {
   page: string;
@@ -23,9 +24,12 @@ const getExperienceRange = (expYears?: number): string | undefined => {
 
 const MobileHeader = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const pages: Page[] = [
     { page: 'DashBoard', link: 'graduate' },
@@ -73,6 +77,8 @@ const MobileHeader = () => {
     return user.email?.split('@')[0] || 'User';
   })();
 
+  const username = user?.email?.split('@')[0] || 'user';
+
   // Compute metrics (graduate rank & experience)
   const metrics = (() => {
     if (user?.role !== 'graduate') return null;
@@ -119,14 +125,40 @@ const MobileHeader = () => {
 
   const currentPageName = getCurrentPageName();
 
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+    setIsDropdownOpen(false);
+  };
+
   return (
     <div className="flex flex-col py-[15px] px-[20px] lg:hidden gap-[15px] sticky z-10 top-0 w-full border-b-[#00000033] text-[#1C1C1C] md:border-b md:pt-[68px] font-inter md:pb-[19px] md:px-[150px] bg-[#F9F9F9]">
       <div className="flex items-center justify-between">
-        <p className="font-medium text-[34px]">Hi, {displayName}</p>
+        <p className="font-medium text-[24px]">Hi, {displayName}</p>
         <div className="flex gap-1 items-center">
-          <p className="text-[24px] text-button">
+          <Link to="/messages" className="text-[24px] text-button">
             <HiOutlineChatBubbleLeftRight />
-          </p>
+          </Link>
           <Link
             to="/notifications"
             className="relative text-button text-[24px] "
@@ -138,6 +170,47 @@ const MobileHeader = () => {
               </span>
             )}
           </Link>
+          {/* profile button */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-[32px] h-[32px] rounded-[8px] bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-semibold text-[14px] shadow-sm hover:shadow-md transition-shadow"
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-[8px] w-[200px] bg-white rounded-[12px] border border-fade shadow-lg overflow-hidden z-50">
+                <div className="px-[16px] py-[12px] border-b border-fade">
+                  <p className="text-[#1C1C1C] font-semibold text-[14px] truncate">
+                    {displayName}
+                  </p>
+                  <p className="text-[#1C1C1C80] font-normal text-[12px] truncate">
+                    @{username}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const basePath =
+                      user?.role === 'company' ? '/company' : '/graduate';
+                    setIsDropdownOpen(false);
+                    navigate(`${basePath}/profile`);
+                  }}
+                  className="w-full flex items-center gap-[10px] px-[16px] py-[12px] text-[#1C1C1C] hover:bg-[#F8F8F8] transition-colors text-[14px] font-medium"
+                >
+                  <BiUser className="text-[18px]" />
+                  <span>View Profile</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-[10px] px-[16px] py-[12px] text-[#DC2626] hover:bg-[#FEF2F2] transition-colors text-[14px] font-medium"
+                >
+                  <BiLogOut className="text-[18px]" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

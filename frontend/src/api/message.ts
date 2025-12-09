@@ -20,6 +20,7 @@ export const messageApi = {
   getMessages: async (params?: { page?: number; limit?: number }) => {
     try {
       const response = await api.get('/messages/conversations', { params });
+      console.log(response);
       return response.data;
     } catch (error: unknown) {
       const err = error as ApiError;

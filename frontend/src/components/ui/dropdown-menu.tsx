@@ -74,7 +74,7 @@ export const DropdownMenuContent = ({
   return (
     <div
       ref={ref}
-      className={`absolute right-0 mt-2 min-w-[180px] rounded-md border shadow-lg p-1 z-50 ${className}`}
+      className={`absolute right-0 mt-2 min-w-[180px] rounded-md backdrop-blur-xl bg-white/80 border border-white/20 shadow-2xl p-1 z-50 ${className}`}
     >
       {children}
     </div>
@@ -88,7 +88,7 @@ export const DropdownMenuLabel = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`px-3 py-2 text-xs font-semibold text-gray-500 ${className}`}>
+  <div className={`px-3 py-2 text-xs font-semibold text-gray-700 ${className}`}>
     {children}
   </div>
 );
@@ -97,7 +97,7 @@ export const DropdownMenuSeparator = ({
   className = '',
 }: {
   className?: string;
-}) => <div className={`h-px bg-gray-200 my-1 ${className}`} />;
+}) => <div className={`h-px bg-white/20 my-1 ${className}`} />;
 
 export const DropdownMenuItem = ({
   children,
@@ -110,7 +110,7 @@ export const DropdownMenuItem = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full text-left px-3 py-2 rounded-md text-sm cursor-pointer hover:bg-gray-100 transition ${className}`}
+    className={`w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 cursor-pointer hover:bg-white/10 transition ${className}`}
   >
     {children}
   </button>

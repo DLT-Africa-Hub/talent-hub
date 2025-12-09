@@ -188,6 +188,10 @@ export const getChatList = async (req: Request, res: Response) => {
               industry?: string;
               website?: string;
             }
+          | {
+              email?: string;
+              username?: string;
+            }
         );
 
         let userData: UserProfileData | null = null;
@@ -213,12 +217,29 @@ export const getChatList = async (req: Request, res: Response) => {
             industry: company?.industry || '',
             website: company?.website || '',
           };
+        } else if (otherUser.role === 'admin') {
+          // Handle admin users
+          userData = {
+            _id: otherUserId,
+            email: otherUser.email || '',
+            username: 'DLT Africa',
+          };
+        } else {
+          // Fallback for unknown roles
+          userData = {
+            _id: otherUserId,
+            email: otherUser.email || '',
+            username: otherUser.username || 'Unknown User',
+          };
         }
 
         return {
           _id: otherUserId,
-          [otherUser.role === 'graduate' ? 'graduate' : 'company']:
-            userData || { _id: otherUserId },
+          [otherUser.role === 'graduate'
+            ? 'graduate'
+            : otherUser.role === 'company'
+              ? 'company'
+              : 'admin']: userData,
           lastMessage: {
             text: conv.lastMessage.message,
             message: conv.lastMessage.message,

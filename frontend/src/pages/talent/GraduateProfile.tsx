@@ -209,7 +209,7 @@ const GraduateProfile = () => {
   };
 
   return (
-    <div className="p-[20px] lg:p-[32px] flex flex-col gap-[32px]">
+    <div className="p-[20px] pb-[100px] lg:p-[32px] flex flex-col gap-[32px]">
       <div className="flex flex-wrap items-start justify-between gap-[16px]">
         <div>
           <p className="text-[22px] font-semibold text-[#1C1C1C]">Profile</p>
@@ -226,7 +226,7 @@ const GraduateProfile = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[32px]">
+      <div className="grid grid-cols-1  xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[32px]">
         <div className="flex flex-col gap-[32px]">
           <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">

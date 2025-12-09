@@ -221,32 +221,34 @@ const CompanyDetailsModal = ({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={data.data.company.status} />
-                {data.data.company.status === 'Active' ? (
-                  <button
-                    onClick={() => toggleStatusMutation.mutate(false)}
-                    disabled={toggleStatusMutation.isPending}
-                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {toggleStatusMutation.isPending
-                      ? 'Processing...'
-                      : 'Suspend'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => toggleStatusMutation.mutate(true)}
-                    disabled={toggleStatusMutation.isPending}
-                    className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {toggleStatusMutation.isPending
-                      ? 'Processing...'
-                      : 'Activate'}
-                  </button>
-                )}
+              <div className="flex flex-col-reverse lg:flex-row items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={data.data.company.status} />
+                  {data.data.company.status === 'Active' ? (
+                    <button
+                      onClick={() => toggleStatusMutation.mutate(false)}
+                      disabled={toggleStatusMutation.isPending}
+                      className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {toggleStatusMutation.isPending
+                        ? 'Processing...'
+                        : 'Suspend'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => toggleStatusMutation.mutate(true)}
+                      disabled={toggleStatusMutation.isPending}
+                      className="px-3 py-1.5  bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {toggleStatusMutation.isPending
+                        ? 'Processing...'
+                        : 'Activate'}
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 self-end lg:self-auto hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <PiX className="text-xl text-gray-500" />
                 </button>
@@ -254,7 +256,7 @@ const CompanyDetailsModal = ({
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-4 gap-4 p-6 bg-gray-50">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-gray-50">
               <div className="bg-white p-3 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-blue-50 rounded-lg">
@@ -334,7 +336,7 @@ const CompanyDetailsModal = ({
             {/* Tab Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
               {activeTab === 'overview' && (
-                <div className="grid grid-cols-2 gap-6">
+                <div className="flex flex-col gap-6 md:grid md:grid-cols-2">
                   {/* Company Info */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-base font-semibold mb-3">

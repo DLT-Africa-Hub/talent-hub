@@ -15,7 +15,7 @@ export interface CompanyStatsApi {
   _id: string;
   companyName: string;
   postedJobs: number;
-  hiredCandidates?: number;
+  hiredCandidates?: string[]; 
 }
 
 export interface HiringCompanyStats {
@@ -131,7 +131,7 @@ const AdminDashboard = () => {
       ?.map((company) => ({
         name: company.companyName || 'Unnamed Company',
         jobs: company.postedJobs ?? 0,
-        hired: company.hiredCandidates ?? 0,
+        hired: company.hiredCandidates?.length ?? 0,
       }))
       ?.sort((a, b) => {
         if (b.jobs !== a.jobs) {

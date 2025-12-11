@@ -24,6 +24,14 @@ interface ScheduleInterviewModalProps {
   isScheduling?: boolean;
 }
 
+// Helper function to convert datetime-local value to UTC ISO string
+const convertLocalDateToUTC = (localDateString: string): string => {
+  // Parse the datetime-local value as a local date
+  const localDate = new Date(localDateString);
+  // Return ISO string which is in UTC
+  return localDate.toISOString();
+};
+
 const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
   isOpen,
   candidate,
@@ -120,12 +128,17 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
     }
 
     try {
-      await onSchedule(
-        candidate,
-        timeSlots.map((slot) => ({ date: slot.date, duration: slot.duration })),
-        companyTimezone,
-        selectionDeadline || undefined
-      );
+      // Convert local datetime values to UTC before sending
+      const utcTimeSlots = timeSlots.map((slot) => ({
+        date: convertLocalDateToUTC(slot.date),
+        duration: slot.duration,
+      }));
+
+      const utcDeadline = selectionDeadline
+        ? convertLocalDateToUTC(selectionDeadline)
+        : undefined;
+
+      await onSchedule(candidate, utcTimeSlots, companyTimezone, utcDeadline);
       setSuccess(
         'Interview time slots sent successfully! The candidate will be notified.'
       );

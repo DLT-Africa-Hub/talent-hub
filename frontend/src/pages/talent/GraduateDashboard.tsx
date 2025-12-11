@@ -44,7 +44,7 @@ interface Match {
       max?: number;
       currency?: string;
     };
-  };
+  } | null;
 }
 
 const normalizeMatchScore = (score: number | undefined): number => {
@@ -79,6 +79,24 @@ const GraduateDashboard = () => {
   const transformMatchToCompany = useCallback(
     (match: Match, index: number): Company & { jobId: string } => {
       const job = match.job;
+
+      // Handle null job case
+      if (!job) {
+        return {
+          id: index + 1,
+          name: 'Company',
+          role: 'Position',
+          match: normalizeMatchScore(match.score),
+          contract: 'Full time',
+          location: 'Location not specified',
+          wageType: 'per year',
+          wage: '—',
+          image: DEFAULT_JOB_IMAGE,
+          jobId: match.id,
+          description: undefined,
+        };
+      }
+
       const matchScore = normalizeMatchScore(match.score);
       const jobType = job.jobType || 'Full time';
       const salaryRange = formatSalaryRange(job.salary);
@@ -111,7 +129,7 @@ const GraduateDashboard = () => {
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
         jobId: job.id,
-        description: job.description, // Add description for CompanyPreviewModal
+        description: job.description,
       };
     },
     []
@@ -133,7 +151,10 @@ const GraduateDashboard = () => {
 
     const standardMatches: (Company & { jobId: string })[] = [];
     matchesData.forEach((match: Match, index: number) => {
-      standardMatches.push(transformMatchToCompany(match, index));
+      // Skip matches with null jobs or filter them as needed
+      if (match.job) {
+        standardMatches.push(transformMatchToCompany(match, index));
+      }
     });
 
     const sortedStandard = [...standardMatches].sort(

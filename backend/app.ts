@@ -11,6 +11,7 @@ import notificationRoutes from './routes/notification.routes';
 import interviewRoutes from './routes/interview.routes';
 import cloudinaryRoutes from './routes/cloudinary.routes';
 import messageRoutes from './routes/message.routes';
+import webhookRoutes from './routes/webhook.routes';
 import { responseFormatter } from './middleware/response.middleware';
 import { apiLimiter } from './middleware/rateLimit.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
@@ -97,6 +98,9 @@ app.get('/api/test', (_req, res) => {
 });
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+
+// Webhook routes (no authentication required, uses signature verification)
+app.use(`${API_PREFIX}/webhooks`, webhookRoutes);
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/graduates`, graduateRoutes);

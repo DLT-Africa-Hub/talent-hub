@@ -30,6 +30,10 @@ interface AvailableJob {
   };
   matchScore?: number | null;
   description?: string;
+  companyCalendly?: {
+    enabled?: boolean;
+    publicLink?: string;
+  };
 }
 
 const ExploreCompany = () => {
@@ -135,6 +139,7 @@ const ExploreCompany = () => {
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
         description: job.description || 'No description provided.',
+        calendly: job.companyCalendly,
       };
     },
     []

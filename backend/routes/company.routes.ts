@@ -18,6 +18,11 @@ import {
   getAvailableGraduates,
   getHiredCandidates,
   getHiredCandidatesCount,
+  getCalendlyAuthUrl,
+  calendlyOAuthCallback,
+  getCalendlyStatus,
+  setCalendlyPublicLink,
+  disconnectCalendly,
 } from '../controllers/company.controller';
 import { suggestTimeSlots } from '../controllers/interview.controller';
 import {
@@ -36,7 +41,10 @@ import {
 
 const router: IRouter = Router();
 
-// All routes require authentication and company role
+// Calendly OAuth callback - must be public (no auth) since it's called by Calendly
+router.get('/calendly/callback', calendlyOAuthCallback);
+
+// All other routes require authentication and company role
 router.use(authenticate);
 router.use(authorize('company'));
 
@@ -76,6 +84,12 @@ router.post('/offers/:offerId/confirm-hire', veryStrictLimiter, confirmHire);
 
 // Interview scheduling with multiple time slots
 router.post('/interviews/suggest-slots', veryStrictLimiter, suggestTimeSlots);
+
+// Calendly integration - Company connects Calendly
+router.get('/calendly/connect', strictLimiter, getCalendlyAuthUrl);
+router.get('/calendly/status', strictLimiter, getCalendlyStatus);
+router.post('/calendly/public-link', veryStrictLimiter, setCalendlyPublicLink);
+router.delete('/calendly/disconnect', veryStrictLimiter, disconnectCalendly);
 
 // Write operations (POST/PUT/DELETE) - very strict limiter
 router.post('/jobs', veryStrictLimiter, createJob);

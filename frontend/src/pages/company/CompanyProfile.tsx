@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   HiBuildingOffice2,
   HiGlobeAlt,
@@ -13,10 +14,15 @@ import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
 import ChangePassword from '../../components/ChangePassword';
 import ProfileEditModal from '../../components/profile/ProfileEditModal';
+import CalendlyIntegration from '../../components/company/CalendlyIntegration';
 import { DEFAULT_COMPANY_IMAGE } from '../../utils/job.utils';
+import { useToastContext } from '../../context/ToastContext';
 
 const CompanyProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const { success, error: showError } = useToastContext();
 
   const {
     data: profileData,
@@ -31,6 +37,28 @@ const CompanyProfile = () => {
   });
 
   const company = useMemo(() => profileData || null, [profileData]);
+
+  // Handle Calendly OAuth callback redirect
+  useEffect(() => {
+    const calendlyStatus = searchParams.get('calendly');
+
+    if (calendlyStatus === 'connected') {
+      success('Calendly account connected successfully!');
+      // Invalidate Calendly status query to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['calendlyStatus'] });
+      // Clean up URL
+      searchParams.delete('calendly');
+      setSearchParams(searchParams, { replace: true });
+    } else if (calendlyStatus === 'error') {
+      const errorMessage =
+        searchParams.get('message') || 'Failed to connect Calendly account';
+      showError(decodeURIComponent(errorMessage));
+      // Clean up URL
+      searchParams.delete('calendly');
+      searchParams.delete('message');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, success, showError, queryClient]);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading profile..." fullPage />;
@@ -123,17 +151,19 @@ const CompanyProfile = () => {
                 label="Location"
                 value={company.location}
               />
-              <ProfileField
-                icon={<HiUsers />}
-                label="Company Size"
-                value={company.companySize}
-              />
-              <ProfileField
-                icon={<HiGlobeAlt />}
-                label="Website"
-                value={company.website}
-                isLink={!!company.website}
-              />
+              <div className="grid grid-cols-2 gap-[20px]">
+                <ProfileField
+                  icon={<HiUsers />}
+                  label="Company Size"
+                  value={company.companySize}
+                />
+                <ProfileField
+                  icon={<HiGlobeAlt />}
+                  label="Website"
+                  value={company.website}
+                  isLink={!!company.website}
+                />
+              </div>
             </div>
           </div>
 
@@ -147,6 +177,8 @@ const CompanyProfile = () => {
               </p>
             </div>
           )}
+
+          <CalendlyIntegration />
         </div>
 
         <ChangePassword />

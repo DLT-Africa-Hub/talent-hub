@@ -33,6 +33,56 @@ export interface ICv {
   onDisplay: boolean;
 }
 
+export type Position =
+  | 'frontend developer'
+  | 'backend developer'
+  | 'fullstack developer'
+  | 'mobile developer'
+  | 'devops engineer'
+  | 'data engineer'
+  | 'security engineer'
+  | 'ui/ux developer'
+  | 'game developer'
+  | 'embedded systems engineer'
+  | 'blockchain developer'
+  | 'cloud engineer'
+  | 'site reliability engineer (sre)'
+  | 'qa engineer'
+  | 'test automation engineer'
+  | 'performance engineer'
+  | 'data scientist'
+  | 'data analyst'
+  | 'machine learning engineer'
+  | 'ai engineer'
+  | 'business intelligence analyst'
+  | 'database administrator'
+  | 'cloud architect'
+  | 'systems administrator'
+  | 'network engineer'
+  | 'platform engineer'
+  | 'infrastructure engineer'
+  | 'cybersecurity analyst'
+  | 'penetration tester'
+  | 'security architect'
+  | 'product manager'
+  | 'technical product manager'
+  | 'ui designer'
+  | 'ux designer'
+  | 'product designer'
+  | 'engineering manager'
+  | 'technical lead'
+  | 'software architect'
+  | 'cto'
+  | 'tech lead'
+  | 'scrum master'
+  | 'technical writer'
+  | 'developer advocate'
+  | 'solutions architect'
+  | 'integration engineer'
+  | 'api developer'
+  | 'microservices engineer'
+  | 'other';
+
 export interface IGraduate {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
@@ -41,15 +91,7 @@ export interface IGraduate {
   phoneNumber: number;
   expLevel: 'entry level' | 'mid level' | 'senior level';
   expYears: number;
-  position:
-    | 'frontend developer'
-    | 'backend developer'
-    | 'fullstack developer'
-    | 'mobile developer'
-    | 'devops engineer'
-    | 'data engineer'
-    | 'security engineer'
-    | 'other';
+  position: Position[];
   profilePictureUrl?: string;
   location?: string;
   salaryPerAnnum?: number; // Expected salary per annum
@@ -115,7 +157,7 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
       required: true,
     },
     position: {
-      type: String,
+      type: [String],
       enum: [
         'frontend developer',
         'backend developer',
@@ -124,9 +166,55 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
         'devops engineer',
         'data engineer',
         'security engineer',
+        'ui/ux developer',
+        'game developer',
+        'embedded systems engineer',
+        'blockchain developer',
+        'cloud engineer',
+        'site reliability engineer (sre)',
+        'qa engineer',
+        'test automation engineer',
+        'performance engineer',
+        'data scientist',
+        'data analyst',
+        'machine learning engineer',
+        'ai engineer',
+        'business intelligence analyst',
+        'database administrator',
+        'cloud architect',
+        'systems administrator',
+        'network engineer',
+        'platform engineer',
+        'infrastructure engineer',
+        'cybersecurity analyst',
+        'penetration tester',
+        'security architect',
+        'product manager',
+        'technical product manager',
+        'ui designer',
+        'ux designer',
+        'product designer',
+        'engineering manager',
+        'technical lead',
+        'software architect',
+        'cto',
+        'tech lead',
+        'scrum master',
+        'technical writer',
+        'developer advocate',
+        'solutions architect',
+        'integration engineer',
+        'api developer',
+        'microservices engineer',
         'other',
       ],
       required: true,
+      validate: {
+        validator: function (positions: Position[]) {
+          return Array.isArray(positions) && positions.length > 0;
+        },
+        message: 'At least one position must be selected',
+      },
     },
     profilePictureUrl: {
       type: String,

@@ -33,7 +33,7 @@ export interface IInterview extends Document {
   status: InterviewStatus;
   roomSlug: string;
   roomUrl: string;
-  provider: 'stream';
+  provider: 'stream' | 'calendly';
   createdBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
   startedAt?: Date;
@@ -44,6 +44,11 @@ export interface IInterview extends Document {
   companyTimezone?: string;
   graduateTimezone?: string;
   selectionDeadline?: Date;
+  stage?: 1 | 2 | 3; // Which interview stage this is (1, 2, or 3)
+  // Calendly-specific fields
+  calendlyEventUri?: string;
+  calendlyEventTypeUri?: string;
+  calendlyInviteeUri?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -188,8 +193,19 @@ const InterviewSchema = new Schema<IInterview>(
     },
     provider: {
       type: String,
-      enum: ['stream'],
+      enum: ['stream', 'calendly'],
       default: 'stream',
+    },
+    // Calendly-specific fields
+    calendlyEventUri: {
+      type: String,
+      required: false,
+    },
+    calendlyEventTypeUri: {
+      type: String,
+    },
+    calendlyInviteeUri: {
+      type: String,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -220,6 +236,11 @@ const InterviewSchema = new Schema<IInterview>(
     },
     selectionDeadline: {
       type: Date,
+    },
+    stage: {
+      type: Number,
+      enum: [1, 2, 3],
+      required: false,
     },
   },
   {

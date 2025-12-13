@@ -17,6 +17,8 @@ interface LocationState {
     requirements: {
       skills: string[];
     };
+    interviewStages: 1 | 2 | 3;
+    interviewStageTitles?: string[];
     salary?: {
       amount?: number;
       currency: string;
@@ -30,6 +32,7 @@ interface LocationState {
     salaryAmount: string;
     description: string;
     skills: string;
+    interviewStages?: 1 | 2 | 3;
   };
 }
 

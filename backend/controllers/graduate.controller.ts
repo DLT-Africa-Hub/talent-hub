@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import Graduate, { GraduateDocument, ICv } from '../models/Graduate.model';
+import Graduate, {
+  GraduateDocument,
+  ICv,
+  Position,
+} from '../models/Graduate.model';
 import Match from '../models/Match.model';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
@@ -79,6 +83,46 @@ const POSITION_OPTIONS = new Set([
   'devops engineer',
   'data engineer',
   'security engineer',
+  'ui/ux developer',
+  'game developer',
+  'embedded systems engineer',
+  'blockchain developer',
+  'cloud engineer',
+  'site reliability engineer (sre)',
+  'qa engineer',
+  'test automation engineer',
+  'performance engineer',
+  'data scientist',
+  'data analyst',
+  'machine learning engineer',
+  'ai engineer',
+  'business intelligence analyst',
+  'database administrator',
+  'cloud architect',
+  'systems administrator',
+  'network engineer',
+  'platform engineer',
+  'infrastructure engineer',
+  'cybersecurity analyst',
+  'penetration tester',
+  'security architect',
+  'product manager',
+  'technical product manager',
+  'ui designer',
+  'ux designer',
+  'product designer',
+  'engineering manager',
+  'technical lead',
+  'software architect',
+  'cto',
+  'tech lead',
+  'scrum master',
+  'technical writer',
+  'developer advocate',
+  'solutions architect',
+  'integration engineer',
+  'api developer',
+  'microservices engineer',
   'other',
 ] as const);
 
@@ -104,10 +148,15 @@ const validateExperienceLevel = (
 ): value is typeof EXPERIENCE_LEVELS extends Set<infer T> ? T : never =>
   typeof value === 'string' && EXPERIENCE_LEVELS.has(value as never);
 
-const validatePosition = (
-  value: unknown
-): value is typeof POSITION_OPTIONS extends Set<infer T> ? T : never =>
+const validatePosition = (value: unknown): value is string =>
   typeof value === 'string' && POSITION_OPTIONS.has(value as never);
+
+const validatePositions = (value: unknown): value is string[] => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return false;
+  }
+  return value.every((pos) => validatePosition(pos));
+};
 
 type PopulatedJobLean = {
   _id: mongoose.Types.ObjectId;
@@ -292,10 +341,10 @@ export const createProfile = async (
       return;
     }
 
-    if (!validatePosition(position)) {
+    if (!validatePositions(position)) {
       res.status(400).json({
         message:
-          'position must be one of frontend developer, backend developer, fullstack developer, mobile developer, devops engineer, data engineer, security engineer, other',
+          'position must be an array of valid positions. At least one position must be selected.',
       });
       return;
     }
@@ -583,14 +632,14 @@ export const updateProfile = async (
     }
 
     if (position !== undefined) {
-      if (!validatePosition(position)) {
+      if (!validatePositions(position)) {
         res.status(400).json({
           message:
-            'position must be one of frontend developer, backend developer, fullstack developer, mobile developer, devops engineer, data engineer, security engineer, other',
+            'position must be an array of valid positions. At least one position must be selected.',
         });
         return;
       }
-      graduate.position = position;
+      graduate.position = position as Position[];
     }
 
     if (education && typeof education === 'object') {
@@ -1467,7 +1516,10 @@ export const getAvailableJobs = async (
         .select(
           'title companyId location requirements salary jobType status preferedRank createdAt updatedAt description'
         )
-        .populate('companyId', 'companyName')
+        .populate({
+          path: 'companyId',
+          select: 'companyName calendly',
+        })
         .sort(sort)
         .skip(skip)
         .limit(limit)
@@ -1504,12 +1556,17 @@ export const getAvailableJobs = async (
     });
 
     const jobsPayload = jobs.map((job) => {
-      const companyName =
+      const companyData =
         job.companyId &&
         typeof job.companyId === 'object' &&
         'companyName' in job.companyId
-          ? (job.companyId as { companyName: string }).companyName
-          : undefined;
+          ? (job.companyId as {
+              companyName: string;
+              calendly?: { enabled?: boolean; publicLink?: string };
+            })
+          : null;
+      const companyName = companyData?.companyName;
+      const calendly = companyData?.calendly;
 
       return {
         id: job._id.toString(),
@@ -1529,6 +1586,12 @@ export const getAvailableJobs = async (
         status: job.status,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
+        companyCalendly: calendly?.enabled
+          ? {
+              enabled: true,
+              publicLink: calendly.publicLink,
+            }
+          : undefined,
       };
     });
 
@@ -1946,25 +2009,39 @@ export const getApplications = async (
     const applications = await Application.find({ graduateId: graduate._id })
       .populate({
         path: 'jobId',
-        select: 'title companyId location status jobType salary description',
+        select:
+          'title companyId location status jobType salary description interviewStages interviewStageTitles directContact',
         populate: {
           path: 'companyId',
-          select: 'companyName',
+          select: 'companyName calendly',
         },
+      })
+      .populate({
+        path: 'graduateId',
+        select: 'firstName lastName email',
+      })
+      .populate({
+        path: 'interviewId',
+        select: 'status scheduledAt durationMinutes',
       })
       .sort({ appliedAt: -1 })
       .lean();
 
     res.json({
       applications: applications.map((application) => ({
+        _id: application._id.toString(),
         id: application._id.toString(),
-        job: application.jobId,
+        jobId: application.jobId,
+        graduateId: application.graduateId,
         status: application.status,
         coverLetter: application.coverLetter,
         resume: application.resume,
         appliedAt: application.appliedAt,
         reviewedAt: application.reviewedAt,
         matchId: application.matchId?.toString(),
+        interviewId: application.interviewId,
+        interviewScheduledAt: application.interviewScheduledAt,
+        interviewRoomSlug: application.interviewRoomSlug,
       })),
     });
   } catch (error) {

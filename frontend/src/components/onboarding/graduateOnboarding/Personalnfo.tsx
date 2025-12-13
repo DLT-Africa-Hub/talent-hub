@@ -159,6 +159,15 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           onCountryCodeChange={setCountryCode}
         />
 
+        <Input
+          label="Input location"
+          name="location"
+          value={form.location || ''}
+          onChange={(e) => handleInputChange('location', e.target.value)}
+          required
+          placeholder="e.g., Lagos, Nigeria"
+        />
+
         <ResumeInput
           value={form.cv as UploadedFile[]}
           onChange={(files) => {

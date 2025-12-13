@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+import axios from 'axios';
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import _ from 'lodash';
@@ -10,6 +12,10 @@ import Interview, { InterviewStatus } from '../models/Interview.model';
 import MessageModel from '../models/Message.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
 import { queueJobMatching } from '../services/aiMatching.service';
+import { calendlyConfig } from '../config/secrets';
+import calendlyService from '../services/calendly.service';
+import Token, { TOKEN_TYPES } from '../models/Token.model';
+import { hashToken, calculateExpiryDate } from '../utils/security.utils';
 import {
   validateRequiredString,
   validateOptionalString,
@@ -20,6 +26,7 @@ import {
   validateSalary,
   validateSkills,
   validateNumericRange,
+  validateInterviewStages,
   deleteUndefined,
 } from '../utils/validation.utils';
 
@@ -33,6 +40,9 @@ import {
   buildInterviewRoomUrl,
   generateInterviewSlug,
 } from '../utils/interview.utils';
+
+const CLIENT_BASE_URL =
+  process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:5174';
 
 const INTERVIEW_STATUS_VALUES: readonly InterviewStatus[] = [
   'scheduled',
@@ -53,7 +63,7 @@ interface PopulatedInterview {
     | {
         firstName?: string;
         lastName?: string;
-        position?: string;
+        position?: string[];
         rank?: string;
         profilePictureUrl?: string;
       }
@@ -122,7 +132,9 @@ const serializeCompanyInterview = (
     },
     participant: {
       name: `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim(),
-      role: graduate.position,
+      role: Array.isArray(graduate.position)
+        ? graduate.position.join(', ')
+        : graduate.position || '',
       rank: graduate.rank,
       avatar: graduate.profilePictureUrl,
     },
@@ -480,6 +492,8 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     salary,
     status,
     directContact,
+    interviewStages,
+    interviewStageTitles,
   } = req.body;
 
   const validatedTitle = validateRequiredString(title, 'Title', res);
@@ -594,6 +608,60 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   const validatedDirectContact =
     directContact !== undefined ? Boolean(directContact) : true;
 
+  // Validate interviewStages (default to 1 if not provided)
+  const validatedInterviewStages = validateInterviewStages(
+    interviewStages,
+    res
+  );
+  if (validatedInterviewStages === null && interviewStages !== undefined) {
+    return; // Error already sent by validateInterviewStages
+  }
+  const finalInterviewStages = validatedInterviewStages ?? 1;
+
+  // Validate interviewStageTitles if provided
+  let validatedStageTitles: string[] | undefined;
+  if (interviewStageTitles !== undefined) {
+    if (!Array.isArray(interviewStageTitles)) {
+      res.status(400).json({
+        message: 'interviewStageTitles must be an array',
+      });
+      return;
+    }
+
+    if (interviewStageTitles.length !== finalInterviewStages) {
+      res.status(400).json({
+        message: `Number of stage titles (${interviewStageTitles.length}) must match the number of interview stages (${finalInterviewStages})`,
+      });
+      return;
+    }
+
+    // Validate each title is a non-empty string
+    const titles = interviewStageTitles
+      .map((title: unknown, index: number) => {
+        if (typeof title !== 'string') {
+          res.status(400).json({
+            message: `Stage title at index ${index} must be a string`,
+          });
+          return null;
+        }
+        const trimmed = title.trim();
+        if (!trimmed) {
+          res.status(400).json({
+            message: `Stage title at index ${index} cannot be empty`,
+          });
+          return null;
+        }
+        return trimmed;
+      })
+      .filter((title): title is string => title !== null);
+
+    if (titles.length !== finalInterviewStages) {
+      return; // Error already sent above
+    }
+
+    validatedStageTitles = titles;
+  }
+
   const jobText = `
     Title: ${validatedTitle}
     Type: ${validatedJobType}
@@ -635,6 +703,8 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
         : {}),
     },
     directContact: validatedDirectContact,
+    interviewStages: finalInterviewStages,
+    ...(validatedStageTitles && { interviewStageTitles: validatedStageTitles }),
     embedding,
     ...deleteUndefined({
       location: validatedLocation,
@@ -1036,6 +1106,8 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     salary,
     status,
     directContact,
+    interviewStages,
+    interviewStageTitles,
   } = req.body;
   let needsEmbeddingUpdate = false;
 
@@ -1112,6 +1184,88 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
   const previousDirectContact = job.directContact;
   if (directContact !== undefined) {
     job.directContact = Boolean(directContact);
+  }
+
+  if (interviewStages !== undefined) {
+    const validated = validateInterviewStages(interviewStages, res);
+    if (validated === null && interviewStages !== null) return;
+    if (validated !== null) {
+      job.interviewStages = validated;
+      // If stages changed and titles are provided, validate them match
+      if (interviewStageTitles !== undefined) {
+        if (!Array.isArray(interviewStageTitles)) {
+          res.status(400).json({
+            message: 'interviewStageTitles must be an array',
+          });
+          return;
+        }
+        if (interviewStageTitles.length !== validated) {
+          res.status(400).json({
+            message: `Number of stage titles (${interviewStageTitles.length}) must match the number of interview stages (${validated})`,
+          });
+          return;
+        }
+        const titles = interviewStageTitles
+          .map((title: unknown, index: number) => {
+            if (typeof title !== 'string') {
+              res.status(400).json({
+                message: `Stage title at index ${index} must be a string`,
+              });
+              return null;
+            }
+            const trimmed = title.trim();
+            if (!trimmed) {
+              res.status(400).json({
+                message: `Stage title at index ${index} cannot be empty`,
+              });
+              return null;
+            }
+            return trimmed;
+          })
+          .filter((title): title is string => title !== null);
+        if (titles.length === validated) {
+          job.interviewStageTitles = titles;
+        }
+      } else if (validated !== job.interviewStages) {
+        // If stages changed but no new titles provided, clear existing titles
+        job.interviewStageTitles = undefined;
+      }
+    }
+  } else if (interviewStageTitles !== undefined) {
+    // Update titles without changing stages
+    if (!Array.isArray(interviewStageTitles)) {
+      res.status(400).json({
+        message: 'interviewStageTitles must be an array',
+      });
+      return;
+    }
+    if (interviewStageTitles.length !== job.interviewStages) {
+      res.status(400).json({
+        message: `Number of stage titles (${interviewStageTitles.length}) must match the number of interview stages (${job.interviewStages})`,
+      });
+      return;
+    }
+    const titles = interviewStageTitles
+      .map((title: unknown, index: number) => {
+        if (typeof title !== 'string') {
+          res.status(400).json({
+            message: `Stage title at index ${index} must be a string`,
+          });
+          return null;
+        }
+        const trimmed = title.trim();
+        if (!trimmed) {
+          res.status(400).json({
+            message: `Stage title at index ${index} cannot be empty`,
+          });
+          return null;
+        }
+        return trimmed;
+      })
+      .filter((title): title is string => title !== null);
+    if (titles.length === job.interviewStages) {
+      job.interviewStageTitles = titles;
+    }
   }
 
   if (needsEmbeddingUpdate) {
@@ -1679,7 +1833,7 @@ export const getAllMatches = async (
       $or: [
         { firstName: searchRegex },
         { lastName: searchRegex },
-        { position: searchRegex },
+        { position: { $elemMatch: { $regex: searchRegex } } },
         { location: searchRegex },
         { skills: { $in: [searchRegex] } },
       ],
@@ -1870,7 +2024,7 @@ export const getApplications = async (
       $or: [
         { firstName: searchRegex },
         { lastName: searchRegex },
-        { position: searchRegex },
+        { position: { $elemMatch: { $regex: searchRegex } } },
         { location: searchRegex },
         { skills: { $in: [searchRegex] } },
       ],
@@ -2072,23 +2226,56 @@ export const updateApplicationStatus = async (
     return;
   }
 
-  // If status is 'accepted', create and send offer
+  // Check if there's a completed interview for this application
+  const Interview = (await import('../models/Interview.model')).default;
+  const completedInterview = await Interview.findOne({
+    applicationId: application._id,
+    status: 'completed',
+  }).lean();
+
+  const hasCompletedInterview = !!completedInterview;
+
+  // If status is 'accepted', handle based on interview status
   if (validatedStatus === 'accepted') {
-    try {
-      const { createAndSendOffer } = await import('../services/offer.service');
-      await createAndSendOffer(applicationId, userId);
-      // Status will be set to 'offer_sent' by the service
-    } catch (error) {
-      console.error('Failed to create offer:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to create and send offer';
-      res.status(500).json({
-        message: errorMessage,
-      });
-      return;
+    if (hasCompletedInterview) {
+      // Interview completed - company reviewed and decided to proceed with offer
+      try {
+        const { createAndSendOffer } = await import(
+          '../services/offer.service'
+        );
+        await createAndSendOffer(applicationId, userId);
+        // Status will be set to 'offer_sent' by the service
+      } catch (error) {
+        console.error('Failed to create offer:', error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'Failed to create and send offer';
+        res.status(500).json({
+          message: errorMessage,
+        });
+        return;
+      }
+    } else {
+      // No completed interview yet - just accept to allow interview scheduling
+      // This is the initial acceptance before interview
+      application.status = validatedStatus;
+      application.reviewedAt = new Date();
+      if (notes !== undefined) {
+        application.notes =
+          typeof notes === 'string' ? notes.trim() : undefined;
+      }
+      await application.save();
     }
+  } else if (validatedStatus === 'rejected') {
+    // Company can reject at any point, including after interview
+    // This allows company to reject even if interview was completed
+    application.status = validatedStatus;
+    application.reviewedAt = new Date();
+    if (notes !== undefined) {
+      application.notes = typeof notes === 'string' ? notes.trim() : undefined;
+    }
+    await application.save();
   } else {
     application.status = validatedStatus;
     application.reviewedAt = new Date();
@@ -2128,7 +2315,11 @@ export const updateApplicationStatus = async (
   }
 
   // Send notifications (only if not already sent by offer service)
-  if (validatedStatus !== 'accepted') {
+  // For 'accepted' status, only send notification if no offer was sent (i.e., no completed interview)
+  if (
+    validatedStatus !== 'accepted' ||
+    (validatedStatus === 'accepted' && !hasCompletedInterview)
+  ) {
     try {
       interface PopulatedGraduate {
         userId?: mongoose.Types.ObjectId;
@@ -2147,28 +2338,51 @@ export const updateApplicationStatus = async (
           graduateData.userId instanceof mongoose.Types.ObjectId
             ? graduateData.userId.toString()
             : String(graduateData.userId);
+        const notificationTitle =
+          validatedStatus === 'rejected'
+            ? 'Application Rejected'
+            : validatedStatus === 'hired'
+              ? 'Hired!'
+              : validatedStatus === 'accepted'
+                ? 'Application Accepted'
+                : 'Application Updated';
+
+        const notificationMessage =
+          validatedStatus === 'hired'
+            ? `Congratulations! You have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}.`
+            : validatedStatus === 'accepted'
+              ? `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been accepted. You can now schedule an interview from your Interviews page.`
+              : validatedStatus === 'rejected' && hasCompletedInterview
+                ? `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been rejected after the interview.`
+                : `Your application for "${jobData?.title || 'the position'}" has been ${validatedStatus}.`;
+
+        const emailSubject =
+          validatedStatus === 'hired'
+            ? `Congratulations! You've been hired at ${company.companyName}`
+            : `Application Update: ${jobData?.title || 'Position'}`;
+
+        const emailText =
+          validatedStatus === 'hired'
+            ? `Congratulations! We are pleased to inform you that you have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}. Welcome to the team!`
+            : validatedStatus === 'accepted'
+              ? `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been accepted.\n\nYou can now schedule an interview by visiting your Interviews page. After the interview is completed, the company will review your application and decide whether to proceed with an offer.\n\nGood luck!`
+              : validatedStatus === 'rejected' && hasCompletedInterview
+                ? `Thank you for your interest in the "${jobData?.title || 'the position'}" position at ${company.companyName}.\n\nAfter reviewing your interview, we have decided not to move forward with your application at this time. We appreciate the time you took to interview with us and wish you the best in your job search.`
+                : `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been ${validatedStatus}.`;
+
         await createNotification({
           userId: graduateUserId,
           type: 'application',
-          title: `Application ${validatedStatus === 'rejected' ? 'Rejected' : validatedStatus === 'hired' ? 'Hired!' : 'Updated'}`,
-          message:
-            validatedStatus === 'hired'
-              ? `Congratulations! You have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}.`
-              : `Your application for "${jobData?.title || 'the position'}" has been ${validatedStatus}.`,
+          title: notificationTitle,
+          message: notificationMessage,
           relatedId:
             application._id instanceof mongoose.Types.ObjectId
               ? application._id.toString()
               : String(application._id),
           relatedType: 'application',
           email: {
-            subject:
-              validatedStatus === 'hired'
-                ? `Congratulations! You've been hired at ${company.companyName}`
-                : `Application Update: ${jobData?.title || 'Position'}`,
-            text:
-              validatedStatus === 'hired'
-                ? `Congratulations! We are pleased to inform you that you have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}. Welcome to the team!`
-                : `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been ${validatedStatus}.`,
+            subject: emailSubject,
+            text: emailText,
           },
         });
       }
@@ -2180,13 +2394,27 @@ export const updateApplicationStatus = async (
   // Reload application to get updated status
   const updatedApplication = await Application.findById(applicationId).lean();
 
+  // Determine response message based on what happened
+  let responseMessage = 'Application status updated successfully';
+  if (validatedStatus === 'accepted') {
+    if (hasCompletedInterview) {
+      responseMessage = 'Application accepted and offer sent successfully';
+    } else {
+      responseMessage =
+        'Application accepted. Candidate can now schedule an interview. After the interview, you can accept or reject the candidate.';
+    }
+  } else if (validatedStatus === 'rejected') {
+    if (hasCompletedInterview) {
+      responseMessage = 'Application rejected after interview review';
+    } else {
+      responseMessage = 'Application rejected';
+    }
+  } else if (validatedStatus === 'hired') {
+    responseMessage = 'Candidate hired successfully';
+  }
+
   res.json({
-    message:
-      validatedStatus === 'accepted'
-        ? 'Application accepted and offer sent successfully'
-        : validatedStatus === 'hired'
-          ? 'Candidate hired successfully'
-          : 'Application status updated successfully',
+    message: responseMessage,
     application:
       updatedApplication || application.toObject({ versionKey: false }),
   });
@@ -2263,6 +2491,8 @@ export const scheduleInterview = async (
   interface PopulatedJob {
     _id?: mongoose.Types.ObjectId;
     title?: string;
+    interviewStages?: 1 | 2 | 3;
+    interviewStageTitles?: string[];
     companyId?:
       | {
           _id?: mongoose.Types.ObjectId;
@@ -2328,13 +2558,60 @@ export const scheduleInterview = async (
             String(graduateData._id || graduateData.id || graduate)
           );
 
+  // Determine which stage this interview should be
+  const totalStages = jobData?.interviewStages || 1;
+
+  // Get all completed interviews for this application to determine next stage
+  const completedInterviews = await Interview.find({
+    applicationId: application._id,
+    status: 'completed',
+  })
+    .select('stage')
+    .sort({ stage: 1 })
+    .lean();
+
+  const completedStages = completedInterviews
+    .map((iv) => iv.stage)
+    .filter(
+      (stage): stage is 1 | 2 | 3 =>
+        stage !== undefined && [1, 2, 3].includes(stage)
+    )
+    .sort((a, b) => a - b);
+
+  // Determine next stage
+  let nextStage: 1 | 2 | 3 = 1;
+  if (completedStages.length > 0) {
+    const highestCompleted = Math.max(...completedStages);
+    if (highestCompleted < totalStages) {
+      nextStage = (highestCompleted + 1) as 1 | 2 | 3;
+    } else {
+      res.status(400).json({
+        message: `All interview stages (${totalStages}) have been completed for this application`,
+      });
+      return;
+    }
+  }
+
+  // Check for active interviews (any stage) or interviews for the same stage
   const existingActiveInterviews = await Interview.find({
-    companyId: company._id,
-    graduateId: graduateId,
-    status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
+    applicationId: application._id,
+    $or: [
+      { status: { $in: ['pending_selection', 'scheduled', 'in_progress'] } },
+      { stage: nextStage, status: { $ne: 'cancelled' } },
+    ],
   }).lean();
 
   if (existingActiveInterviews.length > 0) {
+    const sameStageInterview = existingActiveInterviews.find(
+      (interview) => interview.stage === nextStage
+    );
+    if (sameStageInterview) {
+      res.status(400).json({
+        message: `Stage ${nextStage} interview is already scheduled or in progress for this application`,
+      });
+      return;
+    }
+
     // Check if any interview is pending selection
     const pendingSelection = existingActiveInterviews.find(
       (interview) => interview.status === 'pending_selection'
@@ -2364,8 +2641,6 @@ export const scheduleInterview = async (
       (interview) => interview.status === 'scheduled'
     );
     if (scheduled) {
-      // If interview is scheduled (whether in past or future), prevent new scheduling
-      // Only allow if the interview has been completed
       res.status(400).json({
         message:
           'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.',
@@ -2434,6 +2709,7 @@ export const scheduleInterview = async (
       roomSlug,
       roomUrl,
       provider: 'stream',
+      stage: nextStage,
       createdBy: new mongoose.Types.ObjectId(userId),
     });
   } else {
@@ -2444,6 +2720,7 @@ export const scheduleInterview = async (
       interview.status = 'scheduled';
       interview.roomSlug = roomSlug;
       interview.roomUrl = roomUrl;
+      interview.stage = nextStage;
       interview.updatedBy = new mongoose.Types.ObjectId(userId);
       // Reset interview timing fields
       interview.startedAt = undefined;
@@ -2820,7 +3097,9 @@ export const getAvailableGraduates = async (
           firstName: g.firstName,
           lastName: g.lastName,
           name: `${g.firstName} ${g.lastName}`,
-          position: g.position,
+          position: Array.isArray(g.position)
+            ? g.position
+            : [g.position].filter(Boolean),
           location: g.location,
           skills: g.skills || [],
           education: g.education,
@@ -2941,7 +3220,7 @@ export const getHiredCandidates = async (
     query.$or = [
       { firstName: searchRegex },
       { lastName: searchRegex },
-      { position: searchRegex },
+      { position: { $elemMatch: { $regex: searchRegex } } },
       { location: searchRegex },
       { skills: { $in: [searchRegex] } },
     ];
@@ -3058,4 +3337,405 @@ export const getHiredCandidates = async (
       pages: Math.ceil(total / pagination.limit),
     },
   });
+};
+
+/**
+ * Get Calendly OAuth authorization URL
+ * GET /api/v1/companies/calendly/connect
+ */
+export const getCalendlyAuthUrl = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    if (!calendlyConfig.enabled) {
+      res.status(503).json({
+        message: 'Calendly integration is not configured',
+      });
+      return;
+    }
+
+    if (!calendlyConfig.clientId || !calendlyConfig.redirectUri) {
+      res.status(500).json({
+        message: 'Calendly OAuth configuration is incomplete',
+      });
+      return;
+    }
+
+    // Generate state parameter for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex');
+    const stateHash = hashToken(state);
+
+    // Store state with user ID for callback verification (expires in 10 minutes)
+    await Token.create({
+      user: userId,
+      tokenHash: stateHash,
+      type: TOKEN_TYPES.CALENDLY_OAUTH_STATE,
+      expiresAt: calculateExpiryDate(10 * 60 * 1000), // 10 minutes
+      metadata: { userId: userId.toString() },
+    });
+
+    const authUrl = new URL('https://auth.calendly.com/oauth/authorize');
+    authUrl.searchParams.append('client_id', calendlyConfig.clientId);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('redirect_uri', calendlyConfig.redirectUri);
+    authUrl.searchParams.append('state', state);
+    authUrl.searchParams.append('scope', 'default');
+
+    res.json({
+      authUrl: authUrl.toString(),
+      state,
+    });
+  } catch (error) {
+    console.error('Get Calendly auth URL error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Handle Calendly OAuth callback
+ * GET /api/v1/companies/calendly/callback
+ */
+export const calendlyOAuthCallback = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const redirectToProfile = (success: boolean, message?: string) => {
+    const trimmedBase = CLIENT_BASE_URL.replace(/\/+$/, '');
+    const params = new URLSearchParams();
+
+    if (success) {
+      params.append('calendly', 'connected');
+    } else {
+      params.append('calendly', 'error');
+      if (message) {
+        params.append('message', encodeURIComponent(message));
+      }
+    }
+
+    const redirectUrl = `${trimmedBase}/company/profile?${params.toString()}`;
+    res.redirect(redirectUrl);
+  };
+
+  try {
+    const { code, state } = req.query;
+
+    if (!state || typeof state !== 'string') {
+      redirectToProfile(false, 'Missing state parameter');
+      return;
+    }
+
+    // Look up user by state token
+    const stateHash = hashToken(state);
+    const stateToken = await Token.findOne({
+      tokenHash: stateHash,
+      type: TOKEN_TYPES.CALENDLY_OAUTH_STATE,
+      consumedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!stateToken || !stateToken.isActive()) {
+      redirectToProfile(false, 'Invalid or expired state parameter');
+      return;
+    }
+
+    const userId = stateToken.user;
+
+    // Consume the state token
+    stateToken.consumedAt = new Date();
+    await stateToken.save();
+
+    if (!code || typeof code !== 'string') {
+      redirectToProfile(false, 'Authorization code is required');
+      return;
+    }
+
+    if (
+      !calendlyConfig.clientId ||
+      !calendlyConfig.clientSecret ||
+      !calendlyConfig.redirectUri
+    ) {
+      redirectToProfile(false, 'Calendly OAuth configuration is incomplete');
+      return;
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await axios.post(
+      'https://auth.calendly.com/oauth/token',
+      {
+        grant_type: 'authorization_code',
+        client_id: calendlyConfig.clientId,
+        client_secret: calendlyConfig.clientSecret,
+        code,
+        redirect_uri: calendlyConfig.redirectUri,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const { access_token, refresh_token, expires_in } = tokenResponse.data;
+
+    if (!access_token) {
+      redirectToProfile(false, 'Failed to obtain access token');
+      return;
+    }
+
+    // Get user information from Calendly
+    const userInfo = await calendlyService.getCurrentUser(
+      calendlyService.encryptToken(access_token)
+    );
+
+    // Find company profile
+    const company = await Company.findOne({ userId });
+    if (!company) {
+      redirectToProfile(false, 'Company profile not found');
+      return;
+    }
+
+    // Encrypt tokens for storage
+    const encryptedAccessToken = calendlyService.encryptToken(access_token);
+    const encryptedRefreshToken = refresh_token
+      ? calendlyService.encryptToken(refresh_token)
+      : undefined;
+
+    // Calculate token expiration
+    const tokenExpiresAt = expires_in
+      ? new Date(Date.now() + expires_in * 1000)
+      : undefined;
+
+    // Update company with Calendly connection
+    if (!company.calendly) {
+      company.calendly = {
+        enabled: false,
+      };
+    }
+
+    company.calendly.userUri = userInfo.uri;
+    company.calendly.accessToken = encryptedAccessToken;
+    company.calendly.refreshToken = encryptedRefreshToken;
+    company.calendly.tokenExpiresAt = tokenExpiresAt;
+    company.calendly.connectedAt = new Date();
+    company.calendly.enabled = true;
+
+    await company.save();
+
+    redirectToProfile(true);
+  } catch (error) {
+    console.error('Calendly OAuth callback error:', error);
+    let errorMessage = 'Internal server error';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage =
+        error.response?.data?.message || error.message || errorMessage;
+    }
+
+    redirectToProfile(false, errorMessage);
+  }
+};
+
+/**
+ * Get Calendly connection status
+ * GET /api/v1/companies/calendly/status
+ */
+export const getCalendlyStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    // Explicitly select calendly fields including accessToken (which has select: false)
+    const company = await Company.findOne({ userId }).select(
+      '+calendly.accessToken +calendly.refreshToken'
+    );
+    if (!company) {
+      res.status(404).json({ message: 'Company profile not found' });
+      return;
+    }
+
+    if (!company.calendly?.enabled) {
+      res.json({
+        connected: false,
+        enabled: false,
+      });
+      return;
+    }
+
+    // Try to get user info to verify connection is still valid
+    let userInfo = null;
+    if (!company.calendly.accessToken) {
+      res.json({
+        connected: !!company.calendly.userUri,
+        enabled: company.calendly.enabled,
+        userUri: company.calendly.userUri,
+        publicLink: company.calendly.publicLink,
+        connectedAt: company.calendly.connectedAt,
+        userInfo: null,
+      });
+      return;
+    }
+
+    try {
+      userInfo = await calendlyService.getCurrentUser(
+        company.calendly.accessToken
+      );
+    } catch (error) {
+      console.warn('Calendly token validation failed:', error);
+    }
+
+    res.json({
+      connected: !!company.calendly.userUri,
+      enabled: company.calendly.enabled,
+      userUri: company.calendly.userUri,
+      publicLink: company.calendly.publicLink,
+      connectedAt: company.calendly.connectedAt,
+      userInfo: userInfo
+        ? {
+            name: userInfo.name,
+            email: userInfo.email,
+            schedulingUrl: userInfo.scheduling_url,
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error('Get Calendly status error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Set public Calendly link (alternative to OAuth)
+ * POST /api/v1/companies/calendly/public-link
+ */
+export const setCalendlyPublicLink = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { publicLink } = req.body;
+
+    if (!publicLink || typeof publicLink !== 'string') {
+      res.status(400).json({ message: 'Public Calendly link is required' });
+      return;
+    }
+
+    // Validate that it's a Calendly URL
+    let url: URL;
+    try {
+      url = new URL(publicLink);
+    } catch {
+      res.status(400).json({ message: 'Invalid URL format' });
+      return;
+    }
+
+    // Security: Validate hostname to prevent SSRF attacks
+    const hostname = url.hostname.toLowerCase();
+    if (!hostname.includes('calendly.com')) {
+      res.status(400).json({
+        message: 'Invalid Calendly link. Must be a calendly.com URL',
+      });
+      return;
+    }
+
+    // Security: Only allow HTTPS URLs
+    if (url.protocol !== 'https:') {
+      res.status(400).json({
+        message: 'Calendly link must use HTTPS protocol',
+      });
+      return;
+    }
+
+    const company = await Company.findOne({ userId });
+    if (!company) {
+      res.status(404).json({ message: 'Company profile not found' });
+      return;
+    }
+
+    if (!company.calendly) {
+      company.calendly = {
+        enabled: false,
+      };
+    }
+
+    company.calendly.publicLink = publicLink.trim();
+    company.calendly.enabled = true;
+    company.calendly.connectedAt = new Date();
+
+    await company.save();
+
+    res.json({
+      message: 'Public Calendly link set successfully',
+      calendly: {
+        publicLink: company.calendly.publicLink,
+        enabled: company.calendly.enabled,
+      },
+    });
+  } catch (error) {
+    console.error('Set Calendly public link error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Disconnect Calendly account
+ * DELETE /api/v1/companies/calendly/disconnect
+ */
+export const disconnectCalendly = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const company = await Company.findOne({ userId });
+    if (!company) {
+      res.status(404).json({ message: 'Company profile not found' });
+      return;
+    }
+
+    if (!company.calendly) {
+      res.json({
+        message: 'Calendly account disconnected successfully',
+      });
+      return;
+    }
+
+    company.calendly.enabled = false;
+    company.calendly.accessToken = undefined;
+    company.calendly.refreshToken = undefined;
+    company.calendly.tokenExpiresAt = undefined;
+    // Keep userUri and publicLink in case user wants to reconnect
+
+    await company.save();
+
+    res.json({
+      message: 'Calendly account disconnected successfully',
+    });
+  } catch (error) {
+    console.error('Disconnect Calendly error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };

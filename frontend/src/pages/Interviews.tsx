@@ -16,10 +16,11 @@ import {
   PageLoader,
   SectionHeader,
 } from '../components/ui';
-import { ApiError } from '../types/api';
+import { ApiError, ApiApplication } from '../types/api';
 import InterviewTimeSlotSelector, {
   PendingInterview,
 } from '../components/graduate/InterviewTimeSlotSelector';
+import CalendlyScheduler from '../components/graduate/CalendlyScheduler';
 
 type InterviewRecord = {
   id: string;
@@ -148,6 +149,39 @@ const Interviews = () => {
     queryFn: () => graduateApi.getPendingSelectionInterviews(),
     enabled: isGraduate,
   });
+
+  // Fetch applications for Calendly scheduling (graduates only)
+  const { data: applicationsData } = useQuery({
+    queryKey: ['graduateApplications', 'calendly'],
+    queryFn: async () => {
+      const response = await graduateApi.getApplications({
+        page: 1,
+        limit: 100,
+      });
+      return response.applications || [];
+    },
+    enabled: isGraduate,
+  });
+
+  // Filter applications with Calendly-enabled companies and no scheduled interview
+  const calendlyApplications = useMemo(() => {
+    if (!isGraduate || !applicationsData) return [];
+
+    return applicationsData.filter((app: ApiApplication) => {
+      // Check if company has Calendly enabled
+      const hasCalendly = app.jobId?.companyId?.calendly?.enabled;
+
+      // Check if there's no scheduled interview yet
+      const hasNoInterview = !app.interviewId && !app.interviewScheduledAt;
+
+      // Only show for accepted/shortlisted applications
+      const eligibleStatus =
+        app.status &&
+        ['accepted', 'shortlisted', 'reviewed'].includes(app.status);
+
+      return hasCalendly && hasNoInterview && eligibleStatus && app._id;
+    });
+  }, [applicationsData, isGraduate]);
 
   const selectSlotMutation = useMutation({
     mutationFn: async ({
@@ -420,6 +454,65 @@ const Interviews = () => {
       )}
 
       <div className="flex flex-col gap-8">
+        {/* Calendly Scheduling Section - Graduates Only */}
+        {isGraduate && calendlyApplications.length > 0 && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <span className="text-blue-700 text-lg font-bold">📅</span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#1C1C1C]">
+                    Schedule Interview
+                  </h2>
+                  <p className="text-sm text-[#1C1C1C80]">
+                    Companies have Calendly connected - schedule your interview
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+              {calendlyApplications.map((app: ApiApplication) => {
+                const companyName =
+                  app.jobId?.companyId?.companyName || 'Company';
+                const jobTitle = app.jobId?.title || 'Position';
+                const candidateName =
+                  `${app.graduateId?.firstName || ''} ${app.graduateId?.lastName || ''}`.trim() ||
+                  'Candidate';
+
+                if (!app._id) return null;
+
+                return (
+                  <div
+                    key={app._id}
+                    className="border border-fade rounded-2xl p-4 bg-white shadow-sm"
+                  >
+                    <div className="flex flex-col gap-3 mb-4">
+                      <p className="text-sm text-[#1C1C1C80]">{companyName}</p>
+                      <p className="text-lg font-semibold text-[#1C1C1C]">
+                        {jobTitle}
+                      </p>
+                    </div>
+                    <CalendlyScheduler
+                      applicationId={app._id}
+                      candidateName={candidateName}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({
+                          queryKey: ['interviews'],
+                        });
+                        queryClient.invalidateQueries({
+                          queryKey: ['graduateApplications'],
+                        });
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Pending Selection Section - Graduates Only */}
         {isGraduate && pendingInterviews.length > 0 && (
           <div className="flex flex-col gap-4">

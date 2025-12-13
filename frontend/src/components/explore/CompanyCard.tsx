@@ -15,6 +15,10 @@ export interface Company {
   wage: string;
   image: string;
   description?: string;
+  calendly?: {
+    enabled?: boolean;
+    publicLink?: string;
+  };
 }
 
 interface CompanyCardProps {

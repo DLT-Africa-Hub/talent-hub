@@ -91,10 +91,35 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
           : Math.min(100, Math.round(match.score * 100))
         : 0;
 
+      // Get first position if array, otherwise use as string
+      const position = Array.isArray(graduate.position)
+        ? graduate.position[0]
+        : graduate.position;
+
+      // Get CV from graduate - handle different formats
+      let cvUrl: string | undefined;
+      if (graduate.cv) {
+        // If it's a string, use it directly
+        if (typeof graduate.cv === 'string') {
+          cvUrl = graduate.cv;
+        }
+        // If it's an array, find the display CV or use the first one
+        else if (Array.isArray(graduate.cv) && graduate.cv.length > 0) {
+          const displayCV = graduate.cv.find(
+            (cv: { onDisplay?: boolean; fileUrl?: string }) => cv.onDisplay
+          );
+          cvUrl = displayCV?.fileUrl || graduate.cv[0]?.fileUrl;
+        }
+        // If it's an object with fileUrl
+        else if (typeof graduate.cv === 'object' && 'fileUrl' in graduate.cv) {
+          cvUrl = (graduate.cv as { fileUrl?: string }).fileUrl;
+        }
+      }
+
       return {
         id: match._id || `match-${index}`,
         name: fullName || 'Unknown Candidate',
-        role: job.title || graduate.position || 'Developer',
+        role: job.title || position || 'Developer',
         status: 'matched',
         rank: getCandidateRank(graduate.rank),
         statusLabel: 'Matched',
@@ -103,8 +128,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv:
-          typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
+        cv: cvUrl,
         matchPercentage: matchScore,
         jobType: job.jobType,
         salary: job.salary,
@@ -146,6 +170,11 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         cvUrl = application.resume.fileUrl;
       }
 
+      // Get first position if array, otherwise use as string
+      const position = Array.isArray(graduate.position)
+        ? graduate.position[0]
+        : graduate.position;
+
       return {
         id: application._id || `application-${index}`,
         applicationId: application._id?.toString(),
@@ -153,7 +182,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         jobTitle: job.title,
         companyName: company.companyName,
         name: fullName || 'Unknown Candidate',
-        role: graduate.position || 'Developer',
+        role: position || 'Developer',
         status: candidateStatus,
         rank: getCandidateRank(graduate.rank),
         statusLabel:

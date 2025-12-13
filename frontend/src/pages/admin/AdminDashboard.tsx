@@ -15,7 +15,7 @@ export interface CompanyStatsApi {
   _id: string;
   companyName: string;
   postedJobs: number;
-  hiredCandidates?: string[]; 
+  hiredCandidates?: string[];
 }
 
 export interface HiringCompanyStats {

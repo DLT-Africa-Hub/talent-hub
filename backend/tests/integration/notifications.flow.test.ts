@@ -90,9 +90,10 @@ describe('Notification workflows', () => {
     const companyRegisterResponse = await companyAgent
       .post('/api/v1/auth/register')
       .send({
-        email: 'company@example.com',
+        email: 'company@testcorp.com',
         password: 'Password123!',
         role: 'company',
+        companyWebsite: 'https://testcorp.com',
       })
       .expect(201);
 
@@ -218,9 +219,10 @@ describe('Notification workflows', () => {
     const companyRegisterResponse = await companyAgent
       .post('/api/v1/auth/register')
       .send({
-        email: 'company2@example.com',
+        email: 'company2@testcorp.com',
         password: 'Password123!',
         role: 'company',
+        companyWebsite: 'https://testcorp.com',
       })
       .expect(201);
 

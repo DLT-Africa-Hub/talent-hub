@@ -4,6 +4,7 @@ import Interview, { ISuggestedTimeSlot } from '../models/Interview.model';
 import Application from '../models/Application.model';
 import Company from '../models/Company.model';
 import Graduate from '../models/Graduate.model';
+import Job from '../models/Job.model';
 import { createNotification } from '../services/notification.service';
 import {
   buildInterviewRoomUrl,
@@ -15,6 +16,7 @@ import {
   formatTimeSlotForDisplay,
 } from '../utils/timezone.utils';
 import { generateStreamToken, getStreamClient } from '../utils/stream.utils';
+import calendlyService from '../services/calendly.service';
 
 export const getInterviewBySlug = async (
   req: Request,
@@ -193,7 +195,9 @@ export const getInterviewBySlug = async (
         name: graduateName,
         avatar: graduate.profilePictureUrl,
         rank: graduate.rank,
-        role: graduate.position,
+        role: Array.isArray(graduate.position)
+          ? graduate.position.join(', ')
+          : graduate.position || '',
       },
       participant: {
         role: participantRole,
@@ -309,7 +313,7 @@ export const suggestTimeSlots = async (
   const application = await Application.findById(applicationId)
     .populate({
       path: 'jobId',
-      select: 'companyId title',
+      select: 'companyId title interviewStages interviewStageTitles',
     })
     .populate({
       path: 'graduateId',
@@ -325,6 +329,8 @@ export const suggestTimeSlots = async (
   interface PopulatedJob {
     _id?: mongoose.Types.ObjectId;
     title?: string;
+    interviewStages?: 1 | 2 | 3;
+    interviewStageTitles?: string[];
     companyId?: mongoose.Types.ObjectId;
   }
   interface PopulatedGraduate {
@@ -364,13 +370,56 @@ export const suggestTimeSlots = async (
     return;
   }
 
-  // Check for existing active interview for this application
+  // Determine which stage this interview should be
+  const totalStages = jobData?.interviewStages || 1;
+
+  // Get all completed interviews for this application to determine next stage
+  const completedInterviews = await Interview.find({
+    applicationId: application._id,
+    status: 'completed',
+  })
+    .select('stage')
+    .sort({ stage: 1 })
+    .lean();
+
+  const completedStages = completedInterviews
+    .map((iv) => iv.stage)
+    .filter(
+      (stage): stage is 1 | 2 | 3 =>
+        stage !== undefined && [1, 2, 3].includes(stage)
+    )
+    .sort((a, b) => a - b);
+
+  // Determine next stage
+  let nextStage: 1 | 2 | 3 = 1;
+  if (completedStages.length > 0) {
+    const highestCompleted = Math.max(...completedStages);
+    if (highestCompleted < totalStages) {
+      nextStage = (highestCompleted + 1) as 1 | 2 | 3;
+    } else {
+      res.status(400).json({
+        message: `All interview stages (${totalStages}) have been completed for this application`,
+      });
+      return;
+    }
+  }
+
+  // Check for existing active interview for this application or same stage
   const existingInterviewForApplication = await Interview.findOne({
     applicationId: application._id,
-    status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
+    $or: [
+      { status: { $in: ['pending_selection', 'scheduled', 'in_progress'] } },
+      { stage: nextStage, status: { $ne: 'cancelled' } },
+    ],
   });
 
   if (existingInterviewForApplication) {
+    if (existingInterviewForApplication.stage === nextStage) {
+      res.status(400).json({
+        message: `Stage ${nextStage} interview is already scheduled or pending for this application`,
+      });
+      return;
+    }
     res.status(400).json({
       message:
         'An interview is already scheduled or pending for this application',
@@ -430,6 +479,7 @@ export const suggestTimeSlots = async (
     roomSlug,
     roomUrl,
     provider: 'stream',
+    stage: nextStage,
     createdBy: new mongoose.Types.ObjectId(userId),
     suggestedTimeSlots: suggestedSlots,
     companyTimezone,
@@ -939,5 +989,775 @@ export const generateStreamTokenController = async (
           ? error.message
           : 'Failed to generate Stream token',
     });
+  }
+};
+
+/**
+ * Get company's Calendly availability (for candidates to view and select)
+ * GET /api/v1/interviews/calendly/availability/:applicationId
+ */
+export const getCalendlyAvailability = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { applicationId } = req.params;
+    const { startTime, endTime, eventTypeUri } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      res.status(400).json({ message: 'Invalid application ID' });
+      return;
+    }
+
+    // Get application and verify graduate access (candidate viewing company availability)
+    // Explicitly select calendly fields including accessToken and refreshToken (which have select: false)
+    const application = await Application.findById(applicationId)
+      .populate({
+        path: 'jobId',
+        select: 'companyId title',
+        populate: {
+          path: 'companyId',
+          select:
+            '_id userId calendly.userUri calendly.enabled calendly.publicLink calendly.connectedAt calendly.tokenExpiresAt +calendly.accessToken +calendly.refreshToken',
+        },
+      })
+      .populate({
+        path: 'graduateId',
+        select: 'userId',
+      })
+      .lean();
+
+    if (!application) {
+      res.status(404).json({ message: 'Application not found' });
+      return;
+    }
+
+    const graduate = application.graduateId as {
+      userId?: mongoose.Types.ObjectId;
+    };
+    const graduateUserId = graduate?.userId;
+
+    // Verify the candidate owns this application
+    if (!graduateUserId || graduateUserId.toString() !== userId) {
+      res.status(403).json({ message: 'Access denied' });
+      return;
+    }
+
+    const job = application.jobId as {
+      companyId?: {
+        _id?: mongoose.Types.ObjectId;
+        userId?: mongoose.Types.ObjectId;
+        calendly?: {
+          enabled?: boolean;
+          userUri?: string;
+          accessToken?: string;
+          refreshToken?: string;
+          publicLink?: string;
+          tokenExpiresAt?: Date;
+        };
+      };
+    };
+
+    if (!job?.companyId?.calendly || !job.companyId.calendly.enabled) {
+      res.status(400).json({
+        message: 'Company has not connected their Calendly account',
+      });
+      return;
+    }
+
+    // Validate time range
+    if (
+      !startTime ||
+      !endTime ||
+      typeof startTime !== 'string' ||
+      typeof endTime !== 'string'
+    ) {
+      res.status(400).json({
+        message:
+          'startTime and endTime query parameters are required (ISO 8601 format)',
+      });
+      return;
+    }
+
+    // Validate dates are valid and startTime is before endTime
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      res.status(400).json({
+        message: 'Invalid date format. Dates must be in ISO 8601 format.',
+      });
+      return;
+    }
+
+    if (startDate >= endDate) {
+      res.status(400).json({
+        message: 'startTime must be before endTime',
+      });
+      return;
+    }
+
+    // Ensure dates are in the future (at least 1 hour from now)
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+    if (startDate < oneHourFromNow) {
+      res.status(400).json({
+        message: 'startTime must be at least 1 hour in the future',
+      });
+      return;
+    }
+
+    // Calendly API constraint: date range cannot be greater than 7 days
+    const dateRangeMs = endDate.getTime() - startDate.getTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    if (dateRangeMs > sevenDaysMs) {
+      res.status(400).json({
+        message:
+          'Date range cannot exceed 7 days. Please select a smaller date range.',
+      });
+      return;
+    }
+
+    const companyCalendly = job.companyId.calendly as {
+      enabled?: boolean;
+      userUri?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      tokenExpiresAt?: Date;
+      publicLink?: string;
+      connectedAt?: Date;
+    };
+
+    // Always fetch event types to return to frontend (even if eventTypeUri is provided)
+    let eventTypesData: {
+      collection: Array<{
+        uri: string;
+        name: string;
+        active: boolean;
+        duration?: number;
+      }>;
+    } | null = null;
+    let eventTypeUriToUse = eventTypeUri as string | undefined;
+
+    if (!companyCalendly.accessToken) {
+      res.status(400).json({
+        message: 'Company must connect Calendly via OAuth to view availability',
+      });
+      return;
+    }
+
+    if (!companyCalendly.userUri) {
+      res.status(400).json({
+        message: 'Company Calendly user URI is missing',
+      });
+      return;
+    }
+
+    // Check if token is expired and refresh if needed
+    let accessTokenToUse = companyCalendly.accessToken;
+    const companyId = (job.companyId as { _id?: mongoose.Types.ObjectId })._id;
+
+    if (
+      companyCalendly.tokenExpiresAt &&
+      companyCalendly.tokenExpiresAt < new Date()
+    ) {
+      // Token is expired, try to refresh it
+      if (!companyCalendly.refreshToken) {
+        res.status(400).json({
+          message:
+            'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+        });
+        return;
+      }
+
+      try {
+        const refreshResult = await calendlyService.refreshAccessToken(
+          companyCalendly.refreshToken
+        );
+
+        // Update company with new tokens
+        if (companyId) {
+          const company = await Company.findById(companyId);
+          if (company && company.calendly) {
+            company.calendly.accessToken = refreshResult.accessToken;
+            if (refreshResult.refreshToken) {
+              company.calendly.refreshToken = refreshResult.refreshToken;
+            }
+            if (refreshResult.expiresIn) {
+              company.calendly.tokenExpiresAt = new Date(
+                Date.now() + refreshResult.expiresIn * 1000
+              );
+            }
+            await company.save();
+          }
+        }
+
+        accessTokenToUse = refreshResult.accessToken;
+      } catch (refreshError) {
+        console.error('Failed to refresh Calendly access token:', refreshError);
+        res.status(400).json({
+          message:
+            'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+        });
+        return;
+      }
+    }
+
+    // Fetch event types from Calendly
+    try {
+      // Validate access token exists and is not empty
+      if (!accessTokenToUse || accessTokenToUse.trim() === '') {
+        res.status(400).json({
+          message:
+            'Company Calendly access token is missing or invalid. Please reconnect Calendly.',
+        });
+        return;
+      }
+
+      const eventTypes = await calendlyService.getEventTypes(
+        companyCalendly.userUri,
+        accessTokenToUse
+      );
+
+      if (eventTypes.collection.length === 0) {
+        res.status(400).json({
+          message: 'Company has no available Calendly event types',
+        });
+        return;
+      }
+
+      // Format event types for response (include duration for calculating end_time)
+      eventTypesData = {
+        collection: eventTypes.collection.map((et) => ({
+          uri: et.uri,
+          name: et.name,
+          active: et.active,
+          duration: et.duration, // Include duration for calculating end_time
+        })),
+      };
+
+      // If no eventTypeUri provided, use the first active event type
+      if (!eventTypeUriToUse) {
+        const activeEventType = eventTypes.collection.find((et) => et.active);
+        eventTypeUriToUse =
+          activeEventType?.uri || eventTypes.collection[0].uri;
+      }
+    } catch (error) {
+      console.error('Error fetching event types:', error);
+      res.status(500).json({
+        message: 'Failed to fetch Calendly event types',
+      });
+      return;
+    }
+
+    // Get available times
+    if (!accessTokenToUse) {
+      res.status(400).json({
+        message:
+          'Company Calendly access token is missing. Please reconnect Calendly.',
+      });
+      return;
+    }
+
+    if (!eventTypeUriToUse) {
+      res.status(400).json({
+        message: 'No event type available for scheduling',
+      });
+      return;
+    }
+
+    try {
+      const availability = await calendlyService.getAvailableTimes(
+        eventTypeUriToUse,
+        startTime,
+        endTime,
+        accessTokenToUse
+      );
+
+      // Get event type duration to calculate end_time for slots
+      // Use eventTypesData which already includes duration
+      const selectedEventType = eventTypesData?.collection?.find(
+        (et) => et.uri === eventTypeUriToUse
+      );
+      const eventDurationMinutes = selectedEventType?.duration || 30; // Default to 30 minutes
+
+      // Add end_time to each slot if not present
+      const slotsWithEndTime = (availability.collection || []).map(
+        (slot: { start_time: string; end_time?: string }) => {
+          if (slot.end_time) {
+            return slot; // Already has end_time
+          }
+          // Calculate end_time from start_time + duration
+          const startTime = new Date(slot.start_time);
+          const endTime = new Date(
+            startTime.getTime() + eventDurationMinutes * 60 * 1000
+          );
+          return {
+            ...slot,
+            end_time: endTime.toISOString(),
+          };
+        }
+      );
+
+      res.json({
+        availableSlots: slotsWithEndTime,
+        eventTypeUri: eventTypeUriToUse,
+        eventTypes: eventTypesData?.collection || [],
+      });
+    } catch (error) {
+      console.error('Error fetching Calendly availability:', error);
+      res.status(500).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to fetch Calendly availability',
+      });
+    }
+  } catch (error) {
+    console.error('Get Calendly availability error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Schedule interview via Calendly
+ * POST /api/v1/interviews/calendly/schedule/:applicationId
+ */
+export const scheduleCalendlyInterview = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { applicationId } = req.params;
+    const { eventTypeUri, startTime, inviteeEmail, inviteeName, location } =
+      req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      res.status(400).json({ message: 'Invalid application ID' });
+      return;
+    }
+
+    if (!eventTypeUri || !startTime || !inviteeEmail) {
+      res.status(400).json({
+        message: 'eventTypeUri, startTime, and inviteeEmail are required',
+      });
+      return;
+    }
+
+    // Validate startTime format
+    const startDate = new Date(startTime);
+    if (isNaN(startDate.getTime())) {
+      res
+        .status(400)
+        .json({ message: 'Invalid startTime format (ISO 8601 required)' });
+      return;
+    }
+
+    if (startDate < new Date()) {
+      res.status(400).json({ message: 'startTime must be in the future' });
+      return;
+    }
+
+    // Get application and verify graduate access (candidate scheduling)
+    // Explicitly select calendly fields including accessToken (which has select: false)
+    const application = await Application.findById(applicationId)
+      .populate({
+        path: 'jobId',
+        select: 'companyId title interviewStages interviewStageTitles',
+        populate: {
+          path: 'companyId',
+          select:
+            '_id userId companyName calendly.userUri calendly.enabled calendly.publicLink calendly.connectedAt calendly.tokenExpiresAt +calendly.accessToken +calendly.refreshToken',
+        },
+      })
+      .populate({
+        path: 'graduateId',
+        select: 'userId firstName lastName',
+      })
+      .lean();
+
+    if (!application) {
+      res.status(404).json({ message: 'Application not found' });
+      return;
+    }
+
+    const graduate = application.graduateId as {
+      _id: mongoose.Types.ObjectId;
+      userId?: mongoose.Types.ObjectId;
+      firstName?: string;
+      lastName?: string;
+    };
+    const graduateUserId = graduate?.userId;
+
+    // Verify the candidate owns this application
+    if (!graduateUserId || graduateUserId.toString() !== userId) {
+      res.status(403).json({ message: 'Access denied' });
+      return;
+    }
+
+    const job = application.jobId as {
+      _id: mongoose.Types.ObjectId;
+      interviewStages?: 1 | 2 | 3;
+      interviewStageTitles?: string[];
+      companyId?: {
+        _id?: mongoose.Types.ObjectId;
+        userId?: mongoose.Types.ObjectId;
+        companyName?: string;
+        calendly?: {
+          enabled?: boolean;
+          userUri?: string;
+          accessToken?: string;
+          refreshToken?: string;
+          tokenExpiresAt?: Date;
+        };
+      };
+      title?: string;
+    };
+    const companyIdValue = job?.companyId?._id;
+
+    if (!companyIdValue) {
+      res.status(404).json({ message: 'Company not found' });
+      return;
+    }
+
+    const companyId: mongoose.Types.ObjectId =
+      companyIdValue instanceof mongoose.Types.ObjectId
+        ? companyIdValue
+        : new mongoose.Types.ObjectId(String(companyIdValue));
+
+    const companyCalendly = job?.companyId?.calendly as
+      | {
+          enabled?: boolean;
+          userUri?: string;
+          accessToken?: string;
+          refreshToken?: string;
+          tokenExpiresAt?: Date;
+        }
+      | undefined;
+
+    if (
+      !companyCalendly ||
+      !companyCalendly.enabled ||
+      !companyCalendly.accessToken
+    ) {
+      res.status(400).json({
+        message:
+          'Company must connect Calendly via OAuth to schedule interviews',
+      });
+      return;
+    }
+
+    // Check if token is expired and refresh if needed
+    let accessTokenToUse = companyCalendly.accessToken;
+
+    if (
+      companyCalendly.tokenExpiresAt &&
+      companyCalendly.tokenExpiresAt < new Date()
+    ) {
+      // Token is expired, try to refresh it
+      if (!companyCalendly.refreshToken) {
+        res.status(400).json({
+          message:
+            'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+        });
+        return;
+      }
+
+      try {
+        const refreshResult = await calendlyService.refreshAccessToken(
+          companyCalendly.refreshToken
+        );
+
+        // Update company with new tokens
+        if (companyId) {
+          const company = await Company.findById(companyId);
+          if (company && company.calendly) {
+            company.calendly.accessToken = refreshResult.accessToken;
+            if (refreshResult.refreshToken) {
+              company.calendly.refreshToken = refreshResult.refreshToken;
+            }
+            if (refreshResult.expiresIn) {
+              company.calendly.tokenExpiresAt = new Date(
+                Date.now() + refreshResult.expiresIn * 1000
+              );
+            }
+            await company.save();
+          }
+        }
+
+        accessTokenToUse = refreshResult.accessToken;
+      } catch (refreshError) {
+        console.error('Failed to refresh Calendly access token:', refreshError);
+        res.status(400).json({
+          message:
+            'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+        });
+        return;
+      }
+    }
+
+    // Get job to check interview stages (if not already populated)
+    let jobData = job;
+    if (!job.interviewStages) {
+      const jobDoc = await Job.findById(application.jobId)
+        .select('interviewStages interviewStageTitles')
+        .lean();
+      if (!jobDoc) {
+        res.status(404).json({ message: 'Job not found' });
+        return;
+      }
+      jobData = {
+        ...job,
+        interviewStages: jobDoc.interviewStages,
+        interviewStageTitles: jobDoc.interviewStageTitles,
+      };
+    }
+
+    // Determine which stage this interview should be
+    // Get all completed interviews for this application to determine next stage
+    const completedInterviews = await Interview.find({
+      applicationId: application._id,
+      status: 'completed',
+    })
+      .select('stage')
+      .sort({ stage: 1 })
+      .lean();
+
+    const completedStages = completedInterviews
+      .map((iv) => iv.stage)
+      .filter(
+        (stage): stage is 1 | 2 | 3 =>
+          stage !== undefined && [1, 2, 3].includes(stage)
+      )
+      .sort((a, b) => a - b);
+
+    // Determine next stage
+    const totalStages = jobData.interviewStages || 1;
+    let nextStage: 1 | 2 | 3 = 1;
+    if (completedStages.length > 0) {
+      const highestCompleted = Math.max(...completedStages);
+      if (highestCompleted < totalStages) {
+        nextStage = (highestCompleted + 1) as 1 | 2 | 3;
+      } else {
+        res.status(400).json({
+          message: `All interview stages (${totalStages}) have been completed for this application`,
+        });
+        return;
+      }
+    }
+
+    // Check if there's already an interview for this stage or any active interview
+    const existingInterview = await Interview.findOne({
+      applicationId: application._id,
+      $or: [
+        { status: { $in: ['pending_selection', 'scheduled', 'in_progress'] } },
+        { stage: nextStage, status: { $ne: 'cancelled' } },
+      ],
+    });
+
+    if (existingInterview) {
+      if (existingInterview.stage === nextStage) {
+        res.status(400).json({
+          message: `Stage ${nextStage} interview is already scheduled or in progress for this application`,
+        });
+        return;
+      }
+      res.status(400).json({
+        message:
+          'An interview is already scheduled or pending for this application',
+      });
+      return;
+    }
+
+    // Create Calendly event using company's access token
+    let calendlyEvent;
+    try {
+      calendlyEvent = await calendlyService.createScheduledEvent(
+        eventTypeUri,
+        inviteeEmail,
+        startTime,
+        accessTokenToUse,
+        {
+          inviteeName:
+            inviteeName || `${graduate.firstName} ${graduate.lastName}`.trim(),
+          location,
+        }
+      );
+    } catch (error) {
+      console.error('Error creating Calendly event:', error);
+      res.status(500).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create Calendly event',
+      });
+      return;
+    }
+
+    // Calculate end time (default 30 minutes if not provided by Calendly)
+    const endDate = calendlyEvent.end_time
+      ? new Date(calendlyEvent.end_time)
+      : new Date(startDate.getTime() + 30 * 60 * 1000);
+    const durationMinutes = Math.round(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60)
+    );
+
+    // Get company user ID
+    const companyUserIdValue =
+      job.companyId &&
+      typeof job.companyId === 'object' &&
+      'userId' in job.companyId
+        ? (job.companyId as { userId?: mongoose.Types.ObjectId }).userId
+        : null;
+
+    if (!companyUserIdValue) {
+      res.status(404).json({ message: 'Company user ID not found' });
+      return;
+    }
+
+    // Create interview record
+    const roomSlug = generateInterviewSlug();
+    const roomUrl =
+      calendlyEvent.location?.location || buildInterviewRoomUrl(roomSlug);
+
+    const interview = new Interview({
+      applicationId: application._id,
+      jobId: jobData._id || job._id,
+      companyId: companyId,
+      companyUserId: companyUserIdValue,
+      graduateId: graduate._id,
+      graduateUserId: graduate.userId!,
+      scheduledAt: startDate,
+      durationMinutes,
+      status: 'scheduled',
+      roomSlug,
+      roomUrl,
+      provider: 'calendly',
+      stage: nextStage,
+      calendlyEventUri: calendlyEvent.uri,
+      calendlyEventTypeUri: eventTypeUri,
+      calendlyInviteeUri: calendlyEvent.event_memberships?.[0]?.user,
+      createdBy: graduate.userId!,
+    });
+
+    const savedInterview = await interview.save();
+
+    // Update application status
+    const newApplicationStatus =
+      application.status === 'pending' || application.status === 'reviewed'
+        ? 'shortlisted'
+        : application.status;
+
+    await Application.findByIdAndUpdate(application._id, {
+      interviewScheduledAt: startDate,
+      interviewLink: roomUrl,
+      status: newApplicationStatus,
+    });
+
+    // Send notifications
+    try {
+      const graduateName =
+        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() ||
+        'there';
+      const companyName =
+        job.companyId &&
+        typeof job.companyId === 'object' &&
+        'companyName' in job.companyId
+          ? (job.companyId as { companyName: string }).companyName
+          : 'the company';
+      const formattedDate = startDate.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+
+      // Get stage title if available
+      const stageTitle =
+        jobData.interviewStageTitles &&
+        jobData.interviewStageTitles[nextStage - 1]
+          ? jobData.interviewStageTitles[nextStage - 1]
+          : `Stage ${nextStage}`;
+      const stageInfo =
+        jobData.interviewStages && jobData.interviewStages > 1
+          ? ` (${stageTitle})`
+          : '';
+
+      // Notify candidate
+      await createNotification({
+        userId: graduate.userId!,
+        type: 'interview',
+        title: 'Interview Scheduled',
+        message: `An interview${stageInfo} has been scheduled for ${job.title || 'the position'} at ${companyName} on ${formattedDate}`,
+        relatedId: savedInterview._id as mongoose.Types.ObjectId,
+        relatedType: 'interview',
+        email: {
+          subject: `Interview Scheduled: ${job.title || 'Position'} at ${companyName}${stageInfo}`,
+          text: `Hello ${graduateName},\n\nYour interview${stageInfo} for "${job.title || 'the position'}" at ${companyName} has been scheduled via Calendly.\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}\n\n📅 Add to Calendar: The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+        },
+      });
+
+      // Notify company
+      const companyUserId =
+        job.companyId &&
+        typeof job.companyId === 'object' &&
+        'userId' in job.companyId
+          ? (job.companyId as { userId?: mongoose.Types.ObjectId }).userId
+          : null;
+
+      if (companyUserId) {
+        await createNotification({
+          userId: companyUserId,
+          type: 'interview',
+          title: 'Interview Scheduled via Calendly',
+          message: `${graduateName} has scheduled an interview${stageInfo} for "${job.title || 'the position'}" via Calendly on ${formattedDate}`,
+          relatedId: savedInterview._id as mongoose.Types.ObjectId,
+          relatedType: 'interview',
+          email: {
+            subject: `Interview Scheduled: ${graduateName} - ${job.title || 'Position'}${stageInfo}`,
+            text: `Hello,\n\n${graduateName} has scheduled an interview${stageInfo} via Calendly for "${job.title || 'the position'}".\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}\n\n📅 The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.`,
+          },
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+    }
+
+    res.json({
+      message: 'Interview scheduled successfully via Calendly',
+      interview: {
+        id: String(savedInterview._id),
+        scheduledAt: savedInterview.scheduledAt,
+        durationMinutes: savedInterview.durationMinutes,
+        roomUrl: savedInterview.roomUrl,
+        calendlyEventUri: savedInterview.calendlyEventUri,
+        status: savedInterview.status,
+      },
+      calendlyEvent: {
+        uri: calendlyEvent.uri,
+        startTime: calendlyEvent.start_time,
+        endTime: calendlyEvent.end_time,
+        location: calendlyEvent.location,
+      },
+    });
+  } catch (error) {
+    console.error('Schedule Calendly interview error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };

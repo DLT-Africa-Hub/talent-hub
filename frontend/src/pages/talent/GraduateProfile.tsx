@@ -38,9 +38,18 @@ const GraduateProfile = () => {
   const fullName = graduate
     ? `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim()
     : '';
+
   const headline =
-    graduate?.position ||
-    graduate?.roles?.join(', ') ||
+    (graduate?.position
+      ? Array.isArray(graduate.position)
+        ? graduate.position[0]
+        : graduate.position
+      : null) ||
+    (graduate?.roles
+      ? Array.isArray(graduate.roles)
+        ? graduate.roles[0]
+        : graduate.roles
+      : null) ||
     'Full-Stack Developer, Product Designer';
   const summary =
     graduate?.summary ||
@@ -423,8 +432,8 @@ const DetailList = ({ items }: { items: DetailItem[] }) => (
         key={item.label}
         className="flex flex-col sm:flex-row sm:items-center justify-between p-[16px] rounded-[14px] border border-[#F0F0F0]"
       >
-        <p className="text-[14px] text-[#1C1C1C80]">{item.label}</p>
-        <p className="text-[15px] font-medium text-[#1C1C1C] mt-[6px] sm:mt-0 sm:text-right">
+        <p className="text-[14px] text-[#1C1C1C80]">{item.label}: &nbsp;</p>
+        <p className="text-[15px] font-medium text-[#1C1C1C] mt-[6px] sm:mt-0 ml-2">
           {item.value || 'Not specified'}
         </p>
       </div>

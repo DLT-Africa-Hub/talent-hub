@@ -35,6 +35,12 @@ class EmailService {
       return;
     }
 
+    // In test environment, skip SMTP initialization
+    if (process.env.NODE_ENV === 'test') {
+      this.initialized = true;
+      return;
+    }
+
     if (!emailConfig.enabled || emailConfig.provider === 'console') {
       this.initialized = true;
       return;
@@ -73,25 +79,48 @@ class EmailService {
     message: EmailMessage,
     attempt = 1
   ): Promise<void> {
+    // In test environment, log instead of sending (check BEFORE initialize)
+    // This check must happen first, even if transporter is already initialized
+    if (process.env.NODE_ENV === 'test') {
+      console.log('[Email Service] 📧 TEST MODE - Email logged (not sent):');
+      console.log(`  To: ${message.to}`);
+      console.log(`  Subject: ${message.subject}`);
+      if (message.text) {
+        console.log(
+          `  Text: ${message.text.substring(0, 200)}${message.text.length > 200 ? '...' : ''}`
+        );
+      }
+      if (message.html) {
+        console.log(`  HTML: [${message.html.length} characters]`);
+      }
+      return;
+    }
+
     await this.initialize();
 
-    // Console mode (development/testing)
+    // Console mode (development)
     if (
       !emailConfig.enabled ||
       emailConfig.provider === 'console' ||
       !this.transporter
     ) {
-      if (process.env.NODE_ENV !== 'test') {
-        console.info('[Email Service] 📧 Console Mode');
-        console.info(`To: ${message.to}`);
-        console.info(`Subject: ${message.subject}`);
-        if (message.text) {
-          console.info(`Text:\n${message.text}`);
-        }
-        if (message.html) {
-          console.info(`HTML: [HTML content]`);
-        }
+      console.info('[Email Service] 📧 Console Mode');
+      console.info(`To: ${message.to}`);
+      console.info(`Subject: ${message.subject}`);
+      if (message.text) {
+        console.info(`Text:\n${message.text}`);
       }
+      if (message.html) {
+        console.info(`HTML: [HTML content]`);
+      }
+      return;
+    }
+
+    // Double-check test environment before sending (in case transporter was initialized before NODE_ENV was set)
+    if (process.env.NODE_ENV === 'test') {
+      console.log('[Email Service] 📧 TEST MODE - Email logged (not sent):');
+      console.log(`  To: ${message.to}`);
+      console.log(`  Subject: ${message.subject}`);
       return;
     }
 

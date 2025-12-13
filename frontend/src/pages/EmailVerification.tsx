@@ -6,13 +6,12 @@ import { Button } from '../components/ui';
 import { ApiError } from '../types/api';
 
 const EmailVerification = () => {
-  const { user, isAuthenticated, updateUser } = useAuth();
+  const { user, isAuthenticated, updateUser, ingestAuthPayload } = useAuth();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [shouldPromptLogin, setShouldPromptLogin] = useState(false);
   const navigate = useNavigate();
 
   // Check if token is in URL (from email link)
@@ -41,23 +40,27 @@ const EmailVerification = () => {
         const response = await authApi.verifyEmail(verificationToken);
         const responseRole = response?.user?.role || user?.role || null;
 
-        // Update user in context
-        if (user) {
-          const updatedUser = { ...user, emailVerified: true };
-          updateUser(updatedUser);
-        }
-
-        if (isAuthenticated) {
+        // Auto-login the user after email verification
+        // The backend now returns auth tokens, so we can automatically authenticate
+        if (response.accessToken && response.refreshToken) {
+          ingestAuthPayload(response);
           setSuccess(
             'Email verified successfully! Redirecting to your dashboard...'
           );
           const destination = getDestinationForRole(responseRole);
           setTimeout(() => {
             navigate(destination);
-          }, 2000);
+          }, 1500);
         } else {
-          setSuccess('Email verified successfully! You can now sign in.');
-          setShouldPromptLogin(true);
+          // Fallback: if tokens aren't returned, update user and prompt login
+          if (user) {
+            const updatedUser = { ...user, emailVerified: true };
+            updateUser(updatedUser);
+          }
+          setSuccess('Email verified successfully! Redirecting to login...');
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
         }
       } catch (err) {
         console.error('Email verification error:', err);
@@ -70,7 +73,7 @@ const EmailVerification = () => {
         setLoading(false);
       }
     },
-    [isAuthenticated, navigate, updateUser, user]
+    [navigate, ingestAuthPayload, user, updateUser]
   );
 
   useEffect(() => {
@@ -182,7 +185,7 @@ const EmailVerification = () => {
               </Button>
             )}
 
-            {(shouldPromptLogin || !canResend) && (
+            {!canResend && (
               <Button
                 variant="secondary"
                 fullWidth
@@ -193,7 +196,7 @@ const EmailVerification = () => {
               </Button>
             )}
 
-            {!shouldPromptLogin && canResend && (
+            {canResend && (
               <button
                 onClick={() => navigate('/login')}
                 className="text-center text-[14px] font-normal text-[#1E9500] hover:underline transition-all"

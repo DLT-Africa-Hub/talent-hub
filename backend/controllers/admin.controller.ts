@@ -738,7 +738,8 @@ export const getAllGraduates = async (
 
     const position = sanitizeQueryString(req.query.position);
     if (position) {
-      filters.position = position as IGraduate['position'];
+      // Position is now an array, use $elemMatch to search within it
+      filters.position = { $elemMatch: { $eq: position } };
     }
 
     const location = sanitizeQueryString(req.query.location);
@@ -755,7 +756,7 @@ export const getAllGraduates = async (
         { firstName: regex },
         { lastName: regex },
         { rank: regex },
-        { position: regex },
+        { position: { $elemMatch: regex } }, // Search within position array
         { location: regex },
       ];
     }

@@ -22,6 +22,7 @@ interface CandidatePreviewModalProps {
   isAccepting?: boolean;
   isRejecting?: boolean;
   isSchedulingInterview?: boolean;
+  isCalendlyConnected?: boolean;
 }
 
 const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
@@ -37,6 +38,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   isAccepting = false,
   isRejecting = false,
   isSchedulingInterview = false,
+  isCalendlyConnected = false,
 }) => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
@@ -380,39 +382,52 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                   </div>
                 )}
                 {/* Schedule Interview Controls */}
-                {canShowScheduleControls && (
-                  <div className="flex flex-col gap-2">
-                    {onScheduleInterview && (
-                      <Button
-                        onClick={() => {
-                          setScheduleError('');
-                          setScheduleSuccess('');
-                          setShowScheduleForm(true);
-                        }}
-                        variant="secondary"
-                        className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={!canInteractWithScheduling}
-                      >
-                        <HiVideoCamera className="text-[18px] mr-2" />
-                        {hasActiveInterview
-                          ? 'Interview Already Scheduled'
-                          : canScheduleInterview
-                            ? 'Quick Schedule (Single Time)'
-                            : 'Interview scheduling unavailable'}
-                      </Button>
-                    )}
-                    {onSuggestTimeSlots && canInteractWithScheduling && (
-                      <Button
-                        onClick={() => onSuggestTimeSlots(candidate)}
-                        variant="secondary"
-                        className="w-full border-2 border-[#6B9B5A] text-[#6B9B5A] hover:bg-[#6B9B5A]/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={!canInteractWithScheduling}
-                      >
-                        <HiVideoCamera className="text-[18px] mr-2" />
-                        Suggest Multiple Time Slots
-                      </Button>
-                    )}
+                {isCalendlyConnected ? (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-[14px] text-blue-800 font-medium mb-2">
+                      📅 Calendly Integration Active
+                    </p>
+                    <p className="text-[13px] text-blue-700">
+                      Candidates can schedule interviews directly from your
+                      Calendly availability. They'll see your available time
+                      slots and can book interviews themselves.
+                    </p>
                   </div>
+                ) : (
+                  canShowScheduleControls && (
+                    <div className="flex flex-col gap-2">
+                      {onScheduleInterview && (
+                        <Button
+                          onClick={() => {
+                            setScheduleError('');
+                            setScheduleSuccess('');
+                            setShowScheduleForm(true);
+                          }}
+                          variant="secondary"
+                          className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                          disabled={!canInteractWithScheduling}
+                        >
+                          <HiVideoCamera className="text-[18px] mr-2" />
+                          {hasActiveInterview
+                            ? 'Interview Already Scheduled'
+                            : canScheduleInterview
+                              ? 'Quick Schedule (Single Time)'
+                              : 'Interview scheduling unavailable'}
+                        </Button>
+                      )}
+                      {onSuggestTimeSlots && canInteractWithScheduling && (
+                        <Button
+                          onClick={() => onSuggestTimeSlots(candidate)}
+                          variant="secondary"
+                          className="w-full border-2 border-[#6B9B5A] text-[#6B9B5A] hover:bg-[#6B9B5A]/5 font-medium py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                          disabled={!canInteractWithScheduling}
+                        >
+                          <HiVideoCamera className="text-[18px] mr-2" />
+                          Suggest Multiple Time Slots
+                        </Button>
+                      )}
+                    </div>
+                  )
                 )}
                 {showDirectContactDisabled && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">

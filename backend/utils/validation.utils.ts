@@ -272,6 +272,37 @@ export const validateNumericRange = (
 };
 
 /**
+ * Validate interview stages (1, 2, or 3)
+ */
+export const validateInterviewStages = (
+  value: RequestNumericValue,
+  res: Response
+): 1 | 2 | 3 | null => {
+  if (value === undefined || value === null) {
+    return null; // Optional field, return null to use default
+  }
+
+  const valueStr = typeof value === 'string' ? value : String(value);
+  const num = parseInt(valueStr, 10);
+
+  if (isNaN(num) || num < 1 || num > 3) {
+    res.status(400).json({
+      message: 'Interview stages must be a number between 1 and 3',
+    });
+    return null;
+  }
+
+  if (num !== 1 && num !== 2 && num !== 3) {
+    res.status(400).json({
+      message: 'Interview stages must be exactly 1, 2, or 3',
+    });
+    return null;
+  }
+
+  return num as 1 | 2 | 3;
+};
+
+/**
  * Remove undefined values from object
  */
 export const deleteUndefined = <T extends Record<string, unknown>>(

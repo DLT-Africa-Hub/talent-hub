@@ -12,6 +12,7 @@ export interface GraduateForm {
     linkedin?: string;
   };
   phoneNo?: string;
+  location?: string;
   portfolio?: string;
   yearsOfExperience?: string;
   rank?: string;

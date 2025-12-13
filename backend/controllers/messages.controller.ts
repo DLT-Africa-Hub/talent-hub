@@ -249,7 +249,9 @@ export const getChatList = async (req: Request, res: Response) => {
             firstName: graduate?.firstName || '',
             lastName: graduate?.lastName || '',
             profilePictureUrl: graduate?.profilePictureUrl || '',
-            position: graduate?.position || '',
+            position: Array.isArray(graduate?.position)
+              ? graduate.position.join(', ')
+              : graduate?.position || '',
           };
         } else if (otherUser.role === 'company') {
           const company = companyMap.get(otherUserId.toString());

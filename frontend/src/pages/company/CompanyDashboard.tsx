@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useCompanyMatches, extractMatches } from '../../hooks/useCompanyData';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { companyApi } from '../../api/company';
@@ -11,8 +12,11 @@ import ScheduleInterviewModal from '../../components/company/ScheduleInterviewMo
 import { CandidateProfile } from '../../types/candidates';
 import { transformMatch } from '../../utils/candidate.utils';
 import { ApiMatch } from '../../types/api';
+import { useToastContext } from '../../context/ToastContext';
 
 const CompanyDashboard = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { success, error: showError } = useToastContext();
   const [selectedCandidate, setSelectedCandidate] =
     useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +30,18 @@ const CompanyDashboard = () => {
       page: 1,
       limit: 100,
     });
+
+  // Check Calendly connection status
+  const { data: calendlyStatus } = useQuery({
+    queryKey: ['calendlyStatus'],
+    queryFn: async () => {
+      const response = await companyApi.getCalendlyStatus();
+      return response;
+    },
+  });
+
+  const isCalendlyConnected =
+    calendlyStatus?.connected && calendlyStatus?.enabled;
 
   const scheduleInterviewMutation = useMutation({
     mutationFn: async ({
@@ -163,6 +179,28 @@ const CompanyDashboard = () => {
     [suggestTimeSlotsMutation]
   );
 
+  // Handle Calendly OAuth callback redirect
+  useEffect(() => {
+    const calendlyStatus = searchParams.get('calendly');
+
+    if (calendlyStatus === 'connected') {
+      success('Calendly account connected successfully!');
+      // Invalidate Calendly status query to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['calendlyStatus'] });
+      // Clean up URL
+      searchParams.delete('calendly');
+      setSearchParams(searchParams, { replace: true });
+    } else if (calendlyStatus === 'error') {
+      const errorMessage =
+        searchParams.get('message') || 'Failed to connect Calendly account';
+      showError(decodeURIComponent(errorMessage));
+      // Clean up URL
+      searchParams.delete('calendly');
+      searchParams.delete('message');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, success, showError, queryClient]);
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -200,11 +238,16 @@ const CompanyDashboard = () => {
         onClose={handleCloseModal}
         onViewCV={handleViewCV}
         onScheduleInterview={
-          selectedCandidate?.applicationId ? handleScheduleInterview : undefined
+          !isCalendlyConnected && selectedCandidate?.applicationId
+            ? handleScheduleInterview
+            : undefined
         }
         onSuggestTimeSlots={
-          selectedCandidate?.applicationId ? handleSuggestTimeSlots : undefined
+          !isCalendlyConnected && selectedCandidate?.applicationId
+            ? handleSuggestTimeSlots
+            : undefined
         }
+        isCalendlyConnected={isCalendlyConnected}
         isSchedulingInterview={
           !!(
             scheduleInterviewMutation.isPending &&

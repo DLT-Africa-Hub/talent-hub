@@ -23,6 +23,8 @@ interface JobFormData {
   skills: string[];
   extraRequirements: ExtraRequirement[];
   directContact: boolean;
+  interviewStages: 1 | 2 | 3;
+  interviewStageTitles: string[];
 }
 
 interface LocationState {
@@ -42,6 +44,8 @@ const CompanyJobForm = () => {
     skills: [],
     extraRequirements: [],
     directContact: true, // Default to direct contact
+    interviewStages: 1, // Default to 1 interview stage
+    interviewStageTitles: [''],
   });
   const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
   const skillsDropdownRef = useRef<HTMLDivElement>(null);
@@ -100,7 +104,10 @@ const CompanyJobForm = () => {
       !formData.location ||
       !formData.description ||
       !formData.skills ||
-      formData.skills.length === 0
+      formData.skills.length === 0 ||
+      !formData.interviewStageTitles ||
+      formData.interviewStageTitles.length !== formData.interviewStages ||
+      !formData.interviewStageTitles.every((title) => title.trim().length > 0)
     ) {
       return;
     }
@@ -125,6 +132,7 @@ const CompanyJobForm = () => {
           : {}),
       },
       directContact: formData.directContact,
+      interviewStages: formData.interviewStages,
       salary: salaryAmount
         ? {
             amount: salaryAmount,
@@ -472,6 +480,126 @@ const CompanyJobForm = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Interview Stages Section */}
+        <div className="flex flex-col gap-3 p-4 border border-fade rounded-xl bg-white">
+          <div>
+            <label className="text-[#1C1C1C] text-[16px] font-medium">
+              Interview Stages <span className="text-red-500">*</span>
+            </label>
+            <p className="text-[#1C1C1C80] text-[14px] font-normal mt-1">
+              Select the number of interview stages for this position
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[1, 2, 3].map((stage) => (
+              <label
+                key={stage}
+                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.interviewStages === stage
+                    ? 'border-button bg-button/10'
+                    : 'border-fade bg-white hover:bg-[#F8F8F8]'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="interviewStages"
+                  value={stage}
+                  checked={formData.interviewStages === stage}
+                  onChange={() => {
+                    const newStages = stage as 1 | 2 | 3;
+                    setFormData((prev) => {
+                      const currentTitles = prev.interviewStageTitles || [];
+                      // Adjust titles array to match new stage count
+                      let newTitles: string[];
+                      if (currentTitles.length < newStages) {
+                        // Add empty titles for new stages
+                        newTitles = [
+                          ...currentTitles,
+                          ...Array(newStages - currentTitles.length).fill(''),
+                        ];
+                      } else if (currentTitles.length > newStages) {
+                        // Remove extra titles
+                        newTitles = currentTitles.slice(0, newStages);
+                      } else {
+                        newTitles = currentTitles;
+                      }
+                      return {
+                        ...prev,
+                        interviewStages: newStages,
+                        interviewStageTitles: newTitles,
+                      };
+                    });
+                  }}
+                  className="sr-only"
+                />
+                <div
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mb-2 ${
+                    formData.interviewStages === stage
+                      ? 'border-button bg-button'
+                      : 'border-fade'
+                  }`}
+                >
+                  {formData.interviewStages === stage && (
+                    <div className="w-3 h-3 rounded-full bg-white"></div>
+                  )}
+                </div>
+                <span
+                  className={`text-[16px] font-medium ${
+                    formData.interviewStages === stage
+                      ? 'text-[#1C1C1C]'
+                      : 'text-[#1C1C1C80]'
+                  }`}
+                >
+                  {stage} {stage === 1 ? 'Stage' : 'Stages'}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Stage Titles Input */}
+          {formData.interviewStages > 0 && (
+            <div className="flex flex-col gap-3 mt-2">
+              <label className="text-[#1C1C1C] text-[16px] font-medium">
+                Interview Stage Titles <span className="text-red-500">*</span>
+              </label>
+              <p className="text-[#1C1C1C80] text-[14px] font-normal">
+                Add a title for each interview stage (e.g., "Technical Test",
+                "HR Interview", "Final Round")
+              </p>
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: formData.interviewStages }).map(
+                  (_, index) => (
+                    <div key={index} className="flex flex-col gap-1">
+                      <label className="text-[#1C1C1C] text-[14px] font-medium">
+                        Stage {index + 1} Title
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder={`e.g., ${index === 0 ? 'Technical Test' : index === 1 ? 'HR Interview' : 'Final Round'}`}
+                        value={formData.interviewStageTitles[index] || ''}
+                        onChange={(e) => {
+                          const newTitles = [
+                            ...(formData.interviewStageTitles || []),
+                          ];
+                          while (newTitles.length < formData.interviewStages) {
+                            newTitles.push('');
+                          }
+                          newTitles[index] = e.target.value;
+                          setFormData((prev) => ({
+                            ...prev,
+                            interviewStageTitles: newTitles,
+                          }));
+                        }}
+                        required
+                      />
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 p-4 border border-fade rounded-xl bg-[#F8F8F8]">

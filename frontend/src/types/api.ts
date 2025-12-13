@@ -18,6 +18,10 @@ export interface ApiJob {
   companyId?: {
     _id?: string;
     companyName?: string;
+    calendly?: {
+      enabled?: boolean;
+      publicLink?: string;
+    };
   };
   location?: string;
   status?: string;
@@ -31,6 +35,8 @@ export interface ApiJob {
   requirements?: {
     skills?: string[];
   };
+  interviewStages?: 1 | 2 | 3;
+  interviewStageTitles?: string[];
   createdAt?: string | Date;
   applicantsCount?: number;
   views?: number;
@@ -43,6 +49,7 @@ export interface ApiApplication {
     _id?: string;
     firstName?: string;
     lastName?: string;
+    email?: string;
     position?: string;
     location?: string;
     skills?: string[];
@@ -70,6 +77,10 @@ export interface ApiApplication {
     directContact?: boolean;
     companyId?: {
       companyName?: string;
+      calendly?: {
+        enabled?: boolean;
+        publicLink?: string;
+      };
     };
   };
   matchId?: {

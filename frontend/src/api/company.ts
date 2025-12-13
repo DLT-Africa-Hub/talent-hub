@@ -162,6 +162,29 @@ export const companyApi = {
     );
     return response.data;
   },
+
+  // Calendly Integration
+  getCalendlyAuthUrl: async () => {
+    const response = await api.get('/companies/calendly/connect');
+    return response.data;
+  },
+
+  getCalendlyStatus: async () => {
+    const response = await api.get('/companies/calendly/status');
+    return response.data;
+  },
+
+  setCalendlyPublicLink: async (publicLink: string) => {
+    const response = await api.post('/companies/calendly/public-link', {
+      publicLink,
+    });
+    return response.data;
+  },
+
+  disconnectCalendly: async () => {
+    const response = await api.delete('/companies/calendly/disconnect');
+    return response.data;
+  },
 };
 
 export default companyApi;

@@ -24,6 +24,8 @@ export interface IJob extends Document {
   preferedRank: 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
   status: 'active' | 'closed' | 'draft';
   directContact: boolean; // true = company handles directly, false = DLT Africa (admin) handles
+  interviewStages: 1 | 2 | 3; // Number of interview stages (1, 2, or 3)
+  interviewStageTitles?: string[]; // Titles for each interview stage (length must match interviewStages)
   embedding?: number[];
   matches?: {
     graduateId: mongoose.Types.ObjectId;
@@ -104,6 +106,23 @@ const JobSchema: Schema = new Schema(
       type: Boolean,
       default: true, // Default to direct contact
       required: true,
+    },
+    interviewStages: {
+      type: Number,
+      enum: [1, 2, 3],
+      default: 1,
+      required: true,
+    },
+    interviewStageTitles: {
+      type: [String],
+      validate: {
+        validator: function (this: IJob, titles: string[] | undefined) {
+          if (!titles || titles.length === 0) return true; // Optional, can be set later
+          return titles.length === this.interviewStages;
+        },
+        message:
+          'Number of stage titles must match the number of interview stages',
+      },
     },
     embedding: [Number],
     matches: [

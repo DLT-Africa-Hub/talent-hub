@@ -3,6 +3,7 @@ import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 export const TOKEN_TYPES = {
   EMAIL_VERIFICATION: 'email-verification',
   PASSWORD_RESET: 'password-reset',
+  CALENDLY_OAUTH_STATE: 'calendly-oauth-state',
 } as const;
 
 export type TokenType = (typeof TOKEN_TYPES)[keyof typeof TOKEN_TYPES];

@@ -378,3 +378,89 @@ const parseEmailConfig = () => {
 };
 
 export const emailConfig = parseEmailConfig();
+
+// Calendly Configuration
+const calendlyConfigSchema = z.object({
+  clientId: z.string().optional(),
+  clientSecret: z.string().optional(),
+  redirectUri: z.string().url().optional(),
+  webhookSigningKey: z.string().optional(),
+  apiBaseUrl: z.string().url().default('https://api.calendly.com'),
+  encryptionKey: z
+    .string()
+    .min(32, 'Calendly encryption key must be at least 32 characters')
+    .optional(),
+});
+
+const getCalendlyEncryptionKey = (): string => {
+  const key = process.env.CALENDLY_ENCRYPTION_KEY;
+  if (key && key.length >= 32) {
+    return key.trim();
+  }
+
+  // In development, use a default key (should be changed in production)
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'prod'
+  ) {
+    const defaultKey =
+      process.env.JWT_ACCESS_SECRET?.substring(0, 32) ||
+      'dev-calendly-encryption-key-32-chars!!';
+    console.warn(
+      '[Calendly Config] CALENDLY_ENCRYPTION_KEY not set. Using development default. This should NEVER be used in production!'
+    );
+    return defaultKey.padEnd(32, '!');
+  }
+
+  // Production: fail early
+  throw new Error(
+    'CALENDLY_ENCRYPTION_KEY environment variable is required and must be at least 32 characters long for encrypting OAuth tokens.'
+  );
+};
+
+// Get Calendly redirect URI with development default
+const getCalendlyRedirectUri = (): string | undefined => {
+  if (process.env.CALENDLY_REDIRECT_URI) {
+    return process.env.CALENDLY_REDIRECT_URI;
+  }
+
+  // In development, use localhost default
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'prod'
+  ) {
+    const port = process.env.PORT || '3090';
+    const apiPrefix = process.env.API_PREFIX || '/api/v1';
+    const defaultUri = `http://localhost:${port}${apiPrefix}/companies/calendly/callback`;
+    console.warn(
+      `[Calendly Config] CALENDLY_REDIRECT_URI not set. Using development default: ${defaultUri}`
+    );
+    return defaultUri;
+  }
+
+  // Production: return undefined (will be validated as required)
+  return undefined;
+};
+
+const parsedCalendlyConfig = calendlyConfigSchema.parse({
+  clientId: process.env.CALENDLY_CLIENT_ID,
+  clientSecret: process.env.CALENDLY_CLIENT_SECRET,
+  redirectUri: getCalendlyRedirectUri(),
+  webhookSigningKey: process.env.CALENDLY_WEBHOOK_SIGNING_KEY,
+  apiBaseUrl: process.env.CALENDLY_API_BASE_URL || 'https://api.calendly.com',
+  encryptionKey: getCalendlyEncryptionKey(),
+});
+
+export const calendlyConfig = {
+  clientId: parsedCalendlyConfig.clientId,
+  clientSecret: parsedCalendlyConfig.clientSecret,
+  redirectUri: parsedCalendlyConfig.redirectUri,
+  webhookSigningKey: parsedCalendlyConfig.webhookSigningKey,
+  apiBaseUrl: parsedCalendlyConfig.apiBaseUrl,
+  encryption: {
+    key: parsedCalendlyConfig.encryptionKey,
+  },
+  enabled: !!(
+    parsedCalendlyConfig.clientId && parsedCalendlyConfig.clientSecret
+  ),
+};

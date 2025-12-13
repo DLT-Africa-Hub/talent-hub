@@ -13,6 +13,8 @@ interface AuthFormProps {
     placeholder: string;
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    error?: string;
+    helpText?: string;
   }[];
   onSubmit: (e: React.FormEvent) => void;
   buttonText: string;
@@ -116,8 +118,13 @@ const AuthForm: React.FC<AuthFormProps> = ({
                   value={field.value}
                   onChange={field.onChange}
                   required
-                  error={error ? ' ' : undefined}
+                  error={field.error}
                 />
+                {field.helpText && !field.error && (
+                  <p className="text-[12px] text-[#1C1C1C80] mt-1">
+                    {field.helpText}
+                  </p>
+                )}
                 {forgotPasswordLink &&
                   forgotPasswordLink.fieldIndex === index &&
                   field.type === 'password' && (

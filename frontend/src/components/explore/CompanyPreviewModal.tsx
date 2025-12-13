@@ -4,6 +4,7 @@ import {
   HiOutlineMapPin,
   HiOutlineCurrencyDollar,
   HiOutlineClock,
+  HiOutlineCalendar,
 } from 'react-icons/hi2';
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
@@ -292,8 +293,10 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                     prose-li:text-[#1C1C1CBF] prose-li:my-1
                     prose-a:text-blue-600 prose-a:underline
                     prose-headings:text-[#1C1C1C] prose-headings:font-semibold
-                    prose-h1:text-2xl prose-h1:font-bold prose-h1:my-4
-                    prose-h2:text-xl prose-h2:font-semibold prose-h2:my-3"
+                    prose-h1:text-2xl prose-h1:font-bold prose-h1:mt-6 prose-h1:mb-3 prose-h1:first:mt-0
+                    prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-6 prose-h2:mb-3 prose-h2:first:mt-0
+                    prose-h3:text-lg prose-h3:font-semibold prose-h3:mt-5 prose-h3:mb-2 prose-h3:first:mt-0
+                    prose-h4:text-base prose-h4:font-semibold prose-h4:mt-4 prose-h4:mb-2 prose-h4:first:mt-0"
                   dangerouslySetInnerHTML={{
                     __html: descriptionContent.content,
                   }}
@@ -324,6 +327,26 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Calendly Link */}
+            {company.calendly?.enabled && company.calendly?.publicLink && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-[#1C1C1C80]">
+                  <HiOutlineCalendar className="text-[18px] text-button" />
+                  <p className="text-sm font-medium">
+                    Schedule an interview directly
+                  </p>
+                </div>
+                <a
+                  href={company.calendly.publicLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-[10px] text-blue-700 font-medium text-center hover:bg-blue-100 transition-colors"
+                >
+                  Book Interview via Calendly
+                </a>
               </div>
             )}
 

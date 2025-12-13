@@ -4,11 +4,11 @@ import { GraduateForm } from '../../../constants/type';
 import { ApiError } from '../../../types/api';
 import {
   getSkillsForPositions,
-  rolesToPosition,
+  rolesToPositions,
 } from '../../../utils/material.utils';
 import { graduateApi } from '../../../api/graduate';
 import Modal from '../../auth/Modal';
-import { Input, Button } from '../../ui';
+import { Input, Button, MultiSelect } from '../../ui';
 
 interface Props {
   form: GraduateForm;
@@ -47,7 +47,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
 
     try {
       // Transform form data to backend format
-      const position = rolesToPosition(form.roles || []) || 'other';
+      const positions = rolesToPositions(form.roles || []);
       const expYears = parseYearsOfExperience(
         form.yearsOfExperience || '3&minus;5 years'
       );
@@ -60,7 +60,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         phoneNumber: phoneNumber, // Backend will parse this (accepts string or number)
         expLevel: form.rank || 'entry level',
         expYears: expYears,
-        position: position,
+        position: positions.length > 0 ? positions : ['other'],
         skills: selectedSkills,
         cv: form.cv,
         summary: form.summary,
@@ -68,6 +68,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         interests: form.interests || [],
         socials: form.socials || {},
         portfolio: form.portfolio?.trim() || undefined,
+        location: form.location?.trim() || undefined,
       };
 
       await graduateApi.createProfile(profileData);
@@ -109,17 +110,9 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
     }
   };
 
-  const handleSelectSkill = (skill: string) => {
-    let updatedSkills: string[];
-
-    if (selectedSkills.includes(skill)) {
-      updatedSkills = selectedSkills.filter((r) => r !== skill);
-    } else {
-      updatedSkills = [...selectedSkills, skill];
-    }
-
-    setSelectedSkills(updatedSkills);
-    onChange({ skills: updatedSkills });
+  const handleSkillsChange = (values: string[]) => {
+    setSelectedSkills(values);
+    onChange({ skills: values });
   };
 
   return (
@@ -143,34 +136,24 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         }}
       >
         <div className="flex flex-col gap-2">
-          <label className="text-[#1C1C1C] text-[16px] font-medium">
-            Skills <span className="text-red-500">*</span>
-          </label>
           {form.roles && form.roles.length > 0 && (
             <p className="text-[#1C1C1CBF] text-[14px] font-normal">
               Skills relevant to your selected{' '}
               {form.roles.length === 1 ? 'role' : 'roles'}
             </p>
           )}
-          <div className="flex gap-2.5 justify-start items-center w-full flex-wrap">
-            {availableSkills.map((skill) => {
-              const isSelected = selectedSkills.includes(skill);
-              return (
-                <button
-                  key={skill}
-                  type="button"
-                  onClick={() => handleSelectSkill(skill)}
-                  className={`flex items-center border rounded-xl py-2 px-2 transition-all duration-200 ${
-                    isSelected
-                      ? 'border-button bg-button/10 text-[#1C1C1C] font-medium'
-                      : 'border-fade bg-white text-[#1C1C1CBF] hover:border-button/50'
-                  }`}
-                >
-                  <span className="text-[15px]">{skill}</span>
-                </button>
-              );
-            })}
-          </div>
+          <MultiSelect
+            label="Skills"
+            required
+            options={availableSkills.map((skill) => ({
+              value: skill,
+              label: skill,
+            }))}
+            value={selectedSkills}
+            onChange={handleSkillsChange}
+            placeholder="Select one or more skills"
+            maxHeight="300px"
+          />
         </div>
 
         {/* Links Section */}

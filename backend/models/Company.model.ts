@@ -8,6 +8,15 @@ export interface ICompany extends Document {
   companySize: number;
   website?: string;
   location?: string;
+  calendly?: {
+    userUri?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    tokenExpiresAt?: Date;
+    publicLink?: string;
+    enabled: boolean;
+    connectedAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
   postedJobs: number;
@@ -43,6 +52,38 @@ const CompanySchema: Schema = new Schema(
     },
     location: {
       type: String,
+    },
+    calendly: {
+      userUri: {
+        type: String,
+        required: false,
+      },
+      accessToken: {
+        type: String,
+        required: false,
+        select: false,
+      },
+      refreshToken: {
+        type: String,
+        required: false,
+        select: false,
+      },
+      tokenExpiresAt: {
+        type: Date,
+        required: false,
+      },
+      publicLink: {
+        type: String,
+        required: false,
+      },
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      connectedAt: {
+        type: Date,
+        required: false,
+      },
     },
     postedJobs: {
       type: Number,

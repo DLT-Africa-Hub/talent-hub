@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useCompanyApplications,
   useCompanyMatches,
@@ -40,6 +40,18 @@ const CompanyCandidates = () => {
   const [multiSlotCandidate, setMultiSlotCandidate] =
     useState<CandidateProfile | null>(null);
 
+  // Check Calendly connection status
+  const { data: calendlyStatus } = useQuery({
+    queryKey: ['calendlyStatus'],
+    queryFn: async () => {
+      const response = await companyApi.getCalendlyStatus();
+      return response;
+    },
+  });
+
+  const isCalendlyConnected =
+    calendlyStatus?.connected && calendlyStatus?.enabled;
+
   const transformApplicationMemo = useCallback(
     (app: ApiApplication, index: number) => transformApplication(app, index),
     []
@@ -57,7 +69,9 @@ const CompanyCandidates = () => {
     if (candidateStatus === 'all') return undefined;
     if (candidateStatus === 'hired') return 'hired';
     if (candidateStatus === 'matched') return undefined;
-    if (candidateStatus === 'applied') return 'pending';
+    // For 'applied', fetch all applications (pending, accepted, shortlisted, reviewed, interviewed)
+    // Client-side filter will handle showing only those with applications
+    if (candidateStatus === 'applied') return undefined;
     if (candidateStatus === 'pending') return undefined;
     return undefined;
   };
@@ -393,15 +407,25 @@ const CompanyCandidates = () => {
     }) => {
       return companyApi.updateApplicationStatus(applicationId, status, notes);
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
       queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
       // Also invalidate job-specific queries used in the CandidatesListModal
       queryClient.invalidateQueries({ queryKey: ['jobApplicants'] });
       queryClient.invalidateQueries({ queryKey: ['jobMatches'] });
-      // If status is 'accepted', navigate to messages
-      if (variables.status === 'accepted') {
+
+      // Only navigate to messages if an offer was sent (post-interview acceptance)
+      // Check if the application status is 'offer_sent' which indicates offer was sent
+      if (
+        variables.status === 'accepted' &&
+        data?.application?.status === 'offer_sent'
+      ) {
+        // This is a post-interview acceptance with offer sent - navigate to messages
         navigate('/messages');
+      } else if (variables.status === 'accepted') {
+        // This is the first acceptance (before interview) - just close the modal
+        // The candidate will remain in the 'applied' filter
+        handleCloseModal();
       }
     },
   });
@@ -722,12 +746,18 @@ const CompanyCandidates = () => {
         onChat={handleChat}
         onViewCV={handleViewCV}
         // Only pass schedule/accept/reject handlers for candidates with applicationId
+        // Hide manual scheduling if Calendly is connected (candidates schedule themselves)
         onScheduleInterview={
-          selectedCandidate?.applicationId ? handleScheduleInterview : undefined
+          !isCalendlyConnected && selectedCandidate?.applicationId
+            ? handleScheduleInterview
+            : undefined
         }
         onSuggestTimeSlots={
-          selectedCandidate?.applicationId ? handleSuggestTimeSlots : undefined
+          !isCalendlyConnected && selectedCandidate?.applicationId
+            ? handleSuggestTimeSlots
+            : undefined
         }
+        isCalendlyConnected={isCalendlyConnected}
         onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
         onReject={selectedCandidate?.applicationId ? handleReject : undefined}
         isAccepting={

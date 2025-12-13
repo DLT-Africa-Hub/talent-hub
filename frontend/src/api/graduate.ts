@@ -242,6 +242,39 @@ export const graduateApi = {
     const response = await api.post(`/graduates/offers/${offerId}/reject`);
     return response.data;
   },
+
+  // Calendly Integration
+  getCalendlyAvailability: async (
+    applicationId: string,
+    params?: {
+      startTime?: string;
+      endTime?: string;
+      eventTypeUri?: string;
+    }
+  ) => {
+    const response = await api.get(
+      `/graduates/applications/${applicationId}/calendly/availability`,
+      { params }
+    );
+    return response.data;
+  },
+
+  scheduleCalendlyInterview: async (
+    applicationId: string,
+    payload: {
+      eventTypeUri: string;
+      startTime: string;
+      inviteeEmail: string;
+      inviteeName?: string;
+      location?: string;
+    }
+  ) => {
+    const response = await api.post(
+      `/graduates/applications/${applicationId}/calendly/schedule`,
+      payload
+    );
+    return response.data;
+  },
 };
 
 export default graduateApi;

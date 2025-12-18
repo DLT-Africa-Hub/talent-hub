@@ -13,7 +13,8 @@ import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
 import { messageApi } from '../../api/message';
 import { useNotifications } from '../../hooks/useNotifications';
-import { GoGear } from 'react-icons/go';
+// import { GoGear } from 'react-icons/go';
+import { FiActivity } from 'react-icons/fi';
 
 interface Page {
   page: string;
@@ -52,9 +53,9 @@ const pagesByRole: Record<string, Page[]> = {
     { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
     { page: 'Interviews', link: 'interviews', icon: HiVideoCamera },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
-    // { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
+    { page: 'App Status', link: 'app-status', icon: FiActivity },
     { page: 'Notifications', link: 'notifications', icon: BiBell },
-    { page: 'Settings', link: 'admin/settings', icon: GoGear },
+    // { page: 'Settings', link: 'admin/settings', icon: GoGear },
   ],
 };
 

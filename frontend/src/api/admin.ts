@@ -77,6 +77,10 @@ export const adminApi = {
     const response = await api.get('/admin/health');
     return response.data;
   },
+  getAIHealthStatus: async () => {
+    const response = await api.get('/admin/ai-health');
+    return response.data;
+  },
   getTalentCount: async () => {
     const response = await api.get('/admin/talent-count');
     console.log(response);

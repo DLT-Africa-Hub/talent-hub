@@ -484,6 +484,59 @@ export const getHealthStatus = async (
 };
 
 /**
+ * Get AI service health status
+ * GET /api/admin/ai-health
+ */
+export const getAIHealthStatus = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const axios = (await import('axios')).default;
+    const { aiConfig } = await import('../config/secrets');
+
+    const startTime = Date.now();
+    let responseTime: number | null = null;
+    let status = 'error';
+    let message = 'AI Service is unreachable';
+    let openaiConfigured = false;
+
+    try {
+      const response = await axios.get(`${aiConfig.serviceUrl}/health`, {
+        timeout: 5000, // 5 second timeout
+      });
+
+      responseTime = Date.now() - startTime;
+
+      if (response.status === 200 && response.data) {
+        status = response.data.status === 'ok' ? 'ok' : 'error';
+        message = response.data.message || 'AI Service is running';
+        openaiConfigured = response.data.openai_configured || false;
+      }
+    } catch (error: any) {
+      responseTime = Date.now() - startTime;
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        message = 'AI Service connection failed';
+      } else if (error.response) {
+        status = 'error';
+        message = `AI Service returned error: ${error.response.status}`;
+      }
+    }
+
+    res.success({
+      status,
+      message,
+      responseTime: responseTime !== null ? `${responseTime}ms` : null,
+      openaiConfigured,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    console.error('AI health check error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+/**
  * Get rank statistics for all graduates
  * GET /api/admin/rank-statistics
  */

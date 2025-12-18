@@ -24,6 +24,7 @@ import {
   getSystemStats,
   getUserActivityLogs,
   getHealthStatus,
+  getAIHealthStatus,
   getDatabaseStats,
   getRankStatistics,
   getGraduatesCount,
@@ -148,6 +149,7 @@ router.get('/ai-stats', getAIStats);
 router.get('/system-stats', getSystemStats);
 router.get('/user-activity', getUserActivityLogs);
 router.get('/health', getHealthStatus);
+router.get('/ai-health', getAIHealthStatus);
 router.get('/db-stats', getDatabaseStats);
 router.get('/rank-statistics', getRankStatistics);
 router.get('/talent-count', getGraduatesCount);

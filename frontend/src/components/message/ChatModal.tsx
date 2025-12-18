@@ -11,6 +11,7 @@ import { adminApi } from '../../api/admin';
 import { useAuth } from '../../context/AuthContext';
 import { useToastContext } from '../../context/ToastContext';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useSocket } from '@/context/SocketContext';
 
 interface Company {
   id?: string | number;
@@ -151,6 +152,10 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const [isConfirmingHire, setIsConfirmingHire] = useState(false);
   const [showConfirmHireDialog, setShowConfirmHireDialog] = useState(false);
   const [showMarkHiredDialog, setShowMarkHiredDialog] = useState(false);
+  const { socket, isConnected, typingUsers, startTyping, stopTyping } =
+    useSocket();
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const signedOfferInputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -168,7 +173,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       return Array.isArray(response) ? response : [];
     },
     enabled: !!company?.id,
-    refetchInterval: 5000, // Reduced from 3000 to reduce rate limiting
+    refetchInterval: false, // Real-time updates via Socket.IO
     retry: (failureCount, error) => {
       // Don't retry on 429 errors
       const axiosError = error as { response?: { status?: number } };
@@ -513,6 +518,69 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     markHiredMutation.mutate(applicationId);
   };
 
+  // Listen for new messages via Socket.IO
+  useEffect(() => {
+    if (!socket || !company?.id) return;
+
+    const handleNewMessage = (message: Message) => {
+      // Check if message is for this conversation
+      if (
+        (message.senderId === company.id && message.receiverId === user?.id) ||
+        (message.receiverId === company.id && message.senderId === user?.id)
+      ) {
+        // Invalidate queries to refresh messages
+        queryClient.invalidateQueries({
+          queryKey: ['conversation', company.id],
+        });
+        queryClient.invalidateQueries({ queryKey: ['messages'] });
+
+        // Auto-mark as read if chat is open
+        if (
+          message.senderId === company.id &&
+          message.receiverId === user?.id
+        ) {
+          messageApi.markAsRead(company.id as string);
+        }
+      }
+    };
+
+    const handleMessageRead = (_data: {
+      messageId: string;
+      readBy: string;
+      readAt: Date;
+    }) => {
+      // Update local message state to show read receipt
+      queryClient.invalidateQueries({
+        queryKey: ['conversation', company.id],
+      });
+    };
+
+    socket.on('message:new', handleNewMessage);
+    socket.on('message:read', handleMessageRead);
+
+    // Join conversation room
+    socket.emit('conversation:join', company.id);
+
+    return () => {
+      socket.off('message:new', handleNewMessage);
+      socket.off('message:read', handleMessageRead);
+      socket.emit('conversation:leave', company.id);
+    };
+  }, [socket, company?.id, user?.id, queryClient]);
+
+  // Cleanup typing timeout on unmount or company change
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      if (isTyping && company?.id) {
+        stopTyping(company.id as string);
+      }
+    };
+  }, [company?.id, isTyping, stopTyping]);
+
   useEffect(() => {
     if (company?.id && messages && messages.length > 0) {
       const hasUnread = messages.some(
@@ -612,6 +680,37 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
     }
   };
 
+  // Handle typing indicator
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    if (!company?.id) return;
+
+    // Start typing indicator
+    if (value.trim() && !isTyping) {
+      setIsTyping(true);
+      startTyping(company.id as string);
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      stopTyping(company.id as string);
+    }, 2000);
+
+    // Stop typing if input is empty
+    if (!value.trim() && isTyping) {
+      setIsTyping(false);
+      stopTyping(company.id as string);
+    }
+  };
+
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -621,6 +720,16 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       isUploading
     ) {
       return;
+    }
+
+    // Stop typing when sending
+    if (isTyping && company?.id) {
+      setIsTyping(false);
+      stopTyping(company.id as string);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
     }
 
     try {
@@ -729,10 +838,26 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center gap-[5px] py-2.5 px-5 border-2 border-[#5CFF0D] rounded-[20px] bg-[#EFFFE2]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#5CFF0D]"></span>
-                <p className="text-[#5CFF0D] font-medium text-[14px]">online</p>
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex items-center gap-[5px] py-2.5 px-5 border-2 rounded-[20px] ${
+                  isConnected
+                    ? 'border-[#5CFF0D] bg-[#EFFFE2]'
+                    : 'border-gray-300 bg-gray-100'
+                }`}
+              >
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    isConnected ? 'bg-[#5CFF0D]' : 'bg-gray-400'
+                  }`}
+                ></span>
+                <p
+                  className={`font-medium text-[14px] ${
+                    isConnected ? 'text-[#5CFF0D]' : 'text-gray-600'
+                  }`}
+                >
+                  {isConnected ? 'online' : 'offline'}
+                </p>
               </div>
             </div>
           </div>
@@ -843,6 +968,31 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
             })
           )}
         </div>
+
+        {/* Typing indicator */}
+        {company?.id && typingUsers.has(company.id as string) && (
+          <div className="px-4 py-2 bg-[#F5F5F5] border-t border-fade">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <span
+                  className="w-2 h-2 bg-[#1C1C1C80] rounded-full animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                ></span>
+                <span
+                  className="w-2 h-2 bg-[#1C1C1C80] rounded-full animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                ></span>
+                <span
+                  className="w-2 h-2 bg-[#1C1C1C80] rounded-full animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                ></span>
+              </div>
+              <span className="text-[12px] text-[#1C1C1C80]">
+                {company.name} is typing...
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* File preview */}
         {selectedFile && (
@@ -1073,7 +1223,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
         >
           <input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Write a message"
             className="flex-1 outline-none placeholder:text-[#1C1C1C80] bg-fade px-3 py-2 rounded-[20px] text-[14px]"
             disabled={sendMessageMutation.isPending || isUploading}

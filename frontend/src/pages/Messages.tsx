@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { messageApi } from '../api/message';
 import ChatModal from '../components/message/ChatModal';
 import {
@@ -21,11 +22,13 @@ interface Conversation {
   lastMessage?: string;
   lastMessageTime?: Date;
   unreadCount?: number;
+  isOnline?: boolean;
 }
 
 const Messages: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { socket, onlineUsers } = useSocket();
   const { id } = useParams<{ id?: string }>();
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -42,8 +45,31 @@ const Messages: React.FC = () => {
       const response = await messageApi.getMessages({ page: 1, limit: 100 });
       return response;
     },
-    refetchInterval: 10000, // Refetch every 10 seconds for new conversations
+    refetchInterval: false, // Real-time updates via Socket.IO
   });
+
+  // Listen for new messages and conversation updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = () => {
+      // Refetch conversations when new message arrives
+      refetch();
+    };
+
+    const handleMessageRead = () => {
+      // Refetch to update unread counts
+      refetch();
+    };
+
+    socket.on('message:new', handleNewMessage);
+    socket.on('message:read', handleMessageRead);
+
+    return () => {
+      socket.off('message:new', handleNewMessage);
+      socket.off('message:read', handleMessageRead);
+    };
+  }, [socket, refetch]);
 
   const conversations = useMemo(() => {
     if (!messagesResponse) return [];
@@ -180,18 +206,22 @@ const Messages: React.FC = () => {
             ? new Date(conv.updatedAt as string | Date)
             : undefined;
 
+        const conversationId = (conv._id || conv.id || '') as string;
+        const isOnline = onlineUsers.has(conversationId);
+
         return {
-          id: (conv._id || conv.id || '') as string,
+          id: conversationId,
           name,
           role,
           image,
           lastMessage,
           lastMessageTime,
           unreadCount: (conv.unreadCount || 0) as number,
+          isOnline,
         };
       }
     );
-  }, [messagesResponse, user?.role]);
+  }, [messagesResponse, user?.role, onlineUsers]);
 
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
@@ -312,6 +342,10 @@ const Messages: React.FC = () => {
                               : DEFAULT_PROFILE_IMAGE;
                         }}
                       />
+                      {/* Online indicator */}
+                      {conversation.isOnline && (
+                        <div className="absolute bottom-1 right-1 w-3 h-3 bg-[#5CFF0D] border-2 border-white rounded-full"></div>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1 lg:gap-[5px]">
                       <p className="text-[#1C1C1C] font-medium text-[15px] lg:text-[20px]">

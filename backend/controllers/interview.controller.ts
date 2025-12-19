@@ -17,6 +17,73 @@ import {
 } from '../utils/timezone.utils';
 import { generateStreamToken, getStreamClient } from '../utils/stream.utils';
 import calendlyService from '../services/calendly.service';
+import { InterviewStage } from '../models/Job.model';
+
+/**
+ * Generate interview stage information for email messages
+ */
+function getInterviewStageInfo(
+  jobData: {
+    interviewStages?: number;
+    interviewStageTitles?: string[];
+    interviewStageDetails?: InterviewStage[];
+  },
+  currentStage: number
+): {
+  stageTitle: string;
+  stageDescription?: string;
+  stageInfo: string;
+  totalStagesInfo: string;
+} {
+  const totalStages = jobData.interviewStages || 1;
+  const stageIndex = currentStage - 1;
+
+  // Prefer interviewStageDetails over interviewStageTitles
+  let stageTitle = `Stage ${currentStage}`;
+  let stageDescription: string | undefined;
+
+  if (
+    jobData.interviewStageDetails &&
+    jobData.interviewStageDetails[stageIndex]
+  ) {
+    stageTitle = jobData.interviewStageDetails[stageIndex].title;
+    stageDescription = jobData.interviewStageDetails[stageIndex].description;
+  } else if (
+    jobData.interviewStageTitles &&
+    jobData.interviewStageTitles[stageIndex]
+  ) {
+    stageTitle = jobData.interviewStageTitles[stageIndex];
+  }
+
+  const stageInfo = totalStages > 1 ? ` (${stageTitle})` : '';
+
+  // Generate info about total interview stages
+  let totalStagesInfo = '';
+  if (totalStages > 1) {
+    if (totalStages === 2) {
+      totalStagesInfo =
+        '\n\nThis role requires 2 interview stages. This is your first interview.';
+    } else if (totalStages === 3) {
+      if (currentStage === 1) {
+        totalStagesInfo =
+          '\n\nThis role requires 3 interview stages. This is your first interview.';
+      } else if (currentStage === 2) {
+        totalStagesInfo =
+          '\n\nThis role requires 3 interview stages. This is your second interview.';
+      } else {
+        totalStagesInfo =
+          '\n\nThis role requires 3 interview stages. This is your final interview.';
+      }
+    }
+
+    // Add stage description if available
+    if (stageDescription) {
+      totalStagesInfo += `\n\n${stageTitle}: ${stageDescription}`;
+    }
+  }
+
+  return { stageTitle, stageDescription, stageInfo, totalStagesInfo };
+}
 
 export const getInterviewBySlug = async (
   req: Request,
@@ -370,6 +437,17 @@ export const suggestTimeSlots = async (
     return;
   }
 
+  // Verify application status allows interview scheduling
+  // Application must be accepted before scheduling interviews
+  const applicationStatus = application.status as string;
+  if (applicationStatus !== 'accepted') {
+    res.status(400).json({
+      message:
+        'Application must be accepted before scheduling an interview. Please accept the application first.',
+    });
+    return;
+  }
+
   // Determine which stage this interview should be
   const totalStages = jobData?.interviewStages || 1;
 
@@ -427,37 +505,36 @@ export const suggestTimeSlots = async (
     return;
   }
 
-  // Check for existing active interview between this company and graduate
-  // (regardless of which application/job it's for)
-  // This prevents scheduling multiple interviews with the same candidate until the first one is completed
-  const existingInterviewForPair = await Interview.findOne({
-    companyId: company._id,
+  // Check for existing active interview for the same role (jobId) with this graduate
+  // This prevents scheduling multiple interviews for the same role if one is pending
+  const existingInterviewForSameRole = await Interview.findOne({
+    jobId: jobData._id,
     graduateId: graduateData._id,
     status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
   });
 
-  if (existingInterviewForPair) {
+  if (existingInterviewForSameRole) {
     // Provide specific message based on status
-    if (existingInterviewForPair.status === 'pending_selection') {
+    if (existingInterviewForSameRole.status === 'pending_selection') {
       res.status(400).json({
         message:
-          'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.',
+          'An interview time slot selection is pending for this candidate for this role. Please wait until they select a time or the current selection expires before scheduling another interview.',
       });
       return;
     }
 
-    if (existingInterviewForPair.status === 'in_progress') {
+    if (existingInterviewForSameRole.status === 'in_progress') {
       res.status(400).json({
         message:
-          'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.',
+          'This candidate already has an interview in progress for this role. You cannot schedule another interview until the current one is completed or missed.',
       });
       return;
     }
 
-    if (existingInterviewForPair.status === 'scheduled') {
+    if (existingInterviewForSameRole.status === 'scheduled') {
       res.status(400).json({
         message:
-          'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.',
+          'An interview is already scheduled for this candidate for this role. Please wait until the current interview is completed or missed before scheduling another one.',
       });
       return;
     }
@@ -1211,7 +1288,8 @@ export const getCalendlyAvailability = async (
       }
     }
 
-    // Fetch event types from Calendly
+    // Fetch event types from Calendly and get company timezone
+    let companyTimezone = 'UTC'; // Default to UTC
     try {
       // Validate access token exists and is not empty
       if (!accessTokenToUse || accessTokenToUse.trim() === '') {
@@ -1220,6 +1298,21 @@ export const getCalendlyAvailability = async (
             'Company Calendly access token is missing or invalid. Please reconnect Calendly.',
         });
         return;
+      }
+
+      // Get company's timezone from Calendly user info
+      try {
+        const companyUser =
+          await calendlyService.getCurrentUser(accessTokenToUse);
+        if (companyUser?.timezone) {
+          companyTimezone = companyUser.timezone;
+        }
+      } catch (timezoneError) {
+        console.warn(
+          'Failed to get company timezone, using UTC:',
+          timezoneError
+        );
+        // Continue with UTC as default
       }
 
       const eventTypes = await calendlyService.getEventTypes(
@@ -1311,6 +1404,7 @@ export const getCalendlyAvailability = async (
         availableSlots: slotsWithEndTime,
         eventTypeUri: eventTypeUriToUse,
         eventTypes: eventTypesData?.collection || [],
+        companyTimezone: companyTimezone, // Include company timezone for frontend display
       });
     } catch (error) {
       console.error('Error fetching Calendly availability:', error);
@@ -1514,7 +1608,7 @@ export const scheduleCalendlyInterview = async (
     let jobData = job;
     if (!job.interviewStages) {
       const jobDoc = await Job.findById(application.jobId)
-        .select('interviewStages interviewStageTitles')
+        .select('interviewStages interviewStageTitles interviewStageDetails')
         .lean();
       if (!jobDoc) {
         res.status(404).json({ message: 'Job not found' });
@@ -1560,9 +1654,25 @@ export const scheduleCalendlyInterview = async (
       }
     }
 
+    // Verify application status allows interview scheduling
+    // Applications should be accepted, shortlisted, or reviewed to schedule interviews
+    const applicationStatus = (application as { status?: string }).status;
+    if (
+      applicationStatus &&
+      !['accepted', 'shortlisted', 'reviewed'].includes(applicationStatus)
+    ) {
+      res.status(400).json({
+        message:
+          'Your application must be reviewed and accepted before you can schedule an interview. Please wait for the company to review your application.',
+      });
+      return;
+    }
+
     // Check if there's already an interview for this stage or any active interview
+    // IMPORTANT: Check for same role (jobId) to prevent multiple pending interviews for same role
     const existingInterview = await Interview.findOne({
-      applicationId: application._id,
+      jobId: jobData._id || job._id,
+      graduateId: graduate._id,
       $or: [
         { status: { $in: ['pending_selection', 'scheduled', 'in_progress'] } },
         { stage: nextStage, status: { $ne: 'cancelled' } },
@@ -1572,13 +1682,13 @@ export const scheduleCalendlyInterview = async (
     if (existingInterview) {
       if (existingInterview.stage === nextStage) {
         res.status(400).json({
-          message: `Stage ${nextStage} interview is already scheduled or in progress for this application`,
+          message: `Stage ${nextStage} interview is already scheduled or in progress for this role`,
         });
         return;
       }
       res.status(400).json({
         message:
-          'An interview is already scheduled or pending for this application',
+          'An interview is already scheduled or pending for this role. Please wait until the current interview is completed or missed before scheduling another one.',
       });
       return;
     }
@@ -1688,28 +1798,20 @@ export const scheduleCalendlyInterview = async (
         minute: '2-digit',
       });
 
-      // Get stage title if available
-      const stageTitle =
-        jobData.interviewStageTitles &&
-        jobData.interviewStageTitles[nextStage - 1]
-          ? jobData.interviewStageTitles[nextStage - 1]
-          : `Stage ${nextStage}`;
-      const stageInfo =
-        jobData.interviewStages && jobData.interviewStages > 1
-          ? ` (${stageTitle})`
-          : '';
+      // Get stage information
+      const stageInfoData = getInterviewStageInfo(jobData, nextStage);
 
       // Notify candidate
       await createNotification({
         userId: graduate.userId!,
         type: 'interview',
         title: 'Interview Scheduled',
-        message: `An interview${stageInfo} has been scheduled for ${job.title || 'the position'} at ${companyName} on ${formattedDate}`,
+        message: `An interview${stageInfoData.stageInfo} has been scheduled for ${job.title || 'the position'} at ${companyName} on ${formattedDate}`,
         relatedId: savedInterview._id as mongoose.Types.ObjectId,
         relatedType: 'interview',
         email: {
-          subject: `Interview Scheduled: ${job.title || 'Position'} at ${companyName}${stageInfo}`,
-          text: `Hello ${graduateName},\n\nYour interview${stageInfo} for "${job.title || 'the position'}" at ${companyName} has been scheduled via Calendly.\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}\n\n📅 Add to Calendar: The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+          subject: `Interview Scheduled: ${job.title || 'Position'} at ${companyName}${stageInfoData.stageInfo}`,
+          text: `Hello ${graduateName},\n\nYour interview${stageInfoData.stageInfo} for "${job.title || 'the position'}" at ${companyName} has been scheduled via Calendly.\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}${stageInfoData.totalStagesInfo}\n\n📅 Add to Calendar: The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
         },
       });
 
@@ -1726,12 +1828,12 @@ export const scheduleCalendlyInterview = async (
           userId: companyUserId,
           type: 'interview',
           title: 'Interview Scheduled via Calendly',
-          message: `${graduateName} has scheduled an interview${stageInfo} for "${job.title || 'the position'}" via Calendly on ${formattedDate}`,
+          message: `${graduateName} has scheduled an interview${stageInfoData.stageInfo} for "${job.title || 'the position'}" via Calendly on ${formattedDate}`,
           relatedId: savedInterview._id as mongoose.Types.ObjectId,
           relatedType: 'interview',
           email: {
-            subject: `Interview Scheduled: ${graduateName} - ${job.title || 'Position'}${stageInfo}`,
-            text: `Hello,\n\n${graduateName} has scheduled an interview${stageInfo} via Calendly for "${job.title || 'the position'}".\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}\n\n📅 The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.`,
+            subject: `Interview Scheduled: ${graduateName} - ${job.title || 'Position'}${stageInfoData.stageInfo}`,
+            text: `Hello,\n\n${graduateName} has scheduled an interview${stageInfoData.stageInfo} via Calendly for "${job.title || 'the position'}".\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}${stageInfoData.totalStagesInfo}\n\n📅 The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.`,
           },
         });
       }
@@ -1758,6 +1860,613 @@ export const scheduleCalendlyInterview = async (
     });
   } catch (error) {
     console.error('Schedule Calendly interview error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Mark interview as done or missed (Company)
+ * PUT /api/companies/interviews/:interviewId/status
+ */
+export const updateInterviewStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { interviewId } = req.params;
+    const { status } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      res.status(400).json({ message: 'Invalid interview ID' });
+      return;
+    }
+
+    if (!status || !['completed', 'missed'].includes(status)) {
+      res.status(400).json({
+        message: "Status must be either 'completed' or 'missed'",
+      });
+      return;
+    }
+
+    // Get company
+    const company = await Company.findOne({ userId }).lean();
+    if (!company) {
+      res.status(404).json({ message: 'Company profile not found' });
+      return;
+    }
+
+    // Get interview with populated data (use lean for read-only)
+    const interview = await Interview.findById(interviewId)
+      .populate({
+        path: 'jobId',
+        select: 'title companyId',
+      })
+      .populate({
+        path: 'applicationId',
+        select: 'status',
+      })
+      .populate({
+        path: 'graduateId',
+        select: 'firstName lastName userId',
+      })
+      .lean();
+
+    if (!interview) {
+      res.status(404).json({ message: 'Interview not found' });
+      return;
+    }
+
+    // Verify interview belongs to company
+    const job = interview.jobId as
+      | { companyId?: mongoose.Types.ObjectId }
+      | mongoose.Types.ObjectId;
+    const jobData =
+      typeof job === 'object' &&
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
+        ? job
+        : null;
+
+    if (
+      !jobData ||
+      !jobData.companyId ||
+      jobData.companyId.toString() !== company._id.toString()
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Interview does not belong to your company' });
+      return;
+    }
+
+    // Only allow updating from scheduled or in_progress status
+    // Use atomic update to prevent race conditions
+    const updateData: {
+      status: 'completed' | 'missed';
+      endedAt?: Date;
+      startedAt?: Date;
+      updatedBy: mongoose.Types.ObjectId;
+    } = {
+      status: status as 'completed' | 'missed',
+      updatedBy: new mongoose.Types.ObjectId(userId),
+    };
+
+    if (status === 'completed') {
+      updateData.endedAt = new Date();
+      if (!interview.startedAt) {
+        updateData.startedAt = new Date();
+      }
+    }
+
+    // Use transaction to ensure atomicity of interview and application updates
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Atomic update: only update if status is still scheduled or in_progress
+      // First verify company ownership separately since we can't use populated field in query
+      if (
+        !jobData ||
+        !jobData.companyId ||
+        jobData.companyId.toString() !== company._id.toString()
+      ) {
+        await session.abortTransaction();
+        session.endSession();
+        res
+          .status(403)
+          .json({ message: 'Interview does not belong to your company' });
+        return;
+      }
+
+      const updatedInterview = await Interview.findOneAndUpdate(
+        {
+          _id: interviewId,
+          status: { $in: ['scheduled', 'in_progress'] },
+        },
+        updateData,
+        {
+          new: true,
+          session,
+        }
+      ).lean();
+
+      if (!updatedInterview) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(400).json({
+          message:
+            'Interview status has changed or does not belong to your company. Please refresh and try again.',
+        });
+        return;
+      }
+
+      // Update application status if interview is completed (within transaction)
+      if (status === 'completed') {
+        await Application.findByIdAndUpdate(
+          interview.applicationId,
+          {
+            $set: { status: 'interviewed' },
+          },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
+
+    // Send notifications (outside transaction to avoid blocking)
+    try {
+      // Re-fetch interview with populated data for notifications
+      const interviewForNotify = await Interview.findById(interviewId)
+        .populate({
+          path: 'graduateId',
+          select: 'firstName lastName userId',
+        })
+        .populate({
+          path: 'jobId',
+          select: 'title',
+        })
+        .lean();
+
+      if (!interviewForNotify) {
+        res.status(500).json({ message: 'Failed to fetch interview data' });
+        return;
+      }
+
+      const graduate = interviewForNotify.graduateId as
+        | {
+            firstName?: string;
+            lastName?: string;
+            userId?: mongoose.Types.ObjectId;
+          }
+        | mongoose.Types.ObjectId;
+      const graduateData =
+        typeof graduate === 'object' &&
+        graduate &&
+        !(graduate instanceof mongoose.Types.ObjectId)
+          ? graduate
+          : null;
+
+      const graduateName =
+        graduateData?.firstName && graduateData?.lastName
+          ? `${graduateData.firstName} ${graduateData.lastName}`
+          : 'Candidate';
+
+      const notifyJob = interviewForNotify.jobId as
+        | { title?: string }
+        | mongoose.Types.ObjectId;
+      const jobTitle =
+        notifyJob && typeof notifyJob === 'object' && 'title' in notifyJob
+          ? notifyJob.title
+          : 'the position';
+
+      if (status === 'completed') {
+        // Notify graduate that interview is completed
+        if (graduateData?.userId) {
+          const graduateUserId =
+            graduateData.userId instanceof mongoose.Types.ObjectId
+              ? graduateData.userId.toString()
+              : String(graduateData.userId);
+
+          await createNotification({
+            userId: graduateUserId,
+            type: 'interview',
+            title: 'Interview Completed',
+            message: `Your interview for "${jobTitle}" at ${company.companyName} has been marked as completed. The company will review and get back to you.`,
+            relatedId:
+              interviewForNotify._id instanceof mongoose.Types.ObjectId
+                ? interviewForNotify._id
+                : new mongoose.Types.ObjectId(String(interviewForNotify._id)),
+            relatedType: 'interview',
+            email: {
+              subject: `Interview Completed: ${jobTitle} at ${company.companyName}`,
+              text: `Hello ${graduateName},\n\nYour interview for "${jobTitle}" at ${company.companyName} has been completed. The company will review your interview and get back to you with their decision.\n\nThank you for your time!`,
+            },
+          });
+        }
+      } else if (status === 'missed') {
+        // Notify graduate that interview was missed
+        if (graduateData?.userId) {
+          const graduateUserId =
+            graduateData.userId instanceof mongoose.Types.ObjectId
+              ? graduateData.userId.toString()
+              : String(graduateData.userId);
+
+          await createNotification({
+            userId: graduateUserId,
+            type: 'interview',
+            title: 'Interview Missed',
+            message: `Your interview for "${jobTitle}" at ${company.companyName} was marked as missed. Please contact the company if you'd like to reschedule.`,
+            relatedId:
+              interviewForNotify._id instanceof mongoose.Types.ObjectId
+                ? interviewForNotify._id
+                : new mongoose.Types.ObjectId(String(interviewForNotify._id)),
+            relatedType: 'interview',
+            email: {
+              subject: `Interview Missed: ${jobTitle} at ${company.companyName}`,
+              text: `Hello ${graduateName},\n\nYour interview for "${jobTitle}" at ${company.companyName} was marked as missed. If you'd like to reschedule, please contact the company or check your Interviews page for options.\n\nBest regards.`,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+    }
+
+    // Get the updated interview for response
+    const finalInterview = await Interview.findById(interviewId)
+      .select('_id status')
+      .lean();
+
+    res.json({
+      message: `Interview marked as ${status} successfully`,
+      interview: {
+        id:
+          finalInterview?._id instanceof mongoose.Types.ObjectId
+            ? finalInterview._id.toString()
+            : String(finalInterview?._id || interviewId),
+        status: finalInterview?.status || status,
+      },
+    });
+  } catch (error) {
+    console.error('Update interview status error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Reschedule a missed interview (Company)
+ * POST /api/companies/interviews/:interviewId/reschedule
+ */
+export const rescheduleMissedInterview = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { interviewId } = req.params;
+    const { timeSlots, companyTimezone, selectionDeadline } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      res.status(400).json({ message: 'Invalid interview ID' });
+      return;
+    }
+
+    // Validate timeSlots array
+    if (!Array.isArray(timeSlots) || timeSlots.length === 0) {
+      res.status(400).json({ message: 'At least one time slot is required' });
+      return;
+    }
+
+    if (timeSlots.length > 5) {
+      res.status(400).json({ message: 'Maximum 5 time slots allowed' });
+      return;
+    }
+
+    // Validate timezone
+    if (!companyTimezone || !isValidTimezone(companyTimezone)) {
+      res.status(400).json({ message: 'Valid company timezone is required' });
+      return;
+    }
+
+    // Get company
+    const company = await Company.findOne({ userId }).lean();
+    if (!company) {
+      res.status(404).json({ message: 'Company profile not found' });
+      return;
+    }
+
+    // Get interview (use lean for read-only, will re-fetch in transaction if needed)
+    const interview = await Interview.findById(interviewId)
+      .populate({
+        path: 'jobId',
+        select: 'companyId title interviewStages interviewStageTitles',
+      })
+      .populate({
+        path: 'applicationId',
+        select: 'status',
+      })
+      .populate({
+        path: 'graduateId',
+        select: 'firstName lastName userId',
+      })
+      .lean();
+
+    if (!interview) {
+      res.status(404).json({ message: 'Interview not found' });
+      return;
+    }
+
+    // Verify interview belongs to company
+    const job = interview.jobId as
+      | {
+          companyId?: mongoose.Types.ObjectId;
+          title?: string;
+          interviewStages?: 1 | 2 | 3;
+          interviewStageTitles?: string[];
+        }
+      | mongoose.Types.ObjectId;
+    const jobData =
+      typeof job === 'object' &&
+      job &&
+      !(job instanceof mongoose.Types.ObjectId)
+        ? job
+        : null;
+
+    if (
+      !jobData ||
+      !jobData.companyId ||
+      jobData.companyId.toString() !== company._id.toString()
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Interview does not belong to your company' });
+      return;
+    }
+
+    // Only allow rescheduling missed interviews
+    // Also check if there's already a pending interview for the same role
+    const jobIdForQuery =
+      jobData && typeof jobData === 'object' && '_id' in jobData
+        ? (jobData as { _id?: mongoose.Types.ObjectId })._id
+        : interview.jobId instanceof mongoose.Types.ObjectId
+          ? interview.jobId
+          : new mongoose.Types.ObjectId(String(interview.jobId));
+
+    const graduateIdForQuery =
+      interview.graduateId instanceof mongoose.Types.ObjectId
+        ? interview.graduateId
+        : new mongoose.Types.ObjectId(String(interview.graduateId));
+
+    const existingPendingInterview = await Interview.findOne({
+      jobId: jobIdForQuery,
+      graduateId: graduateIdForQuery,
+      _id: { $ne: new mongoose.Types.ObjectId(interviewId) },
+      status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
+    }).lean();
+
+    if (existingPendingInterview) {
+      res.status(400).json({
+        message:
+          'Another interview is already scheduled or pending for this role. Please wait until it is completed or missed before rescheduling.',
+      });
+      return;
+    }
+
+    // Validate each time slot
+    const validDurations = [15, 30, 45, 60];
+    const now = new Date();
+    const suggestedSlots: ISuggestedTimeSlot[] = [];
+    const seenDates = new Set<string>();
+
+    for (const slot of timeSlots) {
+      if (!slot.date) {
+        res.status(400).json({ message: 'Each time slot must have a date' });
+        return;
+      }
+
+      const slotDate = new Date(slot.date);
+      if (isNaN(slotDate.getTime())) {
+        res.status(400).json({ message: 'Invalid date format in time slot' });
+        return;
+      }
+
+      if (slotDate < now) {
+        res.status(400).json({ message: 'Time slots cannot be in the past' });
+        return;
+      }
+
+      const duration = slot.duration || 30;
+      if (!validDurations.includes(duration)) {
+        res
+          .status(400)
+          .json({ message: 'Duration must be 15, 30, 45, or 60 minutes' });
+        return;
+      }
+
+      const dateKey = slotDate.toISOString();
+      if (seenDates.has(dateKey)) {
+        res.status(400).json({
+          message: 'Duplicate time slots are not allowed',
+        });
+        return;
+      }
+      seenDates.add(dateKey);
+
+      suggestedSlots.push({
+        date: slotDate,
+        duration,
+        timezone: companyTimezone,
+      });
+    }
+
+    // Use atomic update to prevent race conditions
+    // Only update if status is still 'missed' and belongs to company
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    let updatedInterviewForNotify: any = null;
+
+    try {
+      // Verify company ownership before update (already checked above, but double-check in transaction)
+      if (
+        !jobData ||
+        !jobData.companyId ||
+        jobData.companyId.toString() !== company._id.toString()
+      ) {
+        await session.abortTransaction();
+        session.endSession();
+        res
+          .status(403)
+          .json({ message: 'Interview does not belong to your company' });
+        return;
+      }
+
+      const updatedInterview = await Interview.findOneAndUpdate(
+        {
+          _id: interviewId,
+          status: 'missed',
+        },
+        {
+          $set: {
+            status: 'pending_selection',
+            suggestedTimeSlots: suggestedSlots,
+            companyTimezone: companyTimezone,
+            durationMinutes: suggestedSlots[0].duration,
+            selectionDeadline: selectionDeadline
+              ? new Date(selectionDeadline)
+              : undefined,
+            scheduledAt: suggestedSlots[0].date,
+            updatedBy: new mongoose.Types.ObjectId(userId),
+          },
+        },
+        {
+          new: true,
+          session,
+        }
+      )
+        .populate({
+          path: 'jobId',
+          select: 'companyId title',
+        })
+        .populate({
+          path: 'graduateId',
+          select: 'firstName lastName userId',
+        })
+        .lean();
+
+      if (!updatedInterview) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(400).json({
+          message:
+            'Interview status has changed or does not belong to your company. Please refresh and try again.',
+        });
+        return;
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+
+      // Use updatedInterview for notifications and response
+      updatedInterviewForNotify = updatedInterview;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
+
+    // Send notification to graduate
+    const graduate = updatedInterviewForNotify.graduateId as
+      | {
+          firstName?: string;
+          lastName?: string;
+          userId?: mongoose.Types.ObjectId;
+        }
+      | mongoose.Types.ObjectId;
+    const graduateData =
+      typeof graduate === 'object' &&
+      graduate &&
+      !(graduate instanceof mongoose.Types.ObjectId)
+        ? graduate
+        : null;
+
+    const updatedJobData = updatedInterviewForNotify.jobId as
+      | { title?: string }
+      | mongoose.Types.ObjectId;
+
+    if (graduateData?.userId) {
+      const graduateName =
+        graduateData.firstName && graduateData.lastName
+          ? `${graduateData.firstName} ${graduateData.lastName}`
+          : 'there';
+      const graduateUserId =
+        graduateData.userId instanceof mongoose.Types.ObjectId
+          ? graduateData.userId.toString()
+          : String(graduateData.userId);
+
+      const jobTitle =
+        updatedJobData &&
+        typeof updatedJobData === 'object' &&
+        'title' in updatedJobData
+          ? updatedJobData.title
+          : 'the position';
+
+      try {
+        await createNotification({
+          userId: graduateUserId,
+          type: 'interview',
+          title: 'Interview Rescheduled',
+          message: `${company.companyName} has rescheduled your interview for "${jobTitle}". Please select your preferred time slot.`,
+          relatedId:
+            updatedInterviewForNotify._id instanceof mongoose.Types.ObjectId
+              ? updatedInterviewForNotify._id
+              : new mongoose.Types.ObjectId(
+                  String(updatedInterviewForNotify._id)
+                ),
+          relatedType: 'interview',
+          email: {
+            subject: `Interview Rescheduled: ${jobTitle} at ${company.companyName}`,
+            text: `Hello ${graduateName},\n\n${company.companyName} has rescheduled your interview for "${jobTitle}". ${suggestedSlots.length} new time slot${suggestedSlots.length > 1 ? 's have' : ' has'} been suggested.\n\nPlease log in to Talent Hub to view the available times and select your preferred slot.\n\nBest of luck!`,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to send reschedule notification:', error);
+      }
+    }
+
+    const interviewIdInstance =
+      updatedInterviewForNotify._id instanceof mongoose.Types.ObjectId
+        ? updatedInterviewForNotify._id.toString()
+        : String(updatedInterviewForNotify._id);
+
+    res.json({
+      message: 'Interview rescheduled successfully',
+      interview: {
+        id: interviewIdInstance,
+        status: updatedInterviewForNotify.status,
+        suggestedTimeSlots: updatedInterviewForNotify.suggestedTimeSlots,
+        companyTimezone: updatedInterviewForNotify.companyTimezone,
+        selectionDeadline: updatedInterviewForNotify.selectionDeadline,
+      },
+    });
+  } catch (error) {
+    console.error('Reschedule interview error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

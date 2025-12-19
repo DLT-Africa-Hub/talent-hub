@@ -25,7 +25,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = 'Enter text...',
   label,
   required,
-  rows = 4,
 }) => {
   const editor = useEditor({
     extensions: [
@@ -41,7 +40,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[120px] px-4 py-3',
+          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[120px] px-4 py-3 break-words overflow-wrap-anywhere',
       },
     },
   });
@@ -57,9 +56,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div className="border border-fade rounded-xl bg-white overflow-hidden">
+      <div className="border border-fade rounded-xl bg-white overflow-hidden flex flex-col h-full">
         {/* Toolbar */}
-        <div className="flex items-center gap-2 p-2 border-b border-fade bg-[#F8F8F8]">
+        <div className="flex items-center gap-2 p-2 border-b border-fade bg-[#F8F8F8] shrink-0 flex-wrap">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -127,8 +126,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <BsListOl className="text-[18px]" />
           </button>
         </div>
-        {/* Editor Content */}
-        <div className={`min-h-[${rows * 24}px]`}>
+        {/* Editor Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-[120px]">
           <EditorContent editor={editor} />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useCompanyMatches, extractMatches } from '../../hooks/useCompanyData';
 import DashboardLayout from '../../components/layout/DashboardLayout';
@@ -32,38 +32,6 @@ const CompanyDashboard = () => {
     });
 
   // Check Calendly connection status
-  const { data: calendlyStatus } = useQuery({
-    queryKey: ['calendlyStatus'],
-    queryFn: async () => {
-      const response = await companyApi.getCalendlyStatus();
-      return response;
-    },
-  });
-
-  const isCalendlyConnected =
-    calendlyStatus?.connected && calendlyStatus?.enabled;
-
-  const scheduleInterviewMutation = useMutation({
-    mutationFn: async ({
-      applicationId,
-      scheduledAt,
-      durationMinutes,
-    }: {
-      applicationId: string;
-      scheduledAt: string;
-      durationMinutes?: number;
-    }) => {
-      return companyApi.scheduleInterview(applicationId, {
-        scheduledAt,
-        durationMinutes,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
-      queryClient.invalidateQueries({ queryKey: ['interviews'] });
-      queryClient.invalidateQueries({ queryKey: ['interviews', 'company'] });
-    },
-  });
 
   // Mutation for suggesting multiple time slots
   const suggestTimeSlotsMutation = useMutation({
@@ -127,30 +95,6 @@ const CompanyDashboard = () => {
     setIsModalOpen(false);
     setSelectedCandidate(null);
   };
-
-  const handleScheduleInterview = useCallback(
-    async (
-      candidate: CandidateProfile,
-      scheduledAt: string,
-      durationMinutes?: number
-    ) => {
-      if (!candidate.applicationId) {
-        throw new Error('Missing application reference for this candidate.');
-      }
-      await scheduleInterviewMutation.mutateAsync({
-        applicationId: candidate.applicationId,
-        scheduledAt,
-        durationMinutes,
-      });
-    },
-    [scheduleInterviewMutation]
-  );
-
-  const handleSuggestTimeSlots = useCallback((candidate: CandidateProfile) => {
-    setMultiSlotCandidate(candidate);
-    setIsMultiSlotModalOpen(true);
-    setIsModalOpen(false);
-  }, []);
 
   const handleViewCV = useCallback((candidate: CandidateProfile) => {
     const cvUrl = candidate.cv;
@@ -237,25 +181,6 @@ const CompanyDashboard = () => {
         candidate={selectedCandidate}
         onClose={handleCloseModal}
         onViewCV={handleViewCV}
-        onScheduleInterview={
-          !isCalendlyConnected && selectedCandidate?.applicationId
-            ? handleScheduleInterview
-            : undefined
-        }
-        onSuggestTimeSlots={
-          !isCalendlyConnected && selectedCandidate?.applicationId
-            ? handleSuggestTimeSlots
-            : undefined
-        }
-        isCalendlyConnected={isCalendlyConnected}
-        isSchedulingInterview={
-          !!(
-            scheduleInterviewMutation.isPending &&
-            selectedCandidate?.applicationId &&
-            scheduleInterviewMutation.variables?.applicationId ===
-              selectedCandidate.applicationId
-          )
-        }
       />
 
       <ScheduleInterviewModal

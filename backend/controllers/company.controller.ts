@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import _ from 'lodash';
 import Company from '../models/Company.model';
-import Job from '../models/Job.model';
+import Job, { InterviewStage } from '../models/Job.model';
 import Match from '../models/Match.model';
 import Graduate from '../models/Graduate.model';
 import Application from '../models/Application.model';
@@ -407,8 +407,11 @@ const matchGraduatesByRank = async (
     }
 
     // Create matches for each graduate
-    const matchPromises = graduatesToMatch.map(async (graduate) => {
-      try {
+    // Use Promise.allSettled to handle partial failures gracefully
+    // Note: Each match creation is independent, so we don't need a single transaction
+    // However, we batch notifications to avoid N+1
+    const matchResults = await Promise.allSettled(
+      graduatesToMatch.map(async (graduate) => {
         // Create new match with a base score of 100 (rank-based match)
         const match = new Match({
           graduateId: graduate._id,
@@ -419,8 +422,6 @@ const matchGraduatesByRank = async (
 
         await match.save();
 
-        // Send notification to graduate
-        // The userId field in Graduate model references User._id
         const graduateUserId =
           graduate.userId instanceof mongoose.Types.ObjectId
             ? graduate.userId.toString()
@@ -431,8 +432,28 @@ const matchGraduatesByRank = async (
             ? match._id.toString()
             : String(match._id);
 
-        // Send notification with custom message for rank-based match
-        await createNotification({
+        return {
+          graduateUserId,
+          matchId,
+          graduateId: graduate._id,
+        };
+      })
+    );
+
+    // Batch send notifications for successful matches
+    const notificationPromises = matchResults
+      .filter(
+        (
+          result
+        ): result is PromiseFulfilledResult<{
+          graduateUserId: string;
+          matchId: string;
+          graduateId: mongoose.Types.ObjectId;
+        }> => result.status === 'fulfilled'
+      )
+      .map((result) => {
+        const { graduateUserId, matchId } = result.value;
+        return createNotification({
           userId: graduateUserId,
           type: 'match',
           title: 'New Job Match Based on Your Rank!',
@@ -440,22 +461,18 @@ const matchGraduatesByRank = async (
           relatedId: matchId,
           relatedType: 'match',
         });
+      });
 
-        console.log(
-          `[Rank Matching] Created match and sent notification for graduate ${graduate._id}`
-        );
-      } catch (error) {
-        console.error(
-          `[Rank Matching] Error creating match for graduate ${graduate._id}:`,
-          error
-        );
-        // Continue with other graduates even if one fails
-      }
-    });
+    // Execute all notifications in parallel
+    await Promise.allSettled(notificationPromises);
 
-    await Promise.all(matchPromises);
+    // Log results
+    const successful = matchResults.filter(
+      (r) => r.status === 'fulfilled'
+    ).length;
+    const failed = matchResults.filter((r) => r.status === 'rejected').length;
     console.log(
-      `[Rank Matching] Completed matching for job ${jobId} with ${matchingGraduates.length} graduates`
+      `[Rank Matching] Created ${successful} matches${failed > 0 ? `, ${failed} failed` : ''}`
     );
   } catch (error) {
     console.error('[Rank Matching] Error in matchGraduatesByRank:', error);
@@ -494,6 +511,7 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     directContact,
     interviewStages,
     interviewStageTitles,
+    interviewStageDetails,
   } = req.body;
 
   const validatedTitle = validateRequiredString(title, 'Title', res);
@@ -662,6 +680,70 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     validatedStageTitles = titles;
   }
 
+  // Validate interviewStageDetails if provided (preferred over interviewStageTitles)
+  let validatedStageDetails:
+    | Array<{ title: string; description?: string }>
+    | undefined;
+  if (interviewStageDetails !== undefined) {
+    if (!Array.isArray(interviewStageDetails)) {
+      res.status(400).json({
+        message: 'interviewStageDetails must be an array',
+      });
+      return;
+    }
+
+    if (interviewStageDetails.length !== finalInterviewStages) {
+      res.status(400).json({
+        message: `Number of stage details (${interviewStageDetails.length}) must match the number of interview stages (${finalInterviewStages})`,
+      });
+      return;
+    }
+
+    // Validate each stage detail
+    const details = interviewStageDetails
+      .map((detail: unknown, index: number) => {
+        if (
+          !detail ||
+          typeof detail !== 'object' ||
+          !('title' in detail) ||
+          typeof detail.title !== 'string'
+        ) {
+          res.status(400).json({
+            message: `Stage detail at index ${index} must be an object with a title string`,
+          });
+          return null;
+        }
+        const trimmedTitle = detail.title.trim();
+        if (!trimmedTitle) {
+          res.status(400).json({
+            message: `Stage title at index ${index} cannot be empty`,
+          });
+          return null;
+        }
+        const result: InterviewStage = {
+          title: trimmedTitle,
+        };
+        if (
+          'description' in detail &&
+          typeof detail.description === 'string' &&
+          detail.description.trim()
+        ) {
+          result.description = detail.description.trim();
+        }
+        return result;
+      })
+      .filter(
+        (detail): detail is InterviewStage =>
+          detail !== null && typeof detail === 'object' && 'title' in detail
+      );
+
+    if (details.length !== finalInterviewStages) {
+      return; // Error already sent above
+    }
+
+    validatedStageDetails = details;
+  }
+
   const jobText = `
     Title: ${validatedTitle}
     Type: ${validatedJobType}
@@ -704,7 +786,11 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     },
     directContact: validatedDirectContact,
     interviewStages: finalInterviewStages,
-    ...(validatedStageTitles && { interviewStageTitles: validatedStageTitles }),
+    ...(validatedStageDetails
+      ? { interviewStageDetails: validatedStageDetails }
+      : validatedStageTitles
+        ? { interviewStageTitles: validatedStageTitles }
+        : {}),
     embedding,
     ...deleteUndefined({
       location: validatedLocation,
@@ -1108,6 +1194,7 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     directContact,
     interviewStages,
     interviewStageTitles,
+    interviewStageDetails,
   } = req.body;
   let needsEmbeddingUpdate = false;
 
@@ -1191,8 +1278,61 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     if (validated === null && interviewStages !== null) return;
     if (validated !== null) {
       job.interviewStages = validated;
-      // If stages changed and titles are provided, validate them match
-      if (interviewStageTitles !== undefined) {
+      // If stages changed and details/titles are provided, validate them match
+      if (interviewStageDetails !== undefined) {
+        if (!Array.isArray(interviewStageDetails)) {
+          res.status(400).json({
+            message: 'interviewStageDetails must be an array',
+          });
+          return;
+        }
+        if (interviewStageDetails.length !== validated) {
+          res.status(400).json({
+            message: `Number of stage details (${interviewStageDetails.length}) must match the number of interview stages (${validated})`,
+          });
+          return;
+        }
+        const details = interviewStageDetails
+          .map((detail: unknown, index: number) => {
+            if (
+              !detail ||
+              typeof detail !== 'object' ||
+              !('title' in detail) ||
+              typeof detail.title !== 'string'
+            ) {
+              res.status(400).json({
+                message: `Stage detail at index ${index} must be an object with a title string`,
+              });
+              return null;
+            }
+            const trimmedTitle = detail.title.trim();
+            if (!trimmedTitle) {
+              res.status(400).json({
+                message: `Stage title at index ${index} cannot be empty`,
+              });
+              return null;
+            }
+            const result: InterviewStage = {
+              title: trimmedTitle,
+            };
+            if (
+              'description' in detail &&
+              typeof detail.description === 'string' &&
+              detail.description.trim()
+            ) {
+              result.description = detail.description.trim();
+            }
+            return result;
+          })
+          .filter(
+            (detail): detail is InterviewStage =>
+              detail !== null && typeof detail === 'object' && 'title' in detail
+          ) as InterviewStage[];
+        if (details.length === validated) {
+          job.interviewStageDetails = details;
+          job.interviewStageTitles = undefined; // Clear old titles when using details
+        }
+      } else if (interviewStageTitles !== undefined) {
         if (!Array.isArray(interviewStageTitles)) {
           res.status(400).json({
             message: 'interviewStageTitles must be an array',
@@ -1227,10 +1367,67 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
           job.interviewStageTitles = titles;
         }
       } else if (validated !== job.interviewStages) {
-        // If stages changed but no new titles provided, clear existing titles
+        // If stages changed but no new titles/details provided, clear existing
         job.interviewStageTitles = undefined;
+        job.interviewStageDetails = undefined;
       }
     }
+  } else if (interviewStageDetails !== undefined) {
+    // Update stage details without changing number of stages
+    if (!Array.isArray(interviewStageDetails)) {
+      res.status(400).json({
+        message: 'interviewStageDetails must be an array',
+      });
+      return;
+    }
+    if (interviewStageDetails.length !== job.interviewStages) {
+      res.status(400).json({
+        message: `Number of stage details (${interviewStageDetails.length}) must match the number of interview stages (${job.interviewStages})`,
+      });
+      return;
+    }
+    const details = interviewStageDetails
+      .map((detail: unknown, index: number) => {
+        if (
+          !detail ||
+          typeof detail !== 'object' ||
+          !('title' in detail) ||
+          typeof detail.title !== 'string'
+        ) {
+          res.status(400).json({
+            message: `Stage detail at index ${index} must be an object with a title string`,
+          });
+          return null;
+        }
+        const trimmedTitle = detail.title.trim();
+        if (!trimmedTitle) {
+          res.status(400).json({
+            message: `Stage title at index ${index} cannot be empty`,
+          });
+          return null;
+        }
+        const result: InterviewStage = {
+          title: trimmedTitle,
+        };
+        if (
+          'description' in detail &&
+          typeof detail.description === 'string' &&
+          detail.description.trim()
+        ) {
+          result.description = detail.description.trim();
+        }
+        return result;
+      })
+      .filter(
+        (detail): detail is InterviewStage =>
+          detail !== null && typeof detail === 'object' && 'title' in detail
+      ) as InterviewStage[];
+
+    if (details.length !== job.interviewStages) {
+      return; // Error already sent above
+    }
+    job.interviewStageDetails = details;
+    job.interviewStageTitles = undefined; // Clear old titles when using details
   } else if (interviewStageTitles !== undefined) {
     // Update titles without changing stages
     if (!Array.isArray(interviewStageTitles)) {
@@ -1497,13 +1694,39 @@ export const deleteJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  await Promise.all([
-    Match.deleteMany({ jobId: new mongoose.Types.ObjectId(validatedJobId) }),
-    Application.deleteMany({
-      jobId: new mongoose.Types.ObjectId(validatedJobId),
-    }),
-    Job.deleteOne({ _id: new mongoose.Types.ObjectId(validatedJobId) }),
-  ]);
+  // Use transaction to ensure atomicity of related deletions
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    await Promise.all([
+      Match.deleteMany(
+        { jobId: new mongoose.Types.ObjectId(validatedJobId) },
+        { session }
+      ),
+      Application.deleteMany(
+        { jobId: new mongoose.Types.ObjectId(validatedJobId) },
+        { session }
+      ),
+      Interview.deleteMany(
+        { jobId: new mongoose.Types.ObjectId(validatedJobId) },
+        { session }
+      ),
+      Job.deleteOne(
+        { _id: new mongoose.Types.ObjectId(validatedJobId) },
+        { session }
+      ),
+    ]);
+
+    await session.commitTransaction();
+    session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Error deleting job and related records:', error);
+    res.status(500).json({ message: 'Failed to delete job' });
+    return;
+  }
 
   res.json({ message: 'Job deleted successfully' });
 };
@@ -2259,33 +2482,76 @@ export const updateApplicationStatus = async (
     } else {
       // No completed interview yet - just accept to allow interview scheduling
       // This is the initial acceptance before interview
-      application.status = validatedStatus;
-      application.reviewedAt = new Date();
-      if (notes !== undefined) {
-        application.notes =
-          typeof notes === 'string' ? notes.trim() : undefined;
+      // Use atomic update to prevent race conditions
+      const updateResult = await Application.findByIdAndUpdate(
+        applicationId,
+        {
+          $set: {
+            status: validatedStatus,
+            reviewedAt: new Date(),
+            ...(notes !== undefined
+              ? { notes: typeof notes === 'string' ? notes.trim() : undefined }
+              : {}),
+          },
+        },
+        { new: true }
+      );
+
+      if (!updateResult) {
+        res.status(404).json({ message: 'Application not found' });
+        return;
       }
-      await application.save();
     }
   } else if (validatedStatus === 'rejected') {
     // Company can reject at any point, including after interview
     // This allows company to reject even if interview was completed
-    application.status = validatedStatus;
-    application.reviewedAt = new Date();
-    if (notes !== undefined) {
-      application.notes = typeof notes === 'string' ? notes.trim() : undefined;
-    }
-    await application.save();
-  } else {
-    application.status = validatedStatus;
-    application.reviewedAt = new Date();
-    if (notes !== undefined) {
-      application.notes = typeof notes === 'string' ? notes.trim() : undefined;
-    }
-    await application.save();
+    // Use atomic update to prevent race conditions
+    const updateResult = await Application.findByIdAndUpdate(
+      applicationId,
+      {
+        $set: {
+          status: validatedStatus,
+          reviewedAt: new Date(),
+          ...(notes !== undefined
+            ? { notes: typeof notes === 'string' ? notes.trim() : undefined }
+            : {}),
+        },
+      },
+      { new: true }
+    );
 
-    if (validatedStatus === 'hired') {
-      try {
+    if (!updateResult) {
+      res.status(404).json({ message: 'Application not found' });
+      return;
+    }
+  } else {
+    // Use transaction for status update and company update (if hired)
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const updateResult = await Application.findByIdAndUpdate(
+        applicationId,
+        {
+          $set: {
+            status: validatedStatus,
+            reviewedAt: new Date(),
+            ...(notes !== undefined
+              ? { notes: typeof notes === 'string' ? notes.trim() : undefined }
+              : {}),
+          },
+        },
+        { new: true, session }
+      );
+
+      if (!updateResult) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(404).json({ message: 'Application not found' });
+        return;
+      }
+
+      if (validatedStatus === 'hired') {
         let graduateId: mongoose.Types.ObjectId | null = null;
 
         if (application.graduateId instanceof mongoose.Types.ObjectId) {
@@ -2304,13 +2570,24 @@ export const updateApplicationStatus = async (
         }
 
         if (graduateId) {
-          await Company.findByIdAndUpdate(company._id, {
-            $addToSet: { hiredCandidates: graduateId },
-          });
+          await Company.findByIdAndUpdate(
+            company._id,
+            {
+              $addToSet: { hiredCandidates: graduateId },
+            },
+            { session }
+          );
         }
-      } catch (error) {
-        console.error('Failed to update hiredCandidates:', error);
       }
+
+      await session.commitTransaction();
+      session.endSession();
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error('Failed to update application status:', error);
+      res.status(500).json({ message: 'Failed to update application status' });
+      return;
     }
   }
 
@@ -2493,6 +2770,7 @@ export const scheduleInterview = async (
     title?: string;
     interviewStages?: 1 | 2 | 3;
     interviewStageTitles?: string[];
+    interviewStageDetails?: InterviewStage[];
     companyId?:
       | {
           _id?: mongoose.Types.ObjectId;
@@ -3589,11 +3867,75 @@ export const getCalendlyStatus = async (
     }
 
     try {
-      userInfo = await calendlyService.getCurrentUser(
-        company.calendly.accessToken
-      );
+      // Check if token is expired and refresh if needed
+      let accessTokenToUse = company.calendly.accessToken;
+
+      if (
+        company.calendly.tokenExpiresAt &&
+        company.calendly.tokenExpiresAt < new Date() &&
+        company.calendly.refreshToken
+      ) {
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            company.calendly.refreshToken
+          );
+
+          // Update company with new tokens
+          company.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            company.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            company.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await company.save();
+
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.warn('Calendly token refresh failed:', refreshError);
+          // Continue with original token - it might still work
+        }
+      }
+
+      userInfo = await calendlyService.getCurrentUser(accessTokenToUse);
     } catch (error) {
       console.warn('Calendly token validation failed:', error);
+      // If token is invalid and we have a refresh token, try to refresh
+      if (
+        error instanceof Error &&
+        error.message.includes('authentication failed') &&
+        company.calendly.refreshToken
+      ) {
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            company.calendly.refreshToken
+          );
+
+          // Update company with new tokens
+          company.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            company.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            company.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await company.save();
+
+          // Retry with new token
+          userInfo = await calendlyService.getCurrentUser(
+            refreshResult.accessToken
+          );
+        } catch (refreshError) {
+          console.warn(
+            'Calendly token refresh failed after validation error:',
+            refreshError
+          );
+        }
+      }
     }
 
     res.json({

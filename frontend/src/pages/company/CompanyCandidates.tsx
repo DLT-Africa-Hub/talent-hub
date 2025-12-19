@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCompanyApplications,
   useCompanyMatches,
@@ -39,18 +39,6 @@ const CompanyCandidates = () => {
   const [isMultiSlotModalOpen, setIsMultiSlotModalOpen] = useState(false);
   const [multiSlotCandidate, setMultiSlotCandidate] =
     useState<CandidateProfile | null>(null);
-
-  // Check Calendly connection status
-  const { data: calendlyStatus } = useQuery({
-    queryKey: ['calendlyStatus'],
-    queryFn: async () => {
-      const response = await companyApi.getCalendlyStatus();
-      return response;
-    },
-  });
-
-  const isCalendlyConnected =
-    calendlyStatus?.connected && calendlyStatus?.enabled;
 
   const transformApplicationMemo = useCallback(
     (app: ApiApplication, index: number) => transformApplication(app, index),
@@ -338,34 +326,6 @@ const CompanyCandidates = () => {
     }
   }, [id, candidates, navigate]);
 
-  const handleChat = (candidate: CandidateProfile) => {
-    // TODO: Navigate to chat
-    console.log('Chat clicked for candidate:', candidate.id);
-  };
-
-  const scheduleInterviewMutation = useMutation({
-    mutationFn: async ({
-      applicationId,
-      scheduledAt,
-      durationMinutes,
-    }: {
-      applicationId: string;
-      scheduledAt: string;
-      durationMinutes?: number;
-    }) => {
-      return companyApi.scheduleInterview(applicationId, {
-        scheduledAt,
-        durationMinutes,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
-      queryClient.invalidateQueries({ queryKey: ['interviews'] });
-      queryClient.invalidateQueries({ queryKey: ['interviews', 'company'] });
-      queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
-    },
-  });
-
   // Mutation for suggesting multiple time slots
   const suggestTimeSlotsMutation = useMutation({
     mutationFn: async ({
@@ -395,66 +355,6 @@ const CompanyCandidates = () => {
     },
   });
 
-  const updateApplicationStatusMutation = useMutation({
-    mutationFn: async ({
-      applicationId,
-      status,
-      notes,
-    }: {
-      applicationId: string;
-      status: string;
-      notes?: string;
-    }) => {
-      return companyApi.updateApplicationStatus(applicationId, status, notes);
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
-      queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
-      // Also invalidate job-specific queries used in the CandidatesListModal
-      queryClient.invalidateQueries({ queryKey: ['jobApplicants'] });
-      queryClient.invalidateQueries({ queryKey: ['jobMatches'] });
-
-      // Only navigate to messages if an offer was sent (post-interview acceptance)
-      // Check if the application status is 'offer_sent' which indicates offer was sent
-      if (
-        variables.status === 'accepted' &&
-        data?.application?.status === 'offer_sent'
-      ) {
-        // This is a post-interview acceptance with offer sent - navigate to messages
-        navigate('/messages');
-      } else if (variables.status === 'accepted') {
-        // This is the first acceptance (before interview) - just close the modal
-        // The candidate will remain in the 'applied' filter
-        handleCloseModal();
-      }
-    },
-  });
-
-  const handleScheduleInterview = useCallback(
-    async (
-      candidate: CandidateProfile,
-      scheduledAt: string,
-      durationMinutes?: number
-    ) => {
-      if (!candidate.applicationId) {
-        throw new Error('Missing application reference for this candidate.');
-      }
-      await scheduleInterviewMutation.mutateAsync({
-        applicationId: candidate.applicationId,
-        scheduledAt,
-        durationMinutes,
-      });
-    },
-    [scheduleInterviewMutation]
-  );
-
-  // Handler to open multi-slot scheduling modal
-  const handleSuggestTimeSlots = useCallback((candidate: CandidateProfile) => {
-    setMultiSlotCandidate(candidate);
-    setIsMultiSlotModalOpen(true);
-    setIsModalOpen(false); // Close the preview modal
-  }, []);
-
   // Handler for submitting multiple time slots
   const handleSubmitTimeSlots = useCallback(
     async (
@@ -474,32 +374,6 @@ const CompanyCandidates = () => {
       });
     },
     [suggestTimeSlotsMutation]
-  );
-
-  const handleAccept = useCallback(
-    (candidate: CandidateProfile) => {
-      if (!candidate.applicationId) {
-        throw new Error('Missing application reference for this candidate.');
-      }
-      updateApplicationStatusMutation.mutate({
-        applicationId: candidate.applicationId,
-        status: 'accepted',
-      });
-    },
-    [updateApplicationStatusMutation]
-  );
-
-  const handleReject = useCallback(
-    (candidate: CandidateProfile) => {
-      if (!candidate.applicationId) {
-        throw new Error('Missing application reference for this candidate.');
-      }
-      updateApplicationStatusMutation.mutate({
-        applicationId: candidate.applicationId,
-        status: 'rejected',
-      });
-    },
-    [updateApplicationStatusMutation]
   );
 
   const handleViewCV = (candidate: CandidateProfile) => {
@@ -743,49 +617,7 @@ const CompanyCandidates = () => {
         isOpen={isModalOpen}
         candidate={selectedCandidate}
         onClose={handleCloseModal}
-        onChat={handleChat}
         onViewCV={handleViewCV}
-        // Only pass schedule/accept/reject handlers for candidates with applicationId
-        // Hide manual scheduling if Calendly is connected (candidates schedule themselves)
-        onScheduleInterview={
-          !isCalendlyConnected && selectedCandidate?.applicationId
-            ? handleScheduleInterview
-            : undefined
-        }
-        onSuggestTimeSlots={
-          !isCalendlyConnected && selectedCandidate?.applicationId
-            ? handleSuggestTimeSlots
-            : undefined
-        }
-        isCalendlyConnected={isCalendlyConnected}
-        onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
-        onReject={selectedCandidate?.applicationId ? handleReject : undefined}
-        isAccepting={
-          !!(
-            updateApplicationStatusMutation.isPending &&
-            selectedCandidate?.applicationId &&
-            updateApplicationStatusMutation.variables?.status === 'accepted' &&
-            updateApplicationStatusMutation.variables?.applicationId ===
-              selectedCandidate.applicationId
-          )
-        }
-        isRejecting={
-          !!(
-            updateApplicationStatusMutation.isPending &&
-            selectedCandidate?.applicationId &&
-            updateApplicationStatusMutation.variables?.status === 'rejected' &&
-            updateApplicationStatusMutation.variables?.applicationId ===
-              selectedCandidate.applicationId
-          )
-        }
-        isSchedulingInterview={
-          !!(
-            scheduleInterviewMutation.isPending &&
-            selectedCandidate?.applicationId &&
-            scheduleInterviewMutation.variables?.applicationId ===
-              selectedCandidate.applicationId
-          )
-        }
       />
 
       {/* Multi-Slot Scheduling Modal */}

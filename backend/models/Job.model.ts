@@ -7,6 +7,11 @@ export interface ExtraRequirement {
   placeholder?: string;
 }
 
+export interface InterviewStage {
+  title: string;
+  description?: string;
+}
+
 export interface IJob extends Document {
   companyId: mongoose.Types.ObjectId;
   title: string;
@@ -25,7 +30,8 @@ export interface IJob extends Document {
   status: 'active' | 'closed' | 'draft';
   directContact: boolean; // true = company handles directly, false = DLT Africa (admin) handles
   interviewStages: 1 | 2 | 3; // Number of interview stages (1, 2, or 3)
-  interviewStageTitles?: string[]; // Titles for each interview stage (length must match interviewStages)
+  interviewStageTitles?: string[]; // DEPRECATED: Use interviewStageDetails instead. Titles for each interview stage (length must match interviewStages)
+  interviewStageDetails?: InterviewStage[]; // Details for each interview stage (title + description, length must match interviewStages)
   embedding?: number[];
   matches?: {
     graduateId: mongoose.Types.ObjectId;
@@ -122,6 +128,31 @@ const JobSchema: Schema = new Schema(
         },
         message:
           'Number of stage titles must match the number of interview stages',
+      },
+    },
+    interviewStageDetails: {
+      type: [
+        {
+          title: {
+            type: String,
+            required: true,
+          },
+          description: {
+            type: String,
+            required: false,
+          },
+        },
+      ],
+      validate: {
+        validator: function (
+          this: IJob,
+          details: InterviewStage[] | undefined
+        ) {
+          if (!details || details.length === 0) return true; // Optional, can be set later
+          return details.length === this.interviewStages;
+        },
+        message:
+          'Number of stage details must match the number of interview stages',
       },
     },
     embedding: [Number],

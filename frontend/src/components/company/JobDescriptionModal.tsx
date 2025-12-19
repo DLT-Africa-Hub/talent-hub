@@ -37,8 +37,9 @@ const JobDescriptionModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleCancel} size="xl">
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col h-full">
+        {/* Header - Fixed */}
+        <div className="flex flex-col gap-1 mb-5 shrink-0">
           <h2 className="text-[24px] font-semibold text-[#1C1C1C]">
             Job Description
           </h2>
@@ -48,14 +49,17 @@ const JobDescriptionModal = ({
           </p>
         </div>
 
-        <RichTextEditor
-          value={description}
-          onChange={setDescription}
-          placeholder="Describe the role, responsibilities, and requirements in detail..."
-          // rows={12}
-        />
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 mb-5">
+          <RichTextEditor
+            value={description}
+            onChange={setDescription}
+            placeholder="Describe the role, responsibilities, and requirements in detail..."
+          />
+        </div>
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-fade">
+        {/* Footer with Buttons - Fixed at bottom */}
+        <div className="flex justify-end gap-3 pt-2 border-t border-fade shrink-0">
           <Button
             type="button"
             variant="secondary"

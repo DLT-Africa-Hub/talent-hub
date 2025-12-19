@@ -57,13 +57,30 @@ export const getCurrencySymbol = (currencyCode?: string): string => {
 // Format salary range
 export const formatSalaryRange = (salary?: {
   amount?: number;
+  min?: number;
+  max?: number;
   currency?: string;
 }): string => {
-  if (!salary || !salary.amount) return 'Not specified';
+  if (!salary) return 'Not specified';
+
+  // Handle both formats: { amount, currency } and { min, max, currency }
+  const minAmount = salary.min ?? salary.amount;
+  const maxAmount = salary.max ?? salary.amount;
+
+  if (!minAmount && !maxAmount) return 'Not specified';
+
   const symbol = getCurrencySymbol(salary.currency);
-  // Format as thousands (e.g., 50000 -> 50k)
-  const amountInK = Math.round(salary.amount / 1000);
-  return `${symbol}${amountInK.toLocaleString()}k`;
+
+  // If min and max are the same, or only one value exists, show single value
+  if (minAmount === maxAmount || !maxAmount) {
+    const amountInK = Math.round((minAmount || 0) / 1000);
+    return `${symbol}${amountInK.toLocaleString()}k`;
+  }
+
+  // Show range if min and max are different
+  const minInK = Math.round((minAmount || 0) / 1000);
+  const maxInK = Math.round((maxAmount || 0) / 1000);
+  return `${symbol}${minInK.toLocaleString()}k - ${symbol}${maxInK.toLocaleString()}k`;
 };
 
 // Format salary per annum

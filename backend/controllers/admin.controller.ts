@@ -2558,22 +2558,28 @@ export const updateApplicationStatus = async (
         return;
       }
     } else if (validatedStatus === 'hired') {
+      // Use transaction to ensure atomicity of offer, job, and company updates
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
       try {
         const offer = await Offer.findOne({
           applicationId: new mongoose.Types.ObjectId(applicationId),
-        });
+        }).session(session);
 
         if (offer) {
           offer.status = 'accepted';
           offer.acceptedAt = new Date();
           offer.updatedBy = new mongoose.Types.ObjectId(userId);
-          await offer.save();
+          await offer.save({ session });
         }
 
-        const job = await Job.findById(jobData?._id || application.jobId);
+        const job = await Job.findById(
+          jobData?._id || application.jobId
+        ).session(session);
         if (job) {
           job.status = 'closed';
-          await job.save();
+          await job.save({ session });
         }
 
         interface PopulatedCompany {
@@ -2617,7 +2623,7 @@ export const updateApplicationStatus = async (
             {
               $addToSet: { hiredCandidates: graduateObjectId },
             },
-            { new: true }
+            { new: true, session }
           );
         }
 

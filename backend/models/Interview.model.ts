@@ -5,6 +5,7 @@ export type InterviewStatus =
   | 'scheduled'
   | 'in_progress'
   | 'completed'
+  | 'missed'
   | 'cancelled';
 
 export interface ISuggestedTimeSlot {
@@ -176,6 +177,7 @@ const InterviewSchema = new Schema<IInterview>(
         'scheduled',
         'in_progress',
         'completed',
+        'missed',
         'cancelled',
       ],
       default: 'scheduled',

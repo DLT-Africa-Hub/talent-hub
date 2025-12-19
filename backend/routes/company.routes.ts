@@ -24,7 +24,11 @@ import {
   setCalendlyPublicLink,
   disconnectCalendly,
 } from '../controllers/company.controller';
-import { suggestTimeSlots } from '../controllers/interview.controller';
+import {
+  suggestTimeSlots,
+  updateInterviewStatus,
+  rescheduleMissedInterview,
+} from '../controllers/interview.controller';
 import {
   confirmHire,
   getOfferByIdForCompany,
@@ -84,6 +88,18 @@ router.post('/offers/:offerId/confirm-hire', veryStrictLimiter, confirmHire);
 
 // Interview scheduling with multiple time slots
 router.post('/interviews/suggest-slots', veryStrictLimiter, suggestTimeSlots);
+
+// Interview status management
+router.put(
+  '/interviews/:interviewId/status',
+  veryStrictLimiter,
+  updateInterviewStatus
+);
+router.post(
+  '/interviews/:interviewId/reschedule',
+  veryStrictLimiter,
+  rescheduleMissedInterview
+);
 
 // Calendly integration - Company connects Calendly
 router.get('/calendly/connect', strictLimiter, getCalendlyAuthUrl);

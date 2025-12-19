@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useCallback } from 'react';
 import { HiOutlineEye } from 'react-icons/hi2';
 import BaseModal from '../ui/BaseModal';
@@ -32,6 +32,7 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
   type,
   onClose,
 }) => {
+  const queryClient = useQueryClient();
   const [selectedCandidate, setSelectedCandidate] =
     useState<CandidateProfile | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -73,6 +74,15 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
     queryKey,
     queryFn: fetchFunction,
     enabled: isOpen && !!jobId,
+  });
+
+  // Fetch Calendly status
+  const { data: calendlyStatus } = useQuery({
+    queryKey: ['calendlyStatus'],
+    queryFn: async () => {
+      const response = await companyApi.getCalendlyStatus();
+      return response;
+    },
   });
 
   // Transform match to CandidateProfile
@@ -263,6 +273,52 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
     console.log('View CV clicked for candidate:', candidate.id);
   };
 
+  // Mutation for updating application status (accept/reject)
+  const updateApplicationStatusMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      status,
+    }: {
+      applicationId: string;
+      status: string;
+    }) => {
+      return companyApi.updateApplicationStatus(applicationId, status);
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['jobApplicants', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['jobMatches', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+    },
+  });
+
+  const handleAccept = useCallback(
+    (candidate: CandidateProfile) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      updateApplicationStatusMutation.mutate({
+        applicationId: candidate.applicationId,
+        status: 'accepted',
+      });
+    },
+    [updateApplicationStatusMutation]
+  );
+
+  const handleReject = useCallback(
+    (candidate: CandidateProfile) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      updateApplicationStatusMutation.mutate({
+        applicationId: candidate.applicationId,
+        status: 'rejected',
+      });
+    },
+    [updateApplicationStatusMutation]
+  );
+
   return (
     <>
       <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
@@ -413,6 +469,29 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         onClose={handleClosePreview}
         onChat={handleChat}
         onViewCV={handleViewCV}
+        onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
+        onReject={selectedCandidate?.applicationId ? handleReject : undefined}
+        isAccepting={
+          !!(
+            updateApplicationStatusMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            updateApplicationStatusMutation.variables?.status === 'accepted' &&
+            updateApplicationStatusMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+        isRejecting={
+          !!(
+            updateApplicationStatusMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            updateApplicationStatusMutation.variables?.status === 'rejected' &&
+            updateApplicationStatusMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+        isCalendlyConnected={
+          calendlyStatus?.connected && calendlyStatus?.enabled
+        }
       />
     </>
   );

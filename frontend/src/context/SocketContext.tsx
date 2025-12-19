@@ -148,12 +148,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     });
 
     // Handle new messages - increment unread count if message is for current user
-    newSocket.on('message:new', (message: { receiverId: string; senderId: string }) => {
-      if (user?.id && String(message.receiverId) === String(user.id)) {
-        // Increment unread count when receiving a new message
-        setUnreadMessageCount((prev) => prev + 1);
+    newSocket.on(
+      'message:new',
+      (message: { receiverId: string; senderId: string }) => {
+        if (user?.id && String(message.receiverId) === String(user.id)) {
+          // Increment unread count when receiving a new message
+          setUnreadMessageCount((prev) => prev + 1);
+        }
       }
-    });
+    );
 
     // Handle message read - refresh count (messages were marked as read)
     newSocket.on('message:read', () => {

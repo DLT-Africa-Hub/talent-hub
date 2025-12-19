@@ -41,7 +41,6 @@ import Jobs from './pages/admin/Jobs';
 import ApplicationStatus from './pages/admin/AppStatus';
 import { SocketProvider } from './context/SocketContext';
 
-
 const ExplorePreviewRedirect = () => {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/explore?preview=${id}`} replace />;
@@ -53,370 +52,370 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
-      <SocketProvider>
-        <ToastProvider>
-          <div className="App">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route
-                path="/login"
-                element={
-                  <GuestRoute>
-                    <AuthPage mode="login" />
-                  </GuestRoute>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <GuestRoute>
-                    <AuthPage mode="register" />
-                  </GuestRoute>
-                }
-              />
-              <Route
-                path="/forgot-password"
-                element={
-                  <GuestRoute>
-                    <ForgotPassword />
-                  </GuestRoute>
-                }
-              />
-              <Route
-                path="/reset-password"
-                element={
-                  <GuestRoute>
-                    <ResetPassword />
-                  </GuestRoute>
-                }
-              />
-              <Route path="/verify-email" element={<EmailVerification />} />
-              <Route
-                path="/graduate/*"
-                element={
-                  <ProtectedRoute allowedRoles={['graduate']}>
-                    <EmailVerificationGuard>
-                      <AssessmentGuard>
-                        <Layout>
-                          <GraduateDashboard />
-                        </Layout>
-                      </AssessmentGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/graduate/profile"
-                element={
-                  <ProtectedRoute allowedRoles={['graduate']}>
-                    <EmailVerificationGuard>
-                      <AssessmentGuard>
-                        <Layout>
-                          <GraduateProfile />
-                        </Layout>
-                      </AssessmentGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/talent/profile"
-                element={<Navigate to="/graduate/profile" replace />}
-              />
-              <Route
-                path="/talent/*"
-                element={<Navigate to="/graduate" replace />}
-              />
-              <Route
-                path="/company/*"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <CompanyDashboard />
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/company/profile"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <Layout>
-                          <CompanyProfile />
-                        </Layout>
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/*"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <EmailVerificationGuard>
-                      <AdminDashboard />
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/role" element={<AccountType />} />
-              <Route path="/onboarding" element={<GraduateOnboarding />} />
+        <SocketProvider>
+          <ToastProvider>
+            <div className="App">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route
+                  path="/login"
+                  element={
+                    <GuestRoute>
+                      <AuthPage mode="login" />
+                    </GuestRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <GuestRoute>
+                      <AuthPage mode="register" />
+                    </GuestRoute>
+                  }
+                />
+                <Route
+                  path="/forgot-password"
+                  element={
+                    <GuestRoute>
+                      <ForgotPassword />
+                    </GuestRoute>
+                  }
+                />
+                <Route
+                  path="/reset-password"
+                  element={
+                    <GuestRoute>
+                      <ResetPassword />
+                    </GuestRoute>
+                  }
+                />
+                <Route path="/verify-email" element={<EmailVerification />} />
+                <Route
+                  path="/graduate/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['graduate']}>
+                      <EmailVerificationGuard>
+                        <AssessmentGuard>
+                          <Layout>
+                            <GraduateDashboard />
+                          </Layout>
+                        </AssessmentGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/graduate/profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['graduate']}>
+                      <EmailVerificationGuard>
+                        <AssessmentGuard>
+                          <Layout>
+                            <GraduateProfile />
+                          </Layout>
+                        </AssessmentGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/talent/profile"
+                  element={<Navigate to="/graduate/profile" replace />}
+                />
+                <Route
+                  path="/talent/*"
+                  element={<Navigate to="/graduate" replace />}
+                />
+                <Route
+                  path="/company/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <CompanyDashboard />
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/company/profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <Layout>
+                            <CompanyProfile />
+                          </Layout>
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <EmailVerificationGuard>
+                        <AdminDashboard />
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/role" element={<AccountType />} />
+                <Route path="/onboarding" element={<GraduateOnboarding />} />
 
-              <Route
-                path="/assessment"
-                element={
-                  <ProtectedRoute allowedRoles={['graduate']}>
-                    <EmailVerificationGuard>
-                      <AssessmentGuard>
-                        <SkillAssessment />
-                      </AssessmentGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/company-preview/:id"
-                element={<CompanyPreview mode="application" />}
-              />
-              <Route
-                path="/contactCompany/:id"
-                element={<CompanyPreview mode="contact" />}
-              />
-              <Route
-                path="/explore"
-                element={
-                  <ProtectedRoute allowedRoles={['graduate']}>
-                    <EmailVerificationGuard>
-                      <AssessmentGuard>
+                <Route
+                  path="/assessment"
+                  element={
+                    <ProtectedRoute allowedRoles={['graduate']}>
+                      <EmailVerificationGuard>
+                        <AssessmentGuard>
+                          <SkillAssessment />
+                        </AssessmentGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/company-preview/:id"
+                  element={<CompanyPreview mode="application" />}
+                />
+                <Route
+                  path="/contactCompany/:id"
+                  element={<CompanyPreview mode="contact" />}
+                />
+                <Route
+                  path="/explore"
+                  element={
+                    <ProtectedRoute allowedRoles={['graduate']}>
+                      <EmailVerificationGuard>
+                        <AssessmentGuard>
+                          <Layout>
+                            <ExploreCompany />
+                          </Layout>
+                        </AssessmentGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/company/explore"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
                         <Layout>
-                          <ExploreCompany />
+                          <ExploreGraduates />
                         </Layout>
-                      </AssessmentGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/company/explore"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/applications"
+                  element={
+                    <ProtectedRoute allowedRoles={['graduate']}>
+                      <EmailVerificationGuard>
+                        <AssessmentGuard>
+                          <Layout>
+                            <GraduateApplications />
+                          </Layout>
+                        </AssessmentGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/messages/:id"
+                  element={
+                    <Layout>
+                      <Messages />
+                    </Layout>
+                  }
+                />
+                <Route
+                  path="/interviews/:slug"
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={['company', 'graduate', 'admin']}
+                    >
+                      <EmailVerificationGuard>
+                        <InterviewRoom />
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/company/onboarding"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <CompanyOnboarding />
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/candidates"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <Layout>
+                            <CompanyCandidates />
+                          </Layout>
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/candidates/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <Layout>
+                            <CompanyCandidates />
+                          </Layout>
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/messages"
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={['company', 'graduate', 'admin']}
+                    >
+                      <EmailVerificationGuard>
+                        <Layout>
+                          <Messages />
+                        </Layout>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interviews"
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={['company', 'graduate', 'admin']}
+                    >
+                      <EmailVerificationGuard>
+                        <Layout>
+                          <Interviews />
+                        </Layout>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/candidate-preview/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <Layout>
+                            <CandidatePreview />
+                          </Layout>
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/notifications"
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={['company', 'graduate', 'admin']}
+                    >
+                      <EmailVerificationGuard>
+                        <Layout>
+                          <Notifications />
+                        </Layout>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/jobs"
+                  element={
+                    <ProtectedRoute allowedRoles={['company']}>
+                      <EmailVerificationGuard>
+                        <CompanyRouteGuard>
+                          <Layout>
+                            <CompanyJobs />
+                          </Layout>
+                        </CompanyRouteGuard>
+                      </EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/explore-preview/:id"
+                  element={<ExplorePreviewRedirect />}
+                />
+
+                <Route
+                  path="/admin/companies"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
                       <Layout>
-                        <ExploreGraduates />
+                        <Companies />
                       </Layout>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/applications"
-                element={
-                  <ProtectedRoute allowedRoles={['graduate']}>
-                    <EmailVerificationGuard>
-                      <AssessmentGuard>
-                        <Layout>
-                          <GraduateApplications />
-                        </Layout>
-                      </AssessmentGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/messages/:id"
-                element={
-                  <Layout>
-                    <Messages />
-                  </Layout>
-                }
-              />
-              <Route
-                path="/interviews/:slug"
-                element={
-                  <ProtectedRoute
-                    allowedRoles={['company', 'graduate', 'admin']}
-                  >
-                    <EmailVerificationGuard>
-                      <InterviewRoom />
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/company/onboarding"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <CompanyOnboarding />
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/candidates"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <Layout>
-                          <CompanyCandidates />
-                        </Layout>
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/candidates/:id"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <Layout>
-                          <CompanyCandidates />
-                        </Layout>
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/messages"
-                element={
-                  <ProtectedRoute
-                    allowedRoles={['company', 'graduate', 'admin']}
-                  >
-                    <EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/talents"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
                       <Layout>
-                        <Messages />
+                        <Graduates />
                       </Layout>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/interviews"
-                element={
-                  <ProtectedRoute
-                    allowedRoles={['company', 'graduate', 'admin']}
-                  >
-                    <EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/jobs"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
                       <Layout>
-                        <Interviews />
+                        <Jobs />
                       </Layout>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/candidate-preview/:id"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <Layout>
-                          <CandidatePreview />
-                        </Layout>
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/notifications"
-                element={
-                  <ProtectedRoute
-                    allowedRoles={['company', 'graduate', 'admin']}
-                  >
-                    <EmailVerificationGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
                       <Layout>
-                        <Notifications />
+                        <AdminDashboard />
                       </Layout>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/jobs"
-                element={
-                  <ProtectedRoute allowedRoles={['company']}>
-                    <EmailVerificationGuard>
-                      <CompanyRouteGuard>
-                        <Layout>
-                          <CompanyJobs />
-                        </Layout>
-                      </CompanyRouteGuard>
-                    </EmailVerificationGuard>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/explore-preview/:id"
-                element={<ExplorePreviewRedirect />}
-              />
-
-              <Route
-                path="/admin/companies"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Layout>
-                      <Companies />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/talents"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Layout>
-                      <Graduates />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/jobs"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Layout>
-                      <Jobs />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Layout>
-                      <AdminDashboard />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/app-status"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Layout>
-                      <ApplicationStatus />
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </div>
-        </ToastProvider>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/app-status"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <Layout>
+                        <ApplicationStatus />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </div>
+          </ToastProvider>
         </SocketProvider>
       </AuthProvider>
     </GoogleOAuthProvider>

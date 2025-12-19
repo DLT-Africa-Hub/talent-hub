@@ -152,8 +152,14 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const [isConfirmingHire, setIsConfirmingHire] = useState(false);
   const [showConfirmHireDialog, setShowConfirmHireDialog] = useState(false);
   const [showMarkHiredDialog, setShowMarkHiredDialog] = useState(false);
-  const { socket, onlineUsers, typingUsers, startTyping, stopTyping, refreshUnreadCount } =
-    useSocket();
+  const {
+    socket,
+    onlineUsers,
+    typingUsers,
+    startTyping,
+    stopTyping,
+    refreshUnreadCount,
+  } = useSocket();
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const signedOfferInputRef = useRef<HTMLInputElement | null>(null);
@@ -162,7 +168,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const queryClient = useQueryClient();
 
   // Check if the company/user we're chatting with is online
-  const isCompanyOnline = company?.id ? onlineUsers.has(company.id as string) : false;
+  const isCompanyOnline = company?.id
+    ? onlineUsers.has(company.id as string)
+    : false;
 
   const CLOUDINARY_UPLOAD_PRESET = import.meta.env
     .VITE_CLOUDINARY_UPLOAD_PRESET;

@@ -34,8 +34,6 @@ const Messages: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-
-
   const {
     data: messagesResponse,
     isLoading: loading,
@@ -47,10 +45,9 @@ const Messages: React.FC = () => {
       const response = await messageApi.getMessages({ page: 1, limit: 100 });
       return response;
     },
-    refetchInterval: false, 
+    refetchInterval: false,
   });
 
- 
   useEffect(() => {
     if (!socket) return;
 
@@ -98,14 +95,19 @@ const Messages: React.FC = () => {
     }
 
     // Helper function to get first position from array or comma-separated string
-    const getFirstPosition = (position: string | string[] | undefined): string => {
+    const getFirstPosition = (
+      position: string | string[] | undefined
+    ): string => {
       if (!position) return '';
       if (Array.isArray(position)) {
         return position[0] || '';
       }
       if (typeof position === 'string') {
         // If it's a comma-separated string, split and take first
-        const parts = position.split(',').map(p => p.trim()).filter(p => p);
+        const parts = position
+          .split(',')
+          .map((p) => p.trim())
+          .filter((p) => p);
         return parts[0] || '';
       }
       return '';
@@ -160,8 +162,6 @@ const Messages: React.FC = () => {
             username?: string;
             profilePictureUrl?: string;
           };
-
- 
 
           // Show graduate if available, otherwise show admin
           if (graduate.firstName || graduate.lastName) {

@@ -46,6 +46,7 @@ interface Application {
       max?: number;
       currency?: string;
     };
+    description?: string;
   };
   createdAt?: string;
   updatedAt?: string;
@@ -81,8 +82,8 @@ const GraduateApplications = () => {
       index: number
     ): Company & { status: string; applicationId: string } => {
       const job = application.job;
-      const jobType = job.jobType || 'Full time';
-      const salaryRange = formatSalaryRange(job.salary);
+      const jobType = job?.jobType || 'Full time';
+      const salaryRange = formatSalaryRange(job?.salary);
       const salaryType = getSalaryType(jobType);
       const formattedJobType = formatJobType(jobType);
 
@@ -95,8 +96,8 @@ const GraduateApplications = () => {
 
       // Extract companyName from populated structure
       const companyName =
-        job.companyName ||
-        (job.companyId &&
+        job?.companyName ||
+        (job?.companyId &&
         typeof job.companyId === 'object' &&
         'companyName' in job.companyId
           ? (job.companyId as { companyName?: string }).companyName
@@ -106,9 +107,9 @@ const GraduateApplications = () => {
       // Get jobId - handle both _id (MongoDB ObjectId) and id formats
       // When populated, MongoDB returns _id as ObjectId, need to convert to string
       let jobId = '';
-      if (job.id) {
+      if (job?.id) {
         jobId = String(job.id);
-      } else if (job._id) {
+      } else if (job?._id) {
         const jobIdValue = job._id;
         // Handle MongoDB ObjectId (has toString method) or string
         if (
@@ -129,17 +130,17 @@ const GraduateApplications = () => {
         id: cardId,
         jobId: jobId || undefined,
         name: companyName,
-        role: job.title || 'Position',
+        role: job?.title || 'Position',
         match: 0,
         contract: contractString,
-        location: job.location || 'Location not specified',
+        location: job?.location || 'Location not specified',
         wageType: salaryType,
         wage:
           salaryRange === 'Not specified'
             ? '—'
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
-        description: (job as { description?: string }).description || '',
+        description: job?.description || '',
         status: application.status,
         applicationId: application.id,
       };

@@ -1991,6 +1991,73 @@ export const alreadyApplied = async (
   }
 };
 
+// Type for populated job with company in getApplications
+type PopulatedJobWithCompany = {
+  _id: mongoose.Types.ObjectId;
+  title?: string;
+  jobType?: string;
+  location?: string;
+  status?: string;
+  description?: string;
+  interviewStages?: number;
+  interviewStageTitles?: string[];
+  directContact?: boolean;
+  requirements?: {
+    skills?: string[];
+    extraRequirements?: Array<{
+      label: string;
+      type: string;
+      required: boolean;
+      placeholder?: string;
+    }>;
+  };
+  salary?: {
+    amount: number;
+    currency: string;
+  };
+  companyId?:
+    | mongoose.Types.ObjectId
+    | {
+        _id?: mongoose.Types.ObjectId;
+        id?: string;
+        companyName?: string;
+        calendly?: unknown;
+      };
+};
+
+// Type for populated application in getApplications
+type PopulatedApplication = {
+  _id: mongoose.Types.ObjectId;
+  jobId: PopulatedJobWithCompany | mongoose.Types.ObjectId | null;
+  graduateId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId; firstName?: string; lastName?: string; email?: string } | null;
+  status: string;
+  coverLetter?: string;
+  resume?: string;
+  appliedAt?: Date;
+  reviewedAt?: Date;
+  matchId?: mongoose.Types.ObjectId;
+  interviewId?: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId; status?: string; scheduledAt?: Date; durationMinutes?: number } | null;
+  interviewScheduledAt?: Date;
+  interviewRoomSlug?: string;
+};
+
+const isPopulatedJobWithCompany = (
+  value: unknown
+): value is PopulatedJobWithCompany => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  if (value instanceof mongoose.Types.ObjectId) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    '_id' in obj &&
+    obj._id instanceof mongoose.Types.ObjectId &&
+    ('title' in obj || 'jobType' in obj || 'description' in obj)
+  );
+};
+
 export const getApplications = async (
   req: Request,
   res: Response
@@ -2010,7 +2077,7 @@ export const getApplications = async (
       .populate({
         path: 'jobId',
         select:
-          'title companyId location status jobType salary description interviewStages interviewStageTitles directContact',
+          'title companyId location status jobType salary description interviewStages interviewStageTitles directContact requirements',
         populate: {
           path: 'companyId',
           select: 'companyName calendly',
@@ -2028,21 +2095,74 @@ export const getApplications = async (
       .lean();
 
     res.json({
-      applications: applications.map((application) => ({
-        _id: application._id.toString(),
-        id: application._id.toString(),
-        jobId: application.jobId,
-        graduateId: application.graduateId,
-        status: application.status,
-        coverLetter: application.coverLetter,
-        resume: application.resume,
-        appliedAt: application.appliedAt,
-        reviewedAt: application.reviewedAt,
-        matchId: application.matchId?.toString(),
-        interviewId: application.interviewId,
-        interviewScheduledAt: application.interviewScheduledAt,
-        interviewRoomSlug: application.interviewRoomSlug,
-      })),
+      applications: (applications as unknown as PopulatedApplication[]).map((application) => {
+        const job = isPopulatedJobWithCompany(application.jobId)
+          ? application.jobId
+          : null;
+        const companyId = job?.companyId;
+        
+        // Transform job data to match frontend expectations
+        const jobData = job
+          ? {
+              id: job._id.toString(),
+              _id: job._id.toString(),
+              title: job.title,
+              jobType: job.jobType,
+              location: job.location,
+              description: job.description,
+              status: job.status,
+              interviewStages: job.interviewStages,
+              interviewStageTitles: job.interviewStageTitles,
+              directContact: job.directContact,
+              requirements: job.requirements,
+              // Transform salary from { amount, currency } to { min, max, currency } for frontend compatibility
+              salary: job.salary
+                ? {
+                    min: job.salary.amount,
+                    max: job.salary.amount,
+                    currency: job.salary.currency,
+                  }
+                : undefined,
+              // Extract company data from populated companyId
+              // Keep companyId as an object with companyName and calendly for frontend compatibility
+              companyId:
+                typeof companyId === 'object' && companyId !== null && !(companyId instanceof mongoose.Types.ObjectId)
+                  ? {
+                      _id: (companyId as { _id?: mongoose.Types.ObjectId })._id?.toString(),
+                      id: (companyId as { _id?: mongoose.Types.ObjectId; id?: string })._id?.toString() ||
+                          (companyId as { id?: string }).id,
+                      companyName:
+                        'companyName' in companyId
+                          ? (companyId as { companyName?: string }).companyName
+                          : undefined,
+                      calendly:
+                        'calendly' in companyId
+                          ? (companyId as { calendly?: { enabled?: boolean; publicLink?: string } }).calendly
+                          : undefined,
+                    }
+                  : companyId instanceof mongoose.Types.ObjectId
+                    ? companyId.toString()
+                    : undefined,
+            }
+          : null;
+
+        return {
+          _id: application._id.toString(),
+          id: application._id.toString(),
+          job: jobData,
+          jobId: job?._id.toString(),
+          graduateId: application.graduateId,
+          status: application.status,
+          coverLetter: application.coverLetter,
+          resume: application.resume,
+          appliedAt: application.appliedAt,
+          reviewedAt: application.reviewedAt,
+          matchId: application.matchId?.toString(),
+          interviewId: application.interviewId,
+          interviewScheduledAt: application.interviewScheduledAt,
+          interviewRoomSlug: application.interviewRoomSlug,
+        };
+      }),
     });
   } catch (error) {
     console.error('Get applications error:', error);

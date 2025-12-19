@@ -1211,7 +1211,8 @@ export const getCalendlyAvailability = async (
       }
     }
 
-    // Fetch event types from Calendly
+    // Fetch event types from Calendly and get company timezone
+    let companyTimezone = 'UTC'; // Default to UTC
     try {
       // Validate access token exists and is not empty
       if (!accessTokenToUse || accessTokenToUse.trim() === '') {
@@ -1220,6 +1221,17 @@ export const getCalendlyAvailability = async (
             'Company Calendly access token is missing or invalid. Please reconnect Calendly.',
         });
         return;
+      }
+
+      // Get company's timezone from Calendly user info
+      try {
+        const companyUser = await calendlyService.getCurrentUser(accessTokenToUse);
+        if (companyUser?.timezone) {
+          companyTimezone = companyUser.timezone;
+        }
+      } catch (timezoneError) {
+        console.warn('Failed to get company timezone, using UTC:', timezoneError);
+        // Continue with UTC as default
       }
 
       const eventTypes = await calendlyService.getEventTypes(
@@ -1311,6 +1323,7 @@ export const getCalendlyAvailability = async (
         availableSlots: slotsWithEndTime,
         eventTypeUri: eventTypeUriToUse,
         eventTypes: eventTypesData?.collection || [],
+        companyTimezone: companyTimezone, // Include company timezone for frontend display
       });
     } catch (error) {
       console.error('Error fetching Calendly availability:', error);
@@ -1560,7 +1573,22 @@ export const scheduleCalendlyInterview = async (
       }
     }
 
+    // Verify application status allows interview scheduling
+    // Applications should be accepted, shortlisted, or reviewed to schedule interviews
+    const applicationStatus = (application as { status?: string }).status;
+    if (
+      applicationStatus &&
+      !['accepted', 'shortlisted', 'reviewed'].includes(applicationStatus)
+    ) {
+      res.status(400).json({
+        message:
+          'Your application must be reviewed and accepted before you can schedule an interview. Please wait for the company to review your application.',
+      });
+      return;
+    }
+
     // Check if there's already an interview for this stage or any active interview
+    // IMPORTANT: Only check interviews for THIS specific application (not other applications)
     const existingInterview = await Interview.findOne({
       applicationId: application._id,
       $or: [
@@ -1578,7 +1606,7 @@ export const scheduleCalendlyInterview = async (
       }
       res.status(400).json({
         message:
-          'An interview is already scheduled or pending for this application',
+          'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.',
       });
       return;
     }

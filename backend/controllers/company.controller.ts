@@ -3589,11 +3589,72 @@ export const getCalendlyStatus = async (
     }
 
     try {
-      userInfo = await calendlyService.getCurrentUser(
-        company.calendly.accessToken
-      );
+      // Check if token is expired and refresh if needed
+      let accessTokenToUse = company.calendly.accessToken;
+      
+      if (
+        company.calendly.tokenExpiresAt &&
+        company.calendly.tokenExpiresAt < new Date() &&
+        company.calendly.refreshToken
+      ) {
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            company.calendly.refreshToken
+          );
+          
+          // Update company with new tokens
+          company.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            company.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            company.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await company.save();
+          
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.warn('Calendly token refresh failed:', refreshError);
+          // Continue with original token - it might still work
+        }
+      }
+      
+      userInfo = await calendlyService.getCurrentUser(accessTokenToUse);
     } catch (error) {
       console.warn('Calendly token validation failed:', error);
+      // If token is invalid and we have a refresh token, try to refresh
+      if (
+        error instanceof Error &&
+        error.message.includes('authentication failed') &&
+        company.calendly.refreshToken
+      ) {
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            company.calendly.refreshToken
+          );
+          
+          // Update company with new tokens
+          company.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            company.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            company.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await company.save();
+          
+          // Retry with new token
+          userInfo = await calendlyService.getCurrentUser(
+            refreshResult.accessToken
+          );
+        } catch (refreshError) {
+          console.warn('Calendly token refresh failed after validation error:', refreshError);
+        }
+      }
     }
 
     res.json({

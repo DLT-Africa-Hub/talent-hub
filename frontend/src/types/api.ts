@@ -63,6 +63,29 @@ export interface ApiApplication {
     rank?: string;
     salaryPerAnnum?: number;
   };
+  job?: {
+    id?: string;
+    _id?: string;
+    title?: string;
+    location?: string;
+    jobType?: string;
+    salary?: {
+      min?: number;
+      max?: number;
+      currency?: string;
+    };
+    directContact?: boolean;
+    companyId?: string | {
+      _id?: string;
+      id?: string;
+      companyName?: string;
+      calendly?: {
+        enabled?: boolean;
+        publicLink?: string;
+      };
+    };
+    companyName?: string;
+  };
   jobId?: {
     _id?: string;
     id?: string;

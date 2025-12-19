@@ -32,19 +32,21 @@ const Modal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
       <div
-        className={`bg-[#FFFFFF] rounded-2xl shadow-lg p-6 w-full ${widthClass} relative ${className}`.trim()}
+        className={`bg-[#FFFFFF] rounded-2xl shadow-lg p-4 sm:p-6 w-full ${widthClass} relative my-2 sm:my-4 max-h-[95vh] sm:max-h-[90vh] flex flex-col ${className}`.trim()}
       >
         {!hideCloseButton && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 z-10"
           >
             <CgClose />
           </button>
         )}
-        {children}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1 -mr-1">
+          {children}
+        </div>
       </div>
     </div>
   );

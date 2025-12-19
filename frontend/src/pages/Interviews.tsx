@@ -169,17 +169,38 @@ const Interviews = () => {
 
     return applicationsData.filter((app: ApiApplication) => {
       // Check if company has Calendly enabled
-      const hasCalendly = app.jobId?.companyId?.calendly?.enabled;
+      // Backend returns 'job' object with populated companyId
+      const jobData = app.job || app.jobId;
+      const companyData = jobData?.companyId;
+      
+      // Handle both string (ObjectId) and object (populated) companyId
+      let calendlyData: { enabled?: boolean; publicLink?: string } | undefined;
+      if (typeof companyData === 'object' && companyData !== null && 'calendly' in companyData) {
+        calendlyData = (companyData as { calendly?: { enabled?: boolean; publicLink?: string } }).calendly;
+      }
+      
+      const hasCalendly = calendlyData?.enabled === true;
 
-      // Check if there's no scheduled interview yet
-      const hasNoInterview = !app.interviewId && !app.interviewScheduledAt;
+      // Check if there's no active interview
+      // Allow scheduling if there's no interview OR if the interview is completed/cancelled
+      // interviewId can be either an ObjectId string or a populated object with status
+      const interviewId = app.interviewId;
+      const interviewStatus =
+        typeof interviewId === 'object' && interviewId !== null && 'status' in interviewId
+          ? (interviewId as { status?: string }).status
+          : undefined;
+      const activeInterviewStatuses = ['pending_selection', 'scheduled', 'in_progress'];
+      const hasNoActiveInterview =
+        !interviewId ||
+        !interviewStatus ||
+        !activeInterviewStatuses.includes(interviewStatus);
 
       // Only show for accepted/shortlisted applications
       const eligibleStatus =
         app.status &&
         ['accepted', 'shortlisted', 'reviewed'].includes(app.status);
 
-      return hasCalendly && hasNoInterview && eligibleStatus && app._id;
+      return hasCalendly && hasNoActiveInterview && eligibleStatus && app._id;
     });
   }, [applicationsData, isGraduate]);
 
@@ -474,9 +495,13 @@ const Interviews = () => {
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
               {calendlyApplications.map((app: ApiApplication) => {
+                const jobData = app.job || app.jobId;
+                const companyData = jobData?.companyId;
                 const companyName =
-                  app.jobId?.companyId?.companyName || 'Company';
-                const jobTitle = app.jobId?.title || 'Position';
+                  (typeof companyData === 'object' && companyData !== null && 'companyName' in companyData)
+                    ? (companyData as { companyName?: string }).companyName
+                    : 'Company';
+                const jobTitle = jobData?.title || 'Position';
                 const candidateName =
                   `${app.graduateId?.firstName || ''} ${app.graduateId?.lastName || ''}`.trim() ||
                   'Candidate';

@@ -10,6 +10,7 @@ import React, {
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { messageApi } from '../api/message';
+import { notificationApi } from '../api/notification';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -17,6 +18,7 @@ interface SocketContextType {
   onlineUsers: Set<string>;
   typingUsers: Set<string>;
   unreadMessageCount: number;
+  unreadNotificationCount: number;
   sendMessage: (data: {
     receiverId: string;
     message: string;
@@ -50,6 +52,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
+  const [unreadNotificationCount, setUnreadNotificationCount] =
+    useState<number>(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -65,7 +69,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       setOnlineUsers(new Set());
       setTypingUsers(new Set());
       setUnreadMessageCount(0);
-      // Clear typing timeout
+      setUnreadNotificationCount(0);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
@@ -73,14 +77,19 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       return;
     }
 
-    // Fetch unread message count
-    const fetchUnreadCount = async () => {
+    // Fetch unread counts
+    const fetchUnreadCounts = async () => {
       try {
-        const response = await messageApi.getUnreadCount();
-        setUnreadMessageCount(response.totalUnread || 0);
+        const [messageResponse, notificationResponse] = await Promise.all([
+          messageApi.getUnreadCount(),
+          notificationApi.getUnreadCount(),
+        ]);
+        setUnreadMessageCount(messageResponse.totalUnread || 0);
+        setUnreadNotificationCount(notificationResponse.count || 0);
       } catch (error) {
-        console.error('Failed to fetch unread message count:', error);
+        console.error('Failed to fetch unread counts:', error);
         setUnreadMessageCount(0);
+        setUnreadNotificationCount(0);
       }
     };
 
@@ -104,14 +113,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     newSocket.on('connect', () => {
       console.log('✅ Socket connected');
       setIsConnected(true);
-      // Refresh unread count on connect/reconnect
-      fetchUnreadCount();
+      fetchUnreadCounts();
     });
 
     newSocket.on('disconnect', () => {
       console.log('❌ Socket disconnected');
       setIsConnected(false);
-      // Clear online users on disconnect
       setOnlineUsers(new Set());
       setTypingUsers(new Set());
     });
@@ -147,35 +154,78 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       });
     });
 
-    // Handle new messages - increment unread count if message is for current user
+    // Handle new messages
     newSocket.on(
       'message:new',
       (message: { receiverId: string; senderId: string }) => {
         if (user?.id && String(message.receiverId) === String(user.id)) {
-          // Increment unread count when receiving a new message
           setUnreadMessageCount((prev) => prev + 1);
         }
       }
     );
 
-    // Handle message read - refresh count (messages were marked as read)
+    // Handle message read
     newSocket.on('message:read', () => {
-      // Refresh unread count when messages are read
-      fetchUnreadCount();
+      fetchUnreadCounts();
     });
 
-    setSocket(newSocket);
+    // Handle new notifications
+    newSocket.on(
+      'notification:new',
+      (notification: {
+        id: string;
+        title: string;
+        message: string;
+        type: string;
+      }) => {
+        console.log('📬 New notification received:', notification);
+        setUnreadNotificationCount((prev) => prev + 1);
 
-    // Fetch initial unread count
-    fetchUnreadCount();
+        // Optional: Show browser notification if permission is granted
+        if (Notification.permission === 'granted') {
+          new Notification(notification.title, {
+            body: notification.message,
+            icon: '/logo.png', // Your app logo
+            tag: notification.id,
+          });
+        }
+      }
+    );
+
+    // Handle notification updates
+    newSocket.on(
+      'notification:update',
+      (notification: { id: string; read: boolean }) => {
+        console.log('📝 Notification updated:', notification);
+        // The unread count will be updated via unread:update event
+      }
+    );
+
+    // Handle unread count updates
+    newSocket.on(
+      'unread:update',
+      (counts: { notifications: number; messages: number }) => {
+        console.log('🔔 Unread counts updated:', counts);
+        setUnreadNotificationCount(counts.notifications);
+        if (counts.messages !== undefined) {
+          setUnreadMessageCount(counts.messages);
+        }
+      }
+    );
+
+    setSocket(newSocket);
+    fetchUnreadCounts();
+
+    // Request notification permission
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
 
     return () => {
-      // Cleanup typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      // Disconnect socket
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -203,12 +253,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
       socket.emit('typing:start', { receiverId });
 
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      // Auto-stop typing after 3 seconds
       typingTimeoutRef.current = setTimeout(() => {
         stopTyping(receiverId);
       }, 3000);
@@ -234,10 +282,14 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   const refreshUnreadCount = useCallback(async () => {
     try {
-      const response = await messageApi.getUnreadCount();
-      setUnreadMessageCount(response.totalUnread || 0);
+      const [messageResponse, notificationResponse] = await Promise.all([
+        messageApi.getUnreadCount(),
+        notificationApi.getUnreadCount(),
+      ]);
+      setUnreadMessageCount(messageResponse.totalUnread || 0);
+      setUnreadNotificationCount(notificationResponse.count || 0);
     } catch (error) {
-      console.error('Failed to refresh unread message count:', error);
+      console.error('Failed to refresh unread counts:', error);
     }
   }, []);
 
@@ -249,6 +301,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         onlineUsers,
         typingUsers,
         unreadMessageCount,
+        unreadNotificationCount,
         sendMessage,
         startTyping,
         stopTyping,

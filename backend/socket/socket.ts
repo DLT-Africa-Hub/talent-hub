@@ -96,6 +96,15 @@ export const initializeSocket = (httpServer: HttpServer) => {
       }
     );
 
+    // Handle notification acknowledgment
+    socket.on(
+      'notification:read',
+      ({ notificationId }: { notificationId: string }) => {
+        console.log(`User ${userId} read notification ${notificationId}`);
+        // Could emit back confirmation or to other clients if needed
+      }
+    );
+
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`❌ User disconnected: ${userId}`);
@@ -119,6 +128,34 @@ export const emitNewMessage = (
 // Helper function to emit message update
 export const emitMessageUpdate = (io: Server, userId: string, message: any) => {
   io.to(`user:${userId}`).emit('message:update', message);
+};
+
+// Helper function to emit new notification to user
+export const emitNewNotification = (
+  io: Server,
+  userId: string,
+  notification: any
+) => {
+  io.to(`user:${userId}`).emit('notification:new', notification);
+  console.log(`📬 Notification sent to user ${userId}:`, notification.title);
+};
+
+// Helper function to emit notification update (e.g., when marked as read)
+export const emitNotificationUpdate = (
+  io: Server,
+  userId: string,
+  notification: any
+) => {
+  io.to(`user:${userId}`).emit('notification:update', notification);
+};
+
+// Helper function to emit unread count update
+export const emitUnreadCountUpdate = (
+  io: Server,
+  userId: string,
+  counts: { notifications: number; messages: number }
+) => {
+  io.to(`user:${userId}`).emit('unread:update', counts);
 };
 
 // Helper function to check if user is online

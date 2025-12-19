@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import Notification, { INotification } from '../models/Notification.model';
 import User from '../models/User.model';
 import { sendEmail } from './email.service';
+import { io } from '..';
+import { emitNewNotification, emitUnreadCountUpdate } from '../socket/socket';
 
 type ObjectIdLike = mongoose.Types.ObjectId | string;
 
@@ -62,6 +64,35 @@ export const createNotification = async ({
     relatedType,
   });
 
+  // Convert to plain object and transform IDs
+  const notificationData = {
+    ...notification.toObject(),
+    id: (notification._id as mongoose.Types.ObjectId).toString(),
+    userId: notification.userId.toString(),
+    relatedId: notification.relatedId
+      ? notification.relatedId.toString()
+      : null,
+  };
+
+  // Emit real-time notification via Socket.IO
+  try {
+    emitNewNotification(io, resolvedUserId.toString(), notificationData);
+
+    // Also emit updated unread count
+    const unreadCount = await Notification.countDocuments({
+      userId: resolvedUserId,
+      read: false,
+    });
+
+    emitUnreadCountUpdate(io, resolvedUserId.toString(), {
+      notifications: unreadCount,
+      messages: 0, // You can fetch message count here if needed
+    });
+  } catch (error) {
+    console.error('Failed to emit notification via socket:', error);
+  }
+
+  // Send email notification if requested
   if (email) {
     try {
       const user = await User.findById(resolvedUserId).select('email').lean();
@@ -100,6 +131,23 @@ export const markNotificationAsRead = async (
     { new: true }
   );
 
+  // Emit updated unread count via Socket.IO
+  if (notification) {
+    try {
+      const unreadCount = await Notification.countDocuments({
+        userId: resolvedUserId,
+        read: false,
+      });
+
+      emitUnreadCountUpdate(io, resolvedUserId.toString(), {
+        notifications: unreadCount,
+        messages: 0, // You can fetch message count here if needed
+      });
+    } catch (error) {
+      console.error('Failed to emit unread count update:', error);
+    }
+  }
+
   return notification;
 };
 
@@ -116,6 +164,16 @@ export const markAllNotificationsAsRead = async (
       },
     }
   );
+
+  // Emit updated unread count (should be 0 now)
+  try {
+    emitUnreadCountUpdate(io, resolvedUserId.toString(), {
+      notifications: 0,
+      messages: 0, // You can fetch message count here if needed
+    });
+  } catch (error) {
+    console.error('Failed to emit unread count update:', error);
+  }
 
   return result.modifiedCount ?? 0;
 };

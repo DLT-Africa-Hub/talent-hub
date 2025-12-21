@@ -5,6 +5,9 @@ import UserModel from '../models/User.model';
 import GraduateModel from '../models/Graduate.model';
 import CompanyModel from '../models/Company.model';
 
+import { emitNewMessage } from '../socket/socket';
+import { io } from '..';
+
 /**
  * Send a message
  */
@@ -31,7 +34,7 @@ export const sendMessage = async (req: Request, res: Response) => {
         .json({ message: 'receiverId and message are required' });
     }
 
-    // 🔒 SAFETY FIX — Validate user input to prevent MongoDB operator injection
+    // Validate user input to prevent MongoDB operator injection
     if (
       typeof receiverId !== 'string' ||
       !mongoose.Types.ObjectId.isValid(receiverId)
@@ -55,6 +58,24 @@ export const sendMessage = async (req: Request, res: Response) => {
       applicationId,
       offerId,
     });
+
+    // Convert to plain object and transform IDs
+    const messageData = {
+      ...newMessage.toObject(),
+      _id: (newMessage._id as mongoose.Types.ObjectId).toString(),
+      senderId: newMessage.senderId.toString(),
+      receiverId: newMessage.receiverId.toString(),
+      applicationId: newMessage.applicationId
+        ? newMessage.applicationId.toString()
+        : undefined,
+      offerId: newMessage.offerId ? newMessage.offerId.toString() : undefined,
+    };
+
+    if (io) {
+      emitNewMessage(io, receiverId, messageData);
+
+      emitNewMessage(io, senderId, messageData);
+    }
 
     return res.status(201).json(newMessage);
   } catch (err) {
@@ -96,14 +117,33 @@ export const getConversation = async (req: Request, res: Response) => {
         }))
       );
 
-    await MessageModel.updateMany(
-      {
-        senderId: otherUserId,
-        receiverId: userId,
-        read: false,
-      },
-      { $set: { read: true, readAt: new Date() } }
-    );
+    // Mark messages as read
+    const unreadMessages = await MessageModel.find({
+      senderId: otherUserId,
+      receiverId: userId,
+      read: false,
+    });
+
+    if (unreadMessages.length > 0) {
+      await MessageModel.updateMany(
+        {
+          senderId: otherUserId,
+          receiverId: userId,
+          read: false,
+        },
+        { $set: { read: true, readAt: new Date() } }
+      );
+
+      if (io) {
+        unreadMessages.forEach((msg) => {
+          io.to(`user:${otherUserId}`).emit('message:read', {
+            messageId: (msg._id as mongoose.Types.ObjectId).toString(),
+            readBy: userId,
+            readAt: new Date(),
+          });
+        });
+      }
+    }
 
     return res.status(200).json(messages);
   } catch (err) {
@@ -165,7 +205,7 @@ export const getChatList = async (req: Request, res: Response) => {
       { $sort: { 'lastMessage.createdAt': -1 } },
     ]);
 
-    // Batch fetch all users to avoid N+1 queries
+    // Batch fetch all users
     const otherUserIds = conversations.map((conv) => conv._id);
     const otherUsers = await UserModel.find({
       _id: { $in: otherUserIds },
@@ -175,7 +215,7 @@ export const getChatList = async (req: Request, res: Response) => {
       otherUsers.map((user) => [user._id.toString(), user])
     );
 
-    // Separate users by role for batch fetching
+    // Separate users by role
     const graduateUserIds: mongoose.Types.ObjectId[] = [];
     const companyUserIds: mongoose.Types.ObjectId[] = [];
 
@@ -205,7 +245,6 @@ export const getChatList = async (req: Request, res: Response) => {
         : [],
     ]);
 
-    // Create maps for quick lookup
     const graduateMap = new Map(
       graduates.map((g) => [g.userId?.toString(), g])
     );
@@ -262,14 +301,12 @@ export const getChatList = async (req: Request, res: Response) => {
             website: company?.website || '',
           };
         } else if (otherUser.role === 'admin') {
-          // Handle admin users
           userData = {
             _id: otherUserId,
             email: otherUser.email || '',
             username: 'DLT Africa',
           };
         } else {
-          // Fallback for unknown roles
           userData = {
             _id: otherUserId,
             email: otherUser.email || '',
@@ -295,11 +332,7 @@ export const getChatList = async (req: Request, res: Response) => {
       })
       .filter((conv): conv is NonNullable<typeof conv> => conv !== null);
 
-    const validConversations = conversationsWithDetails.filter(
-      (conv) => conv !== null
-    );
-
-    return res.status(200).json({ messages: validConversations });
+    return res.status(200).json({ messages: conversationsWithDetails });
   } catch (err) {
     console.error('Chat List Error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -318,14 +351,32 @@ export const markAsRead = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    await MessageModel.updateMany(
-      {
-        senderId: otherUserId,
-        receiverId: userId,
-        read: false,
-      },
-      { $set: { read: true, readAt: new Date() } }
-    );
+    const unreadMessages = await MessageModel.find({
+      senderId: otherUserId,
+      receiverId: userId,
+      read: false,
+    });
+
+    if (unreadMessages.length > 0) {
+      await MessageModel.updateMany(
+        {
+          senderId: otherUserId,
+          receiverId: userId,
+          read: false,
+        },
+        { $set: { read: true, readAt: new Date() } }
+      );
+
+      if (io) {
+        unreadMessages.forEach((msg) => {
+          io.to(`user:${otherUserId}`).emit('message:read', {
+            messageId: (msg._id as mongoose.Types.ObjectId).toString(),
+            readBy: userId,
+            readAt: new Date(),
+          });
+        });
+      }
+    }
 
     return res.status(200).json({ message: 'Messages marked as read' });
   } catch (err) {
@@ -335,7 +386,7 @@ export const markAsRead = async (req: Request, res: Response) => {
 };
 
 /**
- * Get all messages for logged-in user (flat list)
+ * Get all messages for logged-in user
  */
 export const getAllMessages = async (req: Request, res: Response) => {
   try {

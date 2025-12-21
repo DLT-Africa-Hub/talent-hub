@@ -11,8 +11,8 @@ import { HiVideoCamera } from 'react-icons/hi';
 import { PiBuildingApartmentLight, PiUsersThreeLight } from 'react-icons/pi';
 import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
-import { messageApi } from '../../api/message';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useSocket } from '../../context/SocketContext';
 // import { GoGear } from 'react-icons/go';
 import { FiActivity } from 'react-icons/fi';
 
@@ -82,23 +82,14 @@ const SideBar: React.FC = () => {
   });
 
   const { unreadCount: notificationCount } = useNotifications();
-
-  const messagesQuery = useQuery({
-    queryKey: ['messageUnreadCount'],
-    queryFn: async () => {
-      const response = await messageApi.getUnreadCount();
-      return response.count || 0;
-    },
-  });
+  const { unreadMessageCount } = useSocket();
 
   const jobCount = useMemo(() => {
     if (role !== 'company' || !jobsQuery.data) return null;
     return jobsQuery.data.pagination?.total || 0;
   }, [role, jobsQuery.data]);
 
-  const messageCount = useMemo(() => {
-    return messagesQuery.data || 0;
-  }, [messagesQuery.data]);
+  const messageCount = unreadMessageCount;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

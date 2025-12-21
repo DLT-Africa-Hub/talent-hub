@@ -1,24 +1,31 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { createServer } from 'http';
 import app from './app';
+import { initializeSocket } from './socket/socket';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3090;
 
+const httpServer = createServer(app);
+
+export const io = initializeSocket(httpServer);
+
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/talent-hub', {
-    serverSelectionTimeoutMS: 30000, // 30 seconds
-    socketTimeoutMS: 45000, // 45 seconds
-    connectTimeoutMS: 30000, // 30 seconds
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
     maxPoolSize: 10,
     retryWrites: true,
     w: 'majority',
   } as mongoose.ConnectOptions)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log('✅ Socket.IO initialized');
     });
   })
   .catch((error) => {

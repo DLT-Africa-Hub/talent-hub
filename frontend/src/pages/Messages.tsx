@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { messageApi } from '../api/message';
 import ChatModal from '../components/message/ChatModal';
 import {
@@ -21,11 +22,13 @@ interface Conversation {
   lastMessage?: string;
   lastMessageTime?: Date;
   unreadCount?: number;
+  isOnline?: boolean;
 }
 
 const Messages: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { socket, onlineUsers, refreshUnreadCount } = useSocket();
   const { id } = useParams<{ id?: string }>();
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -42,8 +45,30 @@ const Messages: React.FC = () => {
       const response = await messageApi.getMessages({ page: 1, limit: 100 });
       return response;
     },
-    refetchInterval: 10000, // Refetch every 10 seconds for new conversations
+    refetchInterval: false,
   });
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = () => {
+      // Refetch conversations when new message arrives
+      refetch();
+    };
+
+    const handleMessageRead = () => {
+      // Refetch to update unread counts
+      refetch();
+    };
+
+    socket.on('message:new', handleNewMessage);
+    socket.on('message:read', handleMessageRead);
+
+    return () => {
+      socket.off('message:new', handleNewMessage);
+      socket.off('message:read', handleMessageRead);
+    };
+  }, [socket, refetch]);
 
   const conversations = useMemo(() => {
     if (!messagesResponse) return [];
@@ -68,6 +93,25 @@ const Messages: React.FC = () => {
         unknown
       >[];
     }
+
+    // Helper function to get first position from array or comma-separated string
+    const getFirstPosition = (
+      position: string | string[] | undefined
+    ): string => {
+      if (!position) return '';
+      if (Array.isArray(position)) {
+        return position[0] || '';
+      }
+      if (typeof position === 'string') {
+        // If it's a comma-separated string, split and take first
+        const parts = position
+          .split(',')
+          .map((p) => p.trim())
+          .filter((p) => p);
+        return parts[0] || '';
+      }
+      return '';
+    };
 
     return conversationsData.map(
       (conv: Record<string, unknown>): Conversation => {
@@ -108,7 +152,7 @@ const Messages: React.FC = () => {
           const graduate = (conv.graduate || {}) as {
             firstName?: string;
             lastName?: string;
-            position?: string;
+            position?: string | string[];
             profilePictureUrl?: string;
           };
 
@@ -119,14 +163,13 @@ const Messages: React.FC = () => {
             profilePictureUrl?: string;
           };
 
-          console.log(admin);
-
           // Show graduate if available, otherwise show admin
           if (graduate.firstName || graduate.lastName) {
             const firstName = graduate.firstName || '';
             const lastName = graduate.lastName || '';
             name = `${firstName} ${lastName}`.trim() || 'Graduate';
-            role = graduate.position || '';
+            // Get first position from array or comma-separated string
+            role = getFirstPosition(graduate.position);
             image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
           } else if (admin.email) {
             name = admin.username || '';
@@ -146,11 +189,10 @@ const Messages: React.FC = () => {
           const graduate = (conv.graduate || {}) as {
             firstName?: string;
             lastName?: string;
-            position?: string;
+            position?: string | string[];
             profilePictureUrl?: string;
           };
 
-          // Prefer company if available, otherwise show graduate
           if (company.companyName) {
             name = company.companyName || 'Company';
             role = company.industry || '';
@@ -159,7 +201,8 @@ const Messages: React.FC = () => {
             const firstName = graduate.firstName || '';
             const lastName = graduate.lastName || '';
             name = `${firstName} ${lastName}`.trim() || 'Graduate';
-            role = graduate.position || '';
+            // Get first position from array or comma-separated string
+            role = getFirstPosition(graduate.position);
             image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
           } else {
             name = 'User';
@@ -180,18 +223,22 @@ const Messages: React.FC = () => {
             ? new Date(conv.updatedAt as string | Date)
             : undefined;
 
+        const conversationId = (conv._id || conv.id || '') as string;
+        const isOnline = onlineUsers.has(conversationId);
+
         return {
-          id: (conv._id || conv.id || '') as string,
+          id: conversationId,
           name,
           role,
           image,
           lastMessage,
           lastMessageTime,
           unreadCount: (conv.unreadCount || 0) as number,
+          isOnline,
         };
       }
     );
-  }, [messagesResponse, user?.role]);
+  }, [messagesResponse, user?.role, onlineUsers]);
 
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
@@ -238,7 +285,9 @@ const Messages: React.FC = () => {
     navigate('/messages', { replace: true });
     // Refetch messages to update unread counts
     refetch();
-  }, [navigate, refetch]);
+    // Refresh unread count from Socket.IO
+    refreshUnreadCount();
+  }, [navigate, refetch, refreshUnreadCount]);
 
   useEffect(() => {
     if (id && conversations.length > 0) {
@@ -312,6 +361,10 @@ const Messages: React.FC = () => {
                               : DEFAULT_PROFILE_IMAGE;
                         }}
                       />
+                      {/* Online indicator */}
+                      {conversation.isOnline && (
+                        <div className="absolute bottom-1 right-1 w-3 h-3 bg-[#5CFF0D] border-2 border-white rounded-full"></div>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1 lg:gap-[5px]">
                       <p className="text-[#1C1C1C] font-medium text-[15px] lg:text-[20px]">

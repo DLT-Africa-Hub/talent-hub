@@ -1,6 +1,7 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { notificationApi } from '../api/notification';
 import { ApiNotification } from '../types/api';
 import {
@@ -16,6 +17,7 @@ import { NotificationItem } from '../types/notification';
 
 const Notifications: React.FC = () => {
   const { user } = useAuth();
+  const { socket, unreadNotificationCount } = useSocket();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [selectedNotification, setSelectedNotification] =
@@ -47,6 +49,33 @@ const Notifications: React.FC = () => {
     },
   });
 
+  // Listen for real-time notification events
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notification: any) => {
+      console.log('📬 Real-time notification received:', notification);
+      // Invalidate and refetch notifications
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      // Show toast notification (you can add a toast library)
+      console.log(`New notification: ${notification.title}`);
+    };
+
+    const handleNotificationUpdate = () => {
+      // Refetch notifications when any notification is updated
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    };
+
+    socket.on('notification:new', handleNewNotification);
+    socket.on('notification:update', handleNotificationUpdate);
+
+    return () => {
+      socket.off('notification:new', handleNewNotification);
+      socket.off('notification:update', handleNotificationUpdate);
+    };
+  }, [socket, queryClient]);
+
   const notifications = useMemo(() => {
     if (!notificationsData) return [];
 
@@ -62,10 +91,9 @@ const Notifications: React.FC = () => {
         notif.relatedType
       );
 
-      // Use system icon for system notifications, otherwise use default company image
       const notificationImage =
         notificationType === 'system'
-          ? 'https://cdn-icons-png.flaticon.com/512/1828/1828427.png' // System/gear icon
+          ? 'https://cdn-icons-png.flaticon.com/512/1828/1828427.png'
           : DEFAULT_COMPANY_IMAGE;
 
       return {
@@ -126,11 +154,9 @@ const Notifications: React.FC = () => {
 
   const handleNotificationClick = useCallback(
     (notification: NotificationItem) => {
-      // Mark as read when clicked
       if (!notification.read) {
         markAsReadMutation.mutate(notification.id);
       }
-      // Show modal with notification details
       setSelectedNotification(notification);
       setIsDetailsOpen(true);
     },
@@ -189,7 +215,16 @@ const Notifications: React.FC = () => {
   return (
     <div className="py-5 px-5 min-h-screen flex flex-col gap-6">
       <div className="flex justify-between items-center">
-        <p className="font-medium text-[22px] text-[#1C1C1C]">Notifications</p>
+        <div className="flex items-center gap-3">
+          <p className="font-medium text-[22px] text-[#1C1C1C]">
+            Notifications
+          </p>
+          {unreadNotificationCount > 0 && (
+            <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full">
+              {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+            </span>
+          )}
+        </div>
         <SearchBar
           value={query}
           onChange={setQuery}

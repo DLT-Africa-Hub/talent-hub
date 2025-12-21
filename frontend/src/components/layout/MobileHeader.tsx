@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BiBell, BiLogOut, BiUser } from 'react-icons/bi';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useSocket } from '../../context/SocketContext';
 import { useQuery } from '@tanstack/react-query';
 import { companyApi } from '../../api/company';
 import { graduateApi } from '../../api/graduate';
@@ -28,6 +29,7 @@ const MobileHeader = () => {
   const currentPath = location.pathname;
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
+  const { unreadMessageCount } = useSocket();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -156,8 +158,13 @@ const MobileHeader = () => {
       <div className="flex items-center justify-between">
         <p className="font-medium text-[24px]">Hi, {displayName}</p>
         <div className="flex gap-1 items-center">
-          <Link to="/messages" className="text-[24px] text-button">
+          <Link to="/messages" className="relative text-[24px] text-button">
             <HiOutlineChatBubbleLeftRight />
+            {unreadMessageCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold">
+                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+              </span>
+            )}
           </Link>
           <Link
             to="/notifications"

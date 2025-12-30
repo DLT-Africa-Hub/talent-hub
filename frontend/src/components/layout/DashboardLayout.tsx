@@ -3,7 +3,6 @@ import DashboardHeader from './DashboardHeader';
 import SideBar from './SideBar';
 import MobileHeader from './MobileHeader';
 import MobileNav from './MobileNav';
-import EmailVerificationModal from '../EmailVerificationModal';
 import EmailVerificationBanner from '../EmailVerificationBanner';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,7 +12,6 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user } = useAuth();
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationDismissed, setVerificationDismissed] = useState(false);
 
   useEffect(() => {
@@ -22,34 +20,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       localStorage.getItem('emailVerificationDismissed') === 'true';
     setVerificationDismissed(dismissed);
 
-    // Show modal if user is not verified and hasn't dismissed
-    if (user && (user.emailVerified === false || !user.emailVerified)) {
-      if (!dismissed) {
-        // Check if user has seen the modal in this session
-        const hasSeenModal = sessionStorage.getItem(
-          'emailVerificationModalShown'
-        );
-        if (!hasSeenModal) {
-          setShowVerificationModal(true);
-          sessionStorage.setItem('emailVerificationModalShown', 'true');
-        }
-      }
-    } else {
-      setShowVerificationModal(false);
+    if (user && user.emailVerified) {
       setVerificationDismissed(false);
       // Clear the flags when user is verified
-      sessionStorage.removeItem('emailVerificationModalShown');
       localStorage.removeItem('emailVerificationDismissed');
     }
   }, [user]);
 
-  const handleDismissVerification = () => {
-    setVerificationDismissed(true);
-    localStorage.setItem('emailVerificationDismissed', 'true');
-  };
-
   const handleOpenModal = () => {
-    setShowVerificationModal(true);
+    // Modal removed - banner can still show verification status
   };
 
   // Check if user is unverified and has dismissed
@@ -107,12 +86,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       >
         <MobileNav />
       </div>
-
-      <EmailVerificationModal
-        isOpen={showVerificationModal}
-        onClose={() => setShowVerificationModal(false)}
-        onDismiss={handleDismissVerification}
-      />
     </div>
   );
 };

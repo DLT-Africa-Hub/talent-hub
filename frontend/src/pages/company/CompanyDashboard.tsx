@@ -1,7 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { useCompanyMatches, extractMatches } from '../../hooks/useCompanyData';
+import {
+  useCompanyMatches,
+  extractMatches,
+  useCompanyApplications,
+  extractApplications,
+} from '../../hooks/useCompanyData';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { companyApi } from '../../api/company';
 import { LoadingSpinner } from '../../index';
@@ -10,8 +15,11 @@ import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
 import ScheduleInterviewModal from '../../components/company/ScheduleInterviewModal';
 import { CandidateProfile } from '../../types/candidates';
-import { transformMatch } from '../../utils/candidate.utils';
-import { ApiMatch } from '../../types/api';
+import {
+  transformMatch,
+  transformApplication,
+} from '../../utils/candidate.utils';
+import { ApiMatch, ApiApplication } from '../../types/api';
 import { useToastContext } from '../../context/ToastContext';
 
 const CompanyDashboard = () => {
@@ -31,7 +39,21 @@ const CompanyDashboard = () => {
       limit: 100,
     });
 
-  // Check Calendly connection status
+  // Fetch applications to get applicationId for matched candidates who applied
+  const { data: applicationsResponse, isLoading: loadingApplications } =
+    useCompanyApplications({
+      page: 1,
+      limit: 100,
+    });
+
+  // Fetch Calendly status
+  const { data: calendlyStatus } = useQuery({
+    queryKey: ['calendlyStatus'],
+    queryFn: async () => {
+      const response = await companyApi.getCalendlyStatus();
+      return response;
+    },
+  });
 
   // Mutation for suggesting multiple time slots
   const suggestTimeSlotsMutation = useMutation({
@@ -62,14 +84,49 @@ const CompanyDashboard = () => {
     },
   });
 
+  // Extract applications to map by graduateId and jobId
+  const applicationsData = useMemo(
+    () => extractApplications(applicationsResponse),
+    [applicationsResponse]
+  );
+
+  // Create a map of applications by graduateId-jobId combination
+  const applicationMap = useMemo(() => {
+    const map = new Map<string, ApiApplication>();
+    applicationsData.forEach((app: ApiApplication) => {
+      const graduateId = app.graduateId?._id?.toString() || app.graduateId?._id;
+      const jobId = app.jobId?._id?.toString() || app.jobId?.id;
+      if (graduateId && jobId) {
+        map.set(`${graduateId}-${jobId}`, app);
+      }
+    });
+    return map;
+  }, [applicationsData]);
+
   const transformMatchMemo = useCallback(
     (match: ApiMatch, index: number): CandidateProfile => {
+      const graduateId =
+        match.graduateId?._id?.toString() || match.graduateId?._id;
+      const jobId = match.jobId?._id?.toString() || match.jobId?.id;
+
+      // Check if there's an application for this match
+      const application =
+        graduateId && jobId
+          ? applicationMap.get(`${graduateId}-${jobId}`)
+          : undefined;
+
+      // If application exists, use transformApplication to get applicationId
+      if (application) {
+        return transformApplication(application, index);
+      }
+
+      // Otherwise, use transformMatch
       return transformMatch(match, index, {
         includeCompanyName: true,
         includeApplicationId: false,
       });
     },
-    []
+    [applicationMap]
   );
 
   const matchesData = useMemo(
@@ -84,7 +141,19 @@ const CompanyDashboard = () => {
     );
   }, [matchesData, transformMatchMemo]);
 
-  const loading = loadingMatches;
+  // Update selected candidate when matched candidates list changes (after mutation)
+  useEffect(() => {
+    if (selectedCandidate?.applicationId && matchedCandidates.length > 0) {
+      const updatedCandidate = matchedCandidates.find(
+        (c) => c.applicationId === selectedCandidate.applicationId
+      );
+      if (updatedCandidate) {
+        setSelectedCandidate(updatedCandidate);
+      }
+    }
+  }, [matchedCandidates, selectedCandidate?.applicationId]);
+
+  const loading = loadingMatches || loadingApplications;
 
   const handlePreview = (candidate: CandidateProfile) => {
     setSelectedCandidate(candidate);
@@ -102,6 +171,73 @@ const CompanyDashboard = () => {
       window.open(cvUrl, '_blank', 'noopener,noreferrer');
     }
   }, []);
+
+  // Mutation for updating application status (accept/reject)
+  const updateApplicationStatusMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      status,
+    }: {
+      applicationId: string;
+      status: string;
+    }) => {
+      return companyApi.updateApplicationStatus(applicationId, status);
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate relevant queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['companyMatches'] });
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['graduateMatches'] });
+
+      // Update the selected candidate if it matches the updated application
+      if (
+        selectedCandidate?.applicationId === variables.applicationId &&
+        data?.application
+      ) {
+        // Find the updated application in the applications data
+        const updatedApp = data.application;
+        const updatedCandidate = transformApplication(updatedApp, 0);
+        setSelectedCandidate(updatedCandidate);
+      }
+
+      // If offer was sent, navigate to conversation
+      if (
+        variables.status === 'accepted' &&
+        data?.offerSent &&
+        data?.graduateUserId
+      ) {
+        window.location.href = `/messages/${data.graduateUserId}`;
+      }
+    },
+  });
+
+  const handleAccept = useCallback(
+    (candidate: CandidateProfile) => {
+      if (!candidate.applicationId) {
+        showError('Missing application reference for this candidate.');
+        return;
+      }
+      updateApplicationStatusMutation.mutate({
+        applicationId: candidate.applicationId,
+        status: 'accepted',
+      });
+    },
+    [updateApplicationStatusMutation, showError]
+  );
+
+  const handleReject = useCallback(
+    (candidate: CandidateProfile) => {
+      if (!candidate.applicationId) {
+        showError('Missing application reference for this candidate.');
+        return;
+      }
+      updateApplicationStatusMutation.mutate({
+        applicationId: candidate.applicationId,
+        status: 'rejected',
+      });
+    },
+    [updateApplicationStatusMutation, showError]
+  );
 
   const handleSubmitTimeSlots = useCallback(
     async (
@@ -181,6 +317,29 @@ const CompanyDashboard = () => {
         candidate={selectedCandidate}
         onClose={handleCloseModal}
         onViewCV={handleViewCV}
+        onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
+        onReject={selectedCandidate?.applicationId ? handleReject : undefined}
+        isAccepting={
+          !!(
+            updateApplicationStatusMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            updateApplicationStatusMutation.variables?.status === 'accepted' &&
+            updateApplicationStatusMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+        isRejecting={
+          !!(
+            updateApplicationStatusMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            updateApplicationStatusMutation.variables?.status === 'rejected' &&
+            updateApplicationStatusMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+        isCalendlyConnected={
+          calendlyStatus?.connected && calendlyStatus?.enabled
+        }
       />
 
       <ScheduleInterviewModal

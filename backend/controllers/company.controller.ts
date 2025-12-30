@@ -2468,6 +2468,43 @@ export const updateApplicationStatus = async (
         );
         await createAndSendOffer(applicationId, userId);
         // Status will be set to 'offer_sent' by the service
+
+        // Get graduate userId for navigation - application.graduateId is already populated
+        const graduate = application.graduateId as
+          | {
+              userId?:
+                | mongoose.Types.ObjectId
+                | { _id?: mongoose.Types.ObjectId };
+            }
+          | mongoose.Types.ObjectId;
+        const graduateData =
+          typeof graduate === 'object' &&
+          graduate &&
+          !(graduate instanceof mongoose.Types.ObjectId)
+            ? graduate
+            : null;
+        let graduateUserId: string | null = null;
+        if (graduateData?.userId) {
+          if (graduateData.userId instanceof mongoose.Types.ObjectId) {
+            graduateUserId = graduateData.userId.toString();
+          } else if (
+            typeof graduateData.userId === 'object' &&
+            '_id' in graduateData.userId &&
+            graduateData.userId._id
+          ) {
+            graduateUserId =
+              graduateData.userId._id instanceof mongoose.Types.ObjectId
+                ? graduateData.userId._id.toString()
+                : String(graduateData.userId._id);
+          }
+        }
+
+        res.json({
+          message: 'Application accepted and offer sent successfully',
+          offerSent: true,
+          graduateUserId: graduateUserId,
+        });
+        return;
       } catch (error) {
         console.error('Failed to create offer:', error);
         const errorMessage =
@@ -2668,8 +2705,31 @@ export const updateApplicationStatus = async (
     }
   }
 
-  // Reload application to get updated status
-  const updatedApplication = await Application.findById(applicationId).lean();
+  // Reload application to get updated status with populated fields
+  const updatedApplication = await Application.findById(applicationId)
+    .populate({
+      path: 'graduateId',
+      select:
+        'firstName lastName skills education rank profilePictureUrl summary cv expYears position location salaryPerAnnum userId',
+    })
+    .populate({
+      path: 'jobId',
+      select: 'title jobType location salary directContact companyId',
+      populate: {
+        path: 'companyId',
+        select: 'companyName',
+      },
+    })
+    .populate({
+      path: 'interviewId',
+      select:
+        'status scheduledAt selectedTimeSlot suggestedTimeSlots durationMinutes roomSlug',
+    })
+    .populate({
+      path: 'matchId',
+      select: 'score',
+    })
+    .lean();
 
   // Determine response message based on what happened
   let responseMessage = 'Application status updated successfully';
@@ -2694,6 +2754,7 @@ export const updateApplicationStatus = async (
     message: responseMessage,
     application:
       updatedApplication || application.toObject({ versionKey: false }),
+    offerSent: false,
   });
 };
 
@@ -3790,21 +3851,30 @@ export const calendlyOAuthCallback = async (
       ? new Date(Date.now() + expires_in * 1000)
       : undefined;
 
-    // Update company with Calendly connection
-    if (!company.calendly) {
-      company.calendly = {
-        enabled: false,
-      };
+    // Update company with Calendly connection using updateOne for reliable save
+    // Use $set to ensure nested fields are saved properly, even if calendly object doesn't exist
+    const updateData: Record<string, unknown> = {
+      'calendly.userUri': userInfo.uri,
+      'calendly.accessToken': encryptedAccessToken,
+      'calendly.tokenExpiresAt': tokenExpiresAt,
+      'calendly.connectedAt': new Date(),
+      'calendly.enabled': true,
+    };
+    
+    if (encryptedRefreshToken) {
+      updateData['calendly.refreshToken'] = encryptedRefreshToken;
     }
 
-    company.calendly.userUri = userInfo.uri;
-    company.calendly.accessToken = encryptedAccessToken;
-    company.calendly.refreshToken = encryptedRefreshToken;
-    company.calendly.tokenExpiresAt = tokenExpiresAt;
-    company.calendly.connectedAt = new Date();
-    company.calendly.enabled = true;
-
-    await company.save();
+    // Use updateOne to ensure the update completes before redirecting
+    const updateResult = await Company.updateOne(
+      { _id: company._id },
+      { $set: updateData }
+    );
+    
+    if (updateResult.matchedCount === 0) {
+      redirectToProfile(false, 'Company profile not found');
+      return;
+    }
 
     redirectToProfile(true);
   } catch (error) {

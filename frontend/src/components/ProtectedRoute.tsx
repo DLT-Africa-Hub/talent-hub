@@ -39,8 +39,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuth) {
-    console.log('ProtectedRoute: Not authenticated, redirecting to login');
-    return <Navigate to="/login" replace />;
+    // Preserve the current URL for redirect after login
+    const currentPath = window.location.pathname + window.location.search;
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(currentPath)}`}
+        replace
+      />
+    );
   }
 
   if (currentUser && !allowedRoles.includes(currentUser.role)) {

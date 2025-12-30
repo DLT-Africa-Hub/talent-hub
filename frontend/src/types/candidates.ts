@@ -30,4 +30,5 @@ export interface CandidateProfile {
   interviewRoomSlug?: string;
   interviewStatus?: string;
   hasUpcomingInterview?: boolean;
+  hasCompletedInterview?: boolean;
 }

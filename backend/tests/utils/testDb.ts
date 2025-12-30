@@ -4,6 +4,11 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 let mongo: MongoMemoryServer | null = null;
 
 export const connectTestDb = async (): Promise<void> => {
+  // Disconnect existing connection if any (from index.ts or previous tests)
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
+
   mongo = await MongoMemoryServer.create();
   const uri = mongo.getUri();
 
@@ -16,7 +21,12 @@ export const connectTestDb = async (): Promise<void> => {
 
 export const disconnectTestDb = async (): Promise<void> => {
   if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.dropDatabase();
+    try {
+      await mongoose.connection.dropDatabase();
+    } catch (error) {
+      // Ignore dropDatabase errors (e.g., permission issues with MongoMemoryServer)
+      // This is safe in test environment
+    }
     await mongoose.connection.close();
   }
 

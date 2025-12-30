@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import type { AuthResponsePayload } from '../../types/auth';
 import { graduateApi } from '../../api/graduate';
@@ -15,11 +15,18 @@ const Login = () => {
   const [role, setRole] = useState<'graduate' | 'company'>('graduate');
   const { login, ingestAuthPayload } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
   const handlePostLoginNavigation = async (userRole?: string) => {
+    // Check for redirect parameter first
+    const redirectPath = searchParams.get('redirect');
+    if (redirectPath) {
+      navigate(decodeURIComponent(redirectPath), { replace: true });
+      return;
+    }
     if (userRole === 'graduate') {
       try {
         const profileResponse = await graduateApi.getProfile();

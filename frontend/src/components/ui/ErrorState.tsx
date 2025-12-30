@@ -43,28 +43,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({
   }
 
   return (
-    <div
-      className={`rounded-[12px] bg-red-50 border border-red-200 p-[16px] ${className}`}
-    >
-      <div className="flex items-start gap-3">
-        <HiOutlineExclamationCircle className="text-[20px] text-red-600 shrink-0 mt-0.5" />
-        <div className="flex-1">
-          {title && (
-            <p className="text-[14px] font-semibold text-red-800 mb-1">
-              {title}
-            </p>
-          )}
-          <p className="text-[14px] text-red-600">{message}</p>
-          {onRetry && (
-            <button
-              onClick={onRetry}
-              className="mt-2 text-[13px] text-red-700 font-medium hover:text-red-800 underline"
-            >
-              Try again
-            </button>
-          )}
-        </div>
-      </div>
+    <div className={`border-t border-b border-red-200 py-2 ${className}`}>
+      <p className="text-[14px] text-red-600">{message}</p>
     </div>
   );
 };

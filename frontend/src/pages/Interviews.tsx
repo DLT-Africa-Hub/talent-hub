@@ -537,7 +537,7 @@ const Interviews = () => {
     null;
 
   return (
-    <div className="py-5 px-5 min-h-screen flex flex-col gap-6">
+    <div className="py-5 px-5 min-h-screen flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
       <div className="flex items-center justify-between">
         <SectionHeader title="Interviews" />
       </div>
@@ -567,7 +567,13 @@ const Interviews = () => {
                 </div>
               </div>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <div
+              className={`grid gap-6 ${
+                calendlyApplications.length === 1
+                  ? 'lg:grid-cols-1'
+                  : 'lg:grid-cols-1 xl:grid-cols-2'
+              }`}
+            >
               {calendlyApplications.map((app: ApiApplication) => {
                 const jobData = app.job || app.jobId;
                 const companyData = jobData?.companyId;
@@ -587,11 +593,17 @@ const Interviews = () => {
                 return (
                   <div
                     key={app._id}
-                    className="border border-fade rounded-2xl p-4 bg-white shadow-sm"
+                    className={`border border-fade rounded-2xl p-6 bg-white shadow-sm hover:shadow-md transition-shadow ${
+                      calendlyApplications.length === 1
+                        ? 'max-w-5xl w-full'
+                        : 'w-full'
+                    }`}
                   >
-                    <div className="flex flex-col gap-3 mb-4">
-                      <p className="text-sm text-[#1C1C1C80]">{companyName}</p>
-                      <p className="text-lg font-semibold text-[#1C1C1C]">
+                    <div className="flex flex-col gap-2 mb-6 pb-4 border-b border-fade">
+                      <p className="text-sm font-medium text-[#1C1C1C80] uppercase tracking-wide">
+                        {companyName}
+                      </p>
+                      <p className="text-xl font-bold text-[#1C1C1C]">
                         {jobTitle}
                       </p>
                     </div>

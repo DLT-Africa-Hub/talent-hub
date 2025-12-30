@@ -95,7 +95,8 @@ export const transformApplication = (
     status: candidateStatus,
     rank: getCandidateRank(graduate.rank),
     statusLabel:
-      candidateStatus.charAt(0).toUpperCase() + candidateStatus.slice(1),
+      (app.status || '').charAt(0).toUpperCase() +
+      (app.status || '').slice(1).replace(/_/g, ' '),
     experience: formatExperience(graduate.expYears || 0),
     location: formatLocation(job.location || graduate.location),
     skills: (graduate.skills || []).slice(0, 3),

@@ -6,7 +6,7 @@ import GraduateModel from '../models/Graduate.model';
 import CompanyModel from '../models/Company.model';
 
 import { emitNewMessage } from '../socket/socket';
-import { io } from '..';
+import { io } from '../index';
 
 /**
  * Send a message

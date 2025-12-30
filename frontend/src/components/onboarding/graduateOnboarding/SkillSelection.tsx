@@ -7,7 +7,6 @@ import {
   rolesToPositions,
 } from '../../../utils/material.utils';
 import { graduateApi } from '../../../api/graduate';
-import Modal from '../../auth/Modal';
 import { Input, Button, MultiSelect } from '../../ui';
 
 interface Props {
@@ -21,7 +20,7 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
     form.skills || []
   );
 
-  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
   const navigate = useNavigate();
@@ -130,8 +129,8 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
         className="flex flex-col gap-4 w-full"
         onSubmit={(e) => {
           e.preventDefault();
-          if (filled) {
-            setIsConsentModalOpen(true);
+          if (filled && consentGiven) {
+            handleCreateProfile();
           }
         }}
       >
@@ -186,58 +185,39 @@ const SkillSelection: React.FC<Props> = ({ onChange, form }) => {
           />
         </div>
 
+        {/* Consent Checkbox */}
+        <div className="flex items-start gap-3 pt-2">
+          <input
+            type="checkbox"
+            id="consent"
+            checked={consentGiven}
+            onChange={(e) => setConsentGiven(e.target.checked)}
+            className="mt-1 w-5 h-5 rounded border-gray-300 text-button focus:ring-button"
+          />
+          <label
+            htmlFor="consent"
+            className="text-[14px] text-[#1C1C1CBF] cursor-pointer"
+          >
+            I consent to using my data to better serve me
+          </label>
+        </div>
+
+        {profileError && (
+          <p className="text-center text-red-500 text-[14px] font-normal">
+            {profileError}
+          </p>
+        )}
+
         {/* Continue Button */}
         <div className="pt-2">
-          <Button type="submit" disabled={!filled}>
-            Continue
+          <Button
+            type="submit"
+            disabled={!filled || !consentGiven || isCreatingProfile}
+          >
+            {isCreatingProfile ? 'Creating profile...' : 'Continue'}
           </Button>
         </div>
       </form>
-
-      {/* Consent Modal */}
-      <Modal
-        isOpen={isConsentModalOpen}
-        onClose={() => setIsConsentModalOpen(false)}
-      >
-        <div className="pt-[40px] flex flex-col items-center gap-[30px] lg:gap-[50px] font-inter">
-          <img
-            src="/proceed.png"
-            alt="proceed"
-            className="w-[156px] h-[156px]"
-          />
-
-          <div className="flex flex-col gap-[10px] text-center max-w-[380px]">
-            <p className="text-[32px] font-semibold text-[#1C1C1C]">
-              Before you Proceed
-            </p>
-            <p className="text-[#1C1C1CBF] text-[18px] font-normal">
-              Do you consent to we using your data to better serve you?
-            </p>
-          </div>
-
-          {profileError && (
-            <p className="text-center text-red-500 text-[14px] font-normal">
-              {profileError}
-            </p>
-          )}
-          <div className="w-full max-w-[400px] flex items-center justify-center gap-3">
-            <button
-              onClick={handleCreateProfile}
-              disabled={isCreatingProfile}
-              className="w-full bg-button text-white py-4 px-6 rounded-[10px] font-medium text-[16px] hover:bg-button transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isCreatingProfile ? 'Creating profile...' : 'Yes, proceed'}
-            </button>
-            <button
-              onClick={handleCreateProfile}
-              disabled={isCreatingProfile}
-              className="w-full py-4 px-6 rounded-[10px] border-2 border-[#FF383C] text-[#FF383C] font-medium text-[16px] hover:bg-red-50 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isCreatingProfile ? 'Creating profile...' : 'No, cancel'}
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

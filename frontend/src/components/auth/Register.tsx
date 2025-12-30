@@ -161,14 +161,8 @@ const Register = () => {
 
       await register(email, password, backendRole);
 
-      if (backendRole === 'graduate') {
-        navigate('/onboarding');
-      } else {
-        navigate('/company/onboarding');
-      }
-
-      setEmail('');
-      setPassword('');
+      // Navigate to email verification page
+      navigate('/verify-email', { replace: true });
     } catch (err: unknown) {
       const formattedError = formatErrorMessage(
         err as AxiosError<ErrorResponse>

@@ -55,6 +55,7 @@ describe('Notification workflows', () => {
       currency: 'USD',
     },
     status: 'active',
+    directContact: true, // Ensure company receives notifications
   });
 
   const buildGraduateProfilePayload = () => ({
@@ -154,6 +155,9 @@ describe('Notification workflows', () => {
         coverLetter: 'I am excited about this role.',
       })
       .expect(201);
+
+    // Wait a bit for notification to be created (async operation)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const notificationsResponse = await companyAgent
       .get('/api/v1/notifications')

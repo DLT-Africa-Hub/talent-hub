@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
+import { graduateApi } from '../api/graduate';
+import { companyApi } from '../api/company';
 import { Button } from '../components/ui';
 import { ApiError } from '../types/api';
 
@@ -17,17 +19,51 @@ const EmailVerification = () => {
   // Check if token is in URL (from email link)
   const token = searchParams.get('token');
 
-  const getDestinationForRole = (role?: string | null) => {
-    switch (role) {
-      case 'graduate':
-        return '/graduate';
-      case 'company':
-        return '/company';
-      case 'admin':
-        return '/admin';
-      default:
-        return '/';
+  const getDestinationForRole = async (role?: string | null) => {
+    if (role === 'graduate') {
+      try {
+        const profileResponse = await graduateApi.getProfile();
+        const graduate = profileResponse.graduate;
+
+        if (graduate) {
+          const assessmentData = graduate.assessmentData;
+          const hasCompletedAssessment = assessmentData?.submittedAt != null;
+
+          if (!hasCompletedAssessment) {
+            return '/assessment';
+          }
+          return '/graduate';
+        }
+      } catch (profileError: unknown) {
+        const err = profileError as { response?: { status?: number } };
+        if (err.response?.status === 404) {
+          return '/onboarding';
+        }
+        // For other errors, still go to onboarding
+        return '/onboarding';
+      }
+      return '/onboarding';
     }
+
+    if (role === 'company') {
+      try {
+        await companyApi.getProfile();
+        return '/company';
+      } catch (profileError: unknown) {
+        const err = profileError as { response?: { status?: number } };
+        if (err.response?.status === 404) {
+          return '/company/onboarding';
+        }
+        // For other errors, still go to onboarding
+        return '/company/onboarding';
+      }
+    }
+
+    if (role === 'admin') {
+      return '/admin';
+    }
+
+    return '/';
   };
 
   const handleVerifyEmail = useCallback(
@@ -44,10 +80,8 @@ const EmailVerification = () => {
         // The backend now returns auth tokens, so we can automatically authenticate
         if (response.accessToken && response.refreshToken) {
           ingestAuthPayload(response);
-          setSuccess(
-            'Email verified successfully! Redirecting to your dashboard...'
-          );
-          const destination = getDestinationForRole(responseRole);
+          setSuccess('Email verified successfully! Redirecting...');
+          const destination = await getDestinationForRole(responseRole);
           setTimeout(() => {
             navigate(destination);
           }, 1500);
@@ -77,9 +111,11 @@ const EmailVerification = () => {
   );
 
   useEffect(() => {
-    // If already verified, redirect to dashboard when logged in
+    // If already verified, redirect to appropriate page when logged in
     if (user?.emailVerified && isAuthenticated) {
-      navigate(getDestinationForRole(user.role));
+      getDestinationForRole(user.role).then((destination) => {
+        navigate(destination);
+      });
       return;
     }
 

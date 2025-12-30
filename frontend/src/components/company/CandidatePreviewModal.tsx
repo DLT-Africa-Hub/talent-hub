@@ -9,7 +9,6 @@ interface CandidatePreviewModalProps {
   isOpen: boolean;
   candidate: CandidateProfile | null;
   onClose: () => void;
-  onChat?: (candidate: CandidateProfile) => void;
   onViewCV?: (candidate: CandidateProfile) => void;
   onAccept?: (candidate: CandidateProfile) => void;
   onReject?: (candidate: CandidateProfile) => void;
@@ -29,7 +28,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   isOpen,
   candidate,
   onClose,
-  onChat,
   onViewCV,
   onAccept,
   onReject,
@@ -59,9 +57,18 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
   if (!candidate) return null;
 
+  const applicationStatus = candidate.statusLabel?.toLowerCase() || '';
+  const isAccepted = applicationStatus === 'accepted';
+  // Only consider offer_sent or hired as offer sent, not pending
   const isOfferSent =
-    candidate.status === 'pending' || candidate.status === 'hired';
+    applicationStatus === 'offer_sent' || candidate.status === 'hired';
   const canAcceptOrReject = !isOfferSent && (onAccept || onReject);
+
+  // Check if there's a completed interview (not missed or rescheduled)
+  const hasCompletedInterview = candidate.interviewStatus === 'completed';
+  // Button should show "Send Offer" when accepted, but be disabled until interview is completed
+  const shouldShowSendOffer = isAccepted;
+
   const matchPercentage = candidate.matchPercentage ?? undefined;
   const summary = candidate.summary || 'No summary available.';
   const existingInterviewDate = candidate.interviewScheduledAt
@@ -108,11 +115,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   const locationCity =
     locationParts.length > 1 ? locationParts[1] : candidate.location;
   const locationType = locationParts.length > 0 ? locationParts[0] : '';
-
-  const handleChat = () => {
-    onChat?.(candidate);
-    onClose();
-  };
 
   const handleViewCV = () => {
     onViewCV?.(candidate);
@@ -291,16 +293,6 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
             >
               {candidate.cv ? 'View CV' : 'No CV Available'}
             </Button>
-            {/* Only show Chat if direct contact is enabled */}
-            {candidate.directContact !== false && (
-              <Button
-                variant="secondary"
-                onClick={handleChat}
-                className="flex-1"
-              >
-                Chat
-              </Button>
-            )}
           </div>
 
           {!showScheduleForm ? (
@@ -312,7 +304,12 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                       <Button
                         variant="primary"
                         onClick={handleAccept}
-                        disabled={isOfferSent || isAccepting || isRejecting}
+                        disabled={
+                          isOfferSent ||
+                          isAccepting ||
+                          isRejecting ||
+                          (isAccepted && !hasCompletedInterview)
+                        }
                         className="flex-1 bg-button text-white hover:bg-[#176300] font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {isAccepting ? (
@@ -339,8 +336,10 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
                             </svg>
                             Processing...
                           </>
+                        ) : shouldShowSendOffer ? (
+                          'Send Offer'
                         ) : (
-                          'Accept'
+                          'Accept Application'
                         )}
                       </Button>
                     )}

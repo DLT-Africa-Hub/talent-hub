@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { HiOutlineBriefcase } from 'react-icons/hi';
 import { HiArrowRight } from 'react-icons/hi';
 import { CandidateProfile } from '../../types/candidates';
@@ -182,12 +181,6 @@ const CandidatePreview = () => {
     navigate('/candidates');
   };
 
-  const handleChat = () => {
-    if (candidate?.applicationId) {
-      navigate('/messages');
-    }
-  };
-
   const handleAccept = () => {
     if (candidate?.applicationId) {
       updateApplicationStatusMutation.mutate({
@@ -343,14 +336,6 @@ const CandidatePreview = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center pt-[8px]">
-          <button
-            type="button"
-            onClick={handleChat}
-            className="w-full flex items-center justify-center gap-[12px] rounded-[10px] border border-button bg-white py-[15px] text-[16px] font-medium text-button transition hover:bg-[#F8F8F8]"
-          >
-            <HiOutlineChatBubbleLeftRight className="text-[24px]" />
-            Chat
-          </button>
           <button
             type="button"
             onClick={handleAccept}

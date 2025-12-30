@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { HiOutlineEye } from 'react-icons/hi2';
 import BaseModal from '../ui/BaseModal';
 import CandidatePreviewModal from './CandidatePreviewModal';
@@ -185,6 +185,11 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         ? graduate.position[0]
         : graduate.position;
 
+      // Check interview status - look for completed interview
+      const interview = application.interviewId;
+      const interviewStatus = interview?.status;
+      const hasCompletedInterview = interviewStatus === 'completed';
+
       return {
         id: application._id || `application-${index}`,
         applicationId: application._id?.toString(),
@@ -208,6 +213,8 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         jobType: job.jobType,
         salary: job.salary,
         directContact: job.directContact,
+        interviewStatus: interviewStatus,
+        hasCompletedInterview: hasCompletedInterview,
       };
     },
     [jobId]
@@ -263,15 +270,23 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
     setSelectedCandidate(null);
   };
 
-  const handleChat = (candidate: CandidateProfile) => {
-    // TODO: Navigate to chat
-    console.log('Chat clicked for candidate:', candidate.id);
-  };
-
   const handleViewCV = (candidate: CandidateProfile) => {
     // Already handled in CandidatePreviewModal
     console.log('View CV clicked for candidate:', candidate.id);
   };
+
+  // Update selected candidate when candidates list changes (after mutation)
+  useEffect(() => {
+    if (selectedCandidate?.applicationId && candidates.length > 0) {
+      const updatedCandidate = candidates.find(
+        (candidate: CandidateProfile) =>
+          candidate.applicationId === selectedCandidate.applicationId
+      );
+      if (updatedCandidate) {
+        setSelectedCandidate(updatedCandidate);
+      }
+    }
+  }, [candidates, selectedCandidate?.applicationId]);
 
   // Mutation for updating application status (accept/reject)
   const updateApplicationStatusMutation = useMutation({
@@ -284,12 +299,32 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
     }) => {
       return companyApi.updateApplicationStatus(applicationId, status);
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Invalidate relevant queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ['jobApplicants', jobId] });
       queryClient.invalidateQueries({ queryKey: ['jobMatches', jobId] });
       queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
       queryClient.invalidateQueries({ queryKey: ['companyCandidates'] });
+
+      // Update the selected candidate if it matches the updated application
+      if (
+        selectedCandidate?.applicationId === variables.applicationId &&
+        data?.application
+      ) {
+        // Transform the updated application to candidate profile
+        const updatedCandidate = transformApplication(data.application, 0);
+        setSelectedCandidate(updatedCandidate);
+      }
+
+      // If offer was sent (status becomes 'offer_sent'), navigate to conversation
+      if (
+        variables.status === 'accepted' &&
+        data?.offerSent &&
+        data?.graduateUserId
+      ) {
+        // Navigate to messages with the graduate's userId
+        window.location.href = `/messages/${data.graduateUserId}`;
+      }
     },
   });
 
@@ -467,7 +502,6 @@ const CandidatesListModal: React.FC<CandidatesListModalProps> = ({
         isOpen={isPreviewModalOpen}
         candidate={selectedCandidate}
         onClose={handleClosePreview}
-        onChat={handleChat}
         onViewCV={handleViewCV}
         onAccept={selectedCandidate?.applicationId ? handleAccept : undefined}
         onReject={selectedCandidate?.applicationId ? handleReject : undefined}

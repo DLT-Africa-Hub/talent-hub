@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import Notification, { INotification } from '../models/Notification.model';
 import User from '../models/User.model';
 import { sendEmail } from './email.service';
-import { io } from '..';
+import { io } from '../index';
 import { emitNewNotification, emitUnreadCountUpdate } from '../socket/socket';
 
 type ObjectIdLike = mongoose.Types.ObjectId | string;

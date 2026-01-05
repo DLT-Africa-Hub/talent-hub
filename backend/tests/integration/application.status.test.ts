@@ -5,7 +5,6 @@ import Application from '../../models/Application.model';
 import Interview from '../../models/Interview.model';
 import Graduate from '../../models/Graduate.model';
 import Company from '../../models/Company.model';
-import Job from '../../models/Job.model';
 import User from '../../models/User.model';
 import {
   connectTestDb,
@@ -25,18 +24,23 @@ jest.mock('../../services/offer.service', () => {
   const actual = jest.requireActual('../../services/offer.service');
   return {
     ...actual,
-    createAndSendOffer: jest.fn().mockImplementation(async (applicationId: string) => {
-      // Import Application here to avoid circular dependency
-      const Application = (await import('../../models/Application.model')).default;
-      const application = await Application.findById(applicationId);
-      if (application) {
-        application.status = 'offer_sent';
-        await application.save();
-      }
-      return undefined;
-    }),
+    createAndSendOffer: jest
+      .fn()
+      .mockImplementation(async (applicationId: string) => {
+        // Import Application here to avoid circular dependency
+        const Application = (await import('../../models/Application.model'))
+          .default;
+        const application = await Application.findById(applicationId);
+        if (application) {
+          application.status = 'offer_sent';
+          await application.save();
+        }
+        return undefined;
+      }),
     generateOfferPDF: jest.fn().mockResolvedValue(Buffer.from('test')),
-    uploadOfferPDF: jest.fn().mockResolvedValue('https://example.com/offer.pdf'),
+    uploadOfferPDF: jest
+      .fn()
+      .mockResolvedValue('https://example.com/offer.pdf'),
   };
 });
 
@@ -206,7 +210,6 @@ describe('Application Status Update', () => {
       emailVerifiedAt: new Date(),
     });
 
-    const company = await Company.findOne({ userId: companyUserId });
     await companyAgent
       .post('/api/v1/companies/profile')
       .set('Authorization', `Bearer ${companyToken}`)
@@ -256,8 +259,7 @@ describe('Application Status Update', () => {
 
     // Get company and job details for interview
     const updatedCompany = await Company.findOne({ userId: companyUserId });
-    const job = await Job.findById(jobId);
-    
+
     // Create completed interview with all required fields
     const roomSlug = 'test-room-slug-' + Date.now();
     const roomUrl = `http://localhost:5174/interviews/${roomSlug}`;

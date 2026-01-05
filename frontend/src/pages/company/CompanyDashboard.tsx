@@ -1,6 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import {
+  HiInformationCircle,
+  HiArrowRight,
+  HiCheckCircle,
+} from 'react-icons/hi2';
 import {
   useCompanyMatches,
   extractMatches,
@@ -39,7 +44,6 @@ const CompanyDashboard = () => {
       limit: 100,
     });
 
-  // Fetch applications to get applicationId for matched candidates who applied
   const { data: applicationsResponse, isLoading: loadingApplications } =
     useCompanyApplications({
       page: 1,
@@ -289,10 +293,48 @@ const CompanyDashboard = () => {
     );
   }
 
+  const isCalendlyConnected =
+    calendlyStatus?.connected && calendlyStatus?.enabled;
+
   return (
     <DashboardLayout>
       <div className="py-[24px] px-[24px]">
+        {isCalendlyConnected ? (
+          <div className="flex justify-end items-center">
+            <HiCheckCircle className="text-[20px] text-green-600 shrink-0 " />
+
+            <p className="text-[14px] text-green-800 font-medium ">
+              <Link
+                to="/company/profile"
+                className="inline-flex items-center gap-[4px] underline "
+              >
+                Calendly Connected
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <div className="mb-[24px] p-[16px] rounded-[12px] bg-blue-50 border border-blue-200 flex items-start gap-[12px]">
+            <HiInformationCircle className="text-[20px] text-blue-600 shrink-0 mt-[2px]" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] text-blue-800 font-medium mb-[4px]">
+                Calendly Not Connected
+              </p>
+              <p className="text-[13px] text-blue-700">
+                Connect your Calendly account to enable interview scheduling for
+                candidates.{' '}
+                <Link
+                  to="/company/profile"
+                  className="inline-flex items-center gap-[4px] text-blue-800 font-semibold hover:text-blue-900 underline transition-colors"
+                >
+                  Connect now
+                  <HiArrowRight className="text-[14px]" />
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
         <SectionHeader title="Matched Professionals" />
+
         {matchedCandidates.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[20px]">
             {matchedCandidates.map((candidate: CandidateProfile) => (
@@ -337,9 +379,7 @@ const CompanyDashboard = () => {
               selectedCandidate.applicationId
           )
         }
-        isCalendlyConnected={
-          calendlyStatus?.connected && calendlyStatus?.enabled
-        }
+        isCalendlyConnected={isCalendlyConnected}
       />
 
       <ScheduleInterviewModal

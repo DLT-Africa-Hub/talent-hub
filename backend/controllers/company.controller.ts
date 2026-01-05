@@ -2675,14 +2675,37 @@ export const updateApplicationStatus = async (
             ? `Congratulations! You've been hired at ${company.companyName}`
             : `Application Update: ${jobData?.title || 'Position'}`;
 
+        // Build interview page URL with applicationId and redirect for login
+        const applicationIdString =
+          application._id instanceof mongoose.Types.ObjectId
+            ? application._id.toString()
+            : String(application._id);
+        const interviewPageUrl = `${CLIENT_BASE_URL}/interviews?applicationId=${applicationIdString}`;
+        const loginUrl = `${CLIENT_BASE_URL}/login?redirect=${encodeURIComponent(interviewPageUrl)}`;
+
         const emailText =
           validatedStatus === 'hired'
             ? `Congratulations! We are pleased to inform you that you have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}. Welcome to the team!`
             : validatedStatus === 'accepted'
-              ? `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been accepted.\n\nYou can now schedule an interview by visiting your Interviews page. After the interview is completed, the company will review your application and decide whether to proceed with an offer.\n\nGood luck!`
+              ? `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been accepted.\n\nYou can now schedule an interview by clicking the link below:\n${loginUrl}\n\nAfter the interview is completed, the company will review your application and decide whether to proceed with an offer.\n\nGood luck!`
               : validatedStatus === 'rejected' && hasCompletedInterview
                 ? `Thank you for your interest in the "${jobData?.title || 'the position'}" position at ${company.companyName}.\n\nAfter reviewing your interview, we have decided not to move forward with your application at this time. We appreciate the time you took to interview with us and wish you the best in your job search.`
                 : `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been ${validatedStatus}.`;
+
+        // Create HTML email with clickable link for accepted applications
+        const emailHtml =
+          validatedStatus === 'accepted'
+            ? `<p>Your application for "<strong>${jobData?.title || 'the position'}</strong>" at <strong>${company.companyName}</strong> has been accepted.</p>
+              <p>You can now schedule an interview by clicking the link below:</p>
+              <p><a href="${loginUrl}" style="display: inline-block; padding: 12px 24px; background-color: #1B7700; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">Schedule Interview</a></p>
+              <p>After the interview is completed, the company will review your application and decide whether to proceed with an offer.</p>
+              <p>Good luck!</p>`
+            : validatedStatus === 'hired'
+              ? `<p>Congratulations! We are pleased to inform you that you have been hired for "<strong>${jobData?.title || 'the position'}</strong>" at <strong>${company.companyName}</strong>. Welcome to the team!</p>`
+              : validatedStatus === 'rejected' && hasCompletedInterview
+                ? `<p>Thank you for your interest in the "<strong>${jobData?.title || 'the position'}</strong>" position at <strong>${company.companyName}</strong>.</p>
+<p>After reviewing your interview, we have decided not to move forward with your application at this time. We appreciate the time you took to interview with us and wish you the best in your job search.</p>`
+                : `<p>Your application for "<strong>${jobData?.title || 'the position'}</strong>" at <strong>${company.companyName}</strong> has been ${validatedStatus}.</p>`;
 
         await createNotification({
           userId: graduateUserId,
@@ -2697,6 +2720,7 @@ export const updateApplicationStatus = async (
           email: {
             subject: emailSubject,
             text: emailText,
+            html: emailHtml,
           },
         });
       }
@@ -3840,41 +3864,47 @@ export const calendlyOAuthCallback = async (
       return;
     }
 
-    // Encrypt tokens for storage
-    const encryptedAccessToken = calendlyService.encryptToken(access_token);
+    const encryptedAccessToken =
+      calendlyService.encryptToken(access_token) || access_token;
     const encryptedRefreshToken = refresh_token
-      ? calendlyService.encryptToken(refresh_token)
+      ? calendlyService.encryptToken(refresh_token) || refresh_token
       : undefined;
 
-    // Calculate token expiration
     const tokenExpiresAt = expires_in
       ? new Date(Date.now() + expires_in * 1000)
       : undefined;
 
-    // Update company with Calendly connection using updateOne for reliable save
-    // Use $set to ensure nested fields are saved properly, even if calendly object doesn't exist
-    const updateData: Record<string, unknown> = {
-      'calendly.userUri': userInfo.uri,
-      'calendly.accessToken': encryptedAccessToken,
-      'calendly.tokenExpiresAt': tokenExpiresAt,
-      'calendly.connectedAt': new Date(),
-      'calendly.enabled': true,
-    };
-    
-    if (encryptedRefreshToken) {
-      updateData['calendly.refreshToken'] = encryptedRefreshToken;
-    }
-
-    // Use updateOne to ensure the update completes before redirecting
-    const updateResult = await Company.updateOne(
-      { _id: company._id },
-      { $set: updateData }
+    const companyDoc = await Company.findById(company._id).select(
+      '+calendly.accessToken +calendly.refreshToken'
     );
-    
-    if (updateResult.matchedCount === 0) {
+    if (!companyDoc) {
       redirectToProfile(false, 'Company profile not found');
       return;
     }
+
+    // Initialize calendly object if it doesn't exist
+    if (!companyDoc.calendly) {
+      companyDoc.calendly = {
+        enabled: false,
+      };
+    }
+
+    // Set all calendly fields directly on the document
+    companyDoc.calendly.userUri = userInfo.uri;
+    companyDoc.calendly.accessToken = encryptedAccessToken;
+    companyDoc.calendly.tokenExpiresAt = tokenExpiresAt;
+    companyDoc.calendly.connectedAt = new Date();
+    companyDoc.calendly.enabled = true;
+
+    if (encryptedRefreshToken) {
+      companyDoc.calendly.refreshToken = encryptedRefreshToken;
+    }
+
+    // Mark the nested calendly object as modified
+    companyDoc.markModified('calendly');
+
+    // Save the document - this is the most reliable way to save fields with select: false
+    await companyDoc.save();
 
     redirectToProfile(true);
   } catch (error) {

@@ -108,7 +108,7 @@ const CalendlyIntegration = () => {
           </div>
           {isConnected ? (
             <Button
-              variant="secondary"
+              variant="danger"
               onClick={handleDisconnect}
               disabled={disconnectMutation.isPending}
             >

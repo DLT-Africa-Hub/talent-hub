@@ -37,7 +37,15 @@ interface Application {
     id?: string;
     _id?: string | ObjectIdLike;
     title?: string;
-    companyId?: string | { companyName?: string };
+    companyId?:
+      | string
+      | {
+          companyName?: string;
+          calendly?: {
+            enabled?: boolean;
+            publicLink?: string;
+          };
+        };
     companyName?: string;
     location?: string;
     jobType?: string;
@@ -94,15 +102,20 @@ const GraduateApplications = () => {
         contractString = 'Internship';
       }
 
-      // Extract companyName from populated structure
-      const companyName =
-        job?.companyName ||
-        (job?.companyId &&
+      // Extract companyName and calendly from populated structure
+      const companyIdData =
+        job?.companyId &&
         typeof job.companyId === 'object' &&
-        'companyName' in job.companyId
-          ? (job.companyId as { companyName?: string }).companyName
-          : null) ||
-        'Company';
+        !(job.companyId instanceof String)
+          ? (job.companyId as {
+              companyName?: string;
+              calendly?: { enabled?: boolean; publicLink?: string };
+            })
+          : null;
+
+      const companyName =
+        job?.companyName || companyIdData?.companyName || 'Company';
+      const calendly = companyIdData?.calendly;
 
       // Get jobId - handle both _id (MongoDB ObjectId) and id formats
       // When populated, MongoDB returns _id as ObjectId, need to convert to string
@@ -143,6 +156,7 @@ const GraduateApplications = () => {
         description: job?.description || '',
         status: application.status,
         applicationId: application.id,
+        calendly: calendly,
       };
     },
     []

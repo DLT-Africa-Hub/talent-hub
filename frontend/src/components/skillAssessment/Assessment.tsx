@@ -38,53 +38,6 @@ const Assessment: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const handleSubmit = useCallback(async () => {
-    setTimerActive(false);
-
-    const allAnswers: string[] = questions.map((_, index) => {
-      const answer = answers[index];
-      return answer && typeof answer === 'string' ? answer.trim() : '';
-    });
-
-    const unansweredCount = allAnswers.filter((a) => a === '').length;
-    if (unansweredCount > 0) {
-      setError(
-        `Please answer all ${questions.length} questions before submitting. ${unansweredCount} question(s) remaining.`
-      );
-      return;
-    }
-
-    if (allAnswers.length === 0) {
-      setError('No answers to submit. Please answer the questions first.');
-      return;
-    }
-
-    try {
-      const response = await graduateApi.submitAssessment({
-        answers: allAnswers,
-      });
-
-      // Store the backend-calculated score and passed status
-      if (typeof response.score === 'number') {
-        setBackendScore(response.score);
-      }
-      if (typeof response.passed === 'boolean') {
-        setBackendPassed(response.passed);
-      }
-
-      queryClient.invalidateQueries({
-        queryKey: ['graduateProfile', 'assessment'],
-      });
-      setShowResults(true);
-    } catch (err) {
-      const error = err as ApiError;
-      setError(
-        error.response?.data?.message ||
-          'Failed to submit assessment. Please try again.'
-      );
-    }
-  }, [answers, questions, queryClient]);
-
   const fetchQuestions = useCallback(async () => {
     setIsLoading(true);
     setError('');
@@ -137,6 +90,83 @@ const Assessment: React.FC = () => {
     }
   }, [navigate]);
 
+  const handleSubmit = useCallback(
+    async (forceSubmit = false) => {
+      setTimerActive(false);
+
+      const allAnswers: string[] = questions.map((_, index) => {
+        const answer = answers[index];
+        return answer && typeof answer === 'string' ? answer.trim() : '';
+      });
+
+      // Only validate if not forcing submit (i.e., when time elapses)
+      if (!forceSubmit) {
+        const unansweredCount = allAnswers.filter((a) => a === '').length;
+        if (unansweredCount > 0) {
+          setError(
+            `Please answer all ${questions.length} questions before submitting. ${unansweredCount} question(s) remaining.`
+          );
+          return;
+        }
+
+        if (allAnswers.length === 0) {
+          setError('No answers to submit. Please answer the questions first.');
+          return;
+        }
+      }
+
+      // Filter out empty answers for submission
+      const validAnswers = allAnswers.filter((a) => a !== '');
+
+      try {
+        // Submit with valid answers (even if incomplete when forceSubmit is true)
+        const response = await graduateApi.submitAssessment({
+          answers: validAnswers,
+        });
+
+        // Store the backend-calculated score and passed status
+        if (typeof response.score === 'number') {
+          setBackendScore(response.score);
+        }
+        if (typeof response.passed === 'boolean') {
+          setBackendPassed(response.passed);
+        }
+
+        queryClient.invalidateQueries({
+          queryKey: ['graduateProfile', 'assessment'],
+        });
+
+        // If force submit (time elapsed), restart assessment instead of showing results
+        if (forceSubmit) {
+          // Show a brief message that time elapsed, then restart
+          setError('Time has elapsed. Assessment submitted. Restarting...');
+          setTimeout(() => {
+            setError(''); // Clear error message
+            fetchQuestions();
+          }, 1500);
+        } else {
+          setShowResults(true);
+        }
+      } catch (err) {
+        const error = err as ApiError;
+        // If force submit (time elapsed), restart assessment anyway
+        if (forceSubmit) {
+          setError('Time has elapsed. Restarting assessment...');
+          setTimeout(() => {
+            setError(''); // Clear error message
+            fetchQuestions();
+          }, 1500);
+        } else {
+          setError(
+            error.response?.data?.message ||
+              'Failed to submit assessment. Please try again.'
+          );
+        }
+      }
+    },
+    [answers, questions, queryClient, fetchQuestions]
+  );
+
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
@@ -148,8 +178,8 @@ const Assessment: React.FC = () => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           setTimerActive(false);
-          // Auto submit when time runs out
-          handleSubmit();
+          // Auto submit when time runs out (force submit bypasses validation)
+          handleSubmit(true);
           return 0;
         }
         return prev - 1;
@@ -482,7 +512,7 @@ const Assessment: React.FC = () => {
         </button>
 
         <button
-          onClick={isLastQuestion ? handleSubmit : nextStep}
+          onClick={isLastQuestion ? () => handleSubmit(false) : nextStep}
           disabled={!selectedOption}
           className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             !selectedOption

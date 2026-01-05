@@ -7,6 +7,8 @@ import {
   HiOutlineCalendar,
 } from 'react-icons/hi2';
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import DOMPurify from 'dompurify';
 import { Company } from './CompanyCard';
 import { ActionButtonGroup } from '../ui';
@@ -15,7 +17,8 @@ import CoverLetterStep from './CoverLetterStep';
 import ConfirmationStep from './ConfirmationStep';
 import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
 import { useApplyToJob } from '../../hooks/useApplyToJob';
-import { ApiResume } from '../../types/api';
+import { ApiResume, ApiApplication } from '../../types/api';
+import { graduateApi } from '../../api/graduate';
 
 interface CompanyPreviewModalProps {
   isOpen: boolean;
@@ -47,11 +50,47 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [currentStep, setCurrentStep] = useState<ApplicationStep>('preview');
   const [applicationData, setApplicationData] = useState<ApplicationData>({});
+  const navigate = useNavigate();
 
   const { hasApplied, checkingApplied, resetAppliedStatus } = useApplyToJob({
     jobId: company?.jobId,
     isOpen,
   });
+
+  // Check if company has applicationId prop (from applications page)
+  const applicationIdFromProps = (
+    company as Company & { applicationId?: string }
+  )?.applicationId;
+  const applicationStatusFromProps = (company as Company & { status?: string })
+    ?.status;
+
+  // Fetch application status to check if it's been accepted
+  // Only fetch if we don't have status from props (i.e., viewing from explore page)
+  const { data: applicationsData } = useQuery<ApiApplication | null>({
+    queryKey: ['graduateApplications', company?.jobId],
+    queryFn: async () => {
+      if (!company?.jobId) return null;
+      const response = await graduateApi.getApplications({
+        page: 1,
+        limit: 100,
+      });
+      // Find the application for this job
+      const application = response.applications?.find(
+        (app: ApiApplication) =>
+          app.jobId?._id === company.jobId || app.jobId === company.jobId
+      );
+      return application || null;
+    },
+    enabled:
+      !!company?.jobId && isOpen && hasApplied && !applicationStatusFromProps,
+  });
+
+  // Use status from props if available (from applications page), otherwise from query
+  const applicationStatus =
+    applicationStatusFromProps || applicationsData?.status;
+  const isApplicationAccepted = applicationStatus === 'accepted';
+  const hasCalendlyConnected = company?.calendly?.enabled === true;
+  const canScheduleInterview = isApplicationAccepted && hasCalendlyConnected;
 
   const { submitApplication, isSubmitting, submitError, resetError } =
     useApplicationSubmission({
@@ -127,6 +166,15 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   const skills = ['React', 'TypeScript', 'JavaScript'];
 
   const handleApplyClick = () => {
+    // If application is accepted and company has Calendly, navigate to interviews page
+    if (canScheduleInterview) {
+      const applicationId =
+        applicationIdFromProps || applicationsData?._id || applicationsData?.id;
+      if (applicationId) {
+        navigate(`/interviews?applicationId=${applicationId}`);
+        return;
+      }
+    }
     setCurrentStep('cv-selection');
   };
 
@@ -321,13 +369,13 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                       prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-6 prose-h2:mb-3 prose-h2:first:mt-0
                       prose-h3:text-lg prose-h3:font-semibold prose-h3:mt-5 prose-h3:mb-2 prose-h3:first:mt-0
                       prose-h4:text-base prose-h4:font-semibold prose-h4:mt-4 prose-h4:mb-2 prose-h4:first:mt-0
-                      break-words"
+                      wrap-break-word"
                     dangerouslySetInnerHTML={{
                       __html: descriptionContent.content,
                     }}
                   />
                 ) : (
-                  <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line break-words">
+                  <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line wrap-break-word">
                     {descriptionContent.content}
                   </p>
                 )}
@@ -380,13 +428,20 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
             <div className="pt-2">
               <ActionButtonGroup
                 primary={{
-                  label: hasApplied
-                    ? 'Already Applied'
-                    : checkingApplied
-                      ? 'Checking...'
-                      : 'Apply Now',
-                  onClick: hasApplied ? () => {} : handleApplyClick,
-                  disabled: hasApplied || checkingApplied,
+                  label: canScheduleInterview
+                    ? 'Schedule Interview'
+                    : hasApplied
+                      ? 'Already Applied'
+                      : checkingApplied
+                        ? 'Checking...'
+                        : 'Apply Now',
+                  onClick: canScheduleInterview
+                    ? handleApplyClick
+                    : hasApplied
+                      ? () => {}
+                      : handleApplyClick,
+                  disabled:
+                    (hasApplied && !canScheduleInterview) || checkingApplied,
                 }}
               />
             </div>

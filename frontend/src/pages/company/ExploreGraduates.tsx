@@ -55,7 +55,7 @@ const ExploreGraduates = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<'createdAt' | 'name' | 'rank'>(
+  const [sortBy] = useState<'createdAt' | 'name' | 'rank'>(
     'createdAt'
   );
   const [filterRank, setFilterRank] = useState<string>('all');
@@ -216,36 +216,22 @@ const ExploreGraduates = () => {
                   </button>
                 )}
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center gap-2 px-4 py-3 border rounded-[10px] transition-all ${
-                    showFilters || filterRank !== 'all'
-                      ? 'border-button bg-button/5 text-button'
-                      : 'border-fade bg-white text-[#1C1C1C] hover:border-button/50'
-                  }`}
-                >
-                  <BsFilter className="text-[18px]" />
-                  <span className="hidden sm:inline text-[14px] font-medium">
-                    Filters
-                  </span>
-                </button>
-                <select
-                  value={sortBy}
-                  onChange={(e) =>
-                    setSortBy(e.target.value as 'createdAt' | 'name' | 'rank')
-                  }
-                  className="px-4 py-3 border border-fade rounded-[10px] bg-white text-[#1C1C1C] outline-none focus:border-button focus:ring-2 focus:ring-button/20 transition-all cursor-pointer text-[14px] font-medium"
-                >
-                  <option value="createdAt">Sort by Newest</option>
-                  <option value="name">Sort by Name</option>
-                  <option value="rank">Sort by Rank</option>
-                </select>
-              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-4 py-3 border rounded-[10px] transition-all ${
+                  showFilters || filterRank !== 'all'
+                    ? 'border-button bg-button/5 text-button'
+                    : 'border-fade bg-white text-[#1C1C1C] hover:border-button/50'
+                }`}
+              >
+                <BsFilter className="text-[18px]" />
+                <span className="hidden sm:inline text-[14px] font-medium">
+                  Filters
+                </span>
+              </button>
             </div>
           </div>
 
-          {/* Filter Chips */}
           {showFilters && (
             <div className="flex flex-wrap items-center gap-3 p-4 bg-[#F8F8F8] rounded-[12px] border border-fade animate-in slide-in-from-top-2 duration-200">
               <span className="text-[14px] font-medium text-[#1C1C1C80]">

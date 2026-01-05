@@ -1467,7 +1467,8 @@ export const scheduleCalendlyInterview = async (
     }
 
     // Get application and verify graduate access (candidate scheduling)
-    // Explicitly select calendly fields including accessToken (which has select: false)
+    // Note: When using .lean(), the + syntax for select: false fields in nested objects
+    // may not work correctly with populate. We'll fetch the company separately if needed.
     const application = await Application.findById(applicationId)
       .populate({
         path: 'jobId',
@@ -1475,7 +1476,7 @@ export const scheduleCalendlyInterview = async (
         populate: {
           path: 'companyId',
           select:
-            '_id userId companyName calendly.userUri calendly.enabled calendly.publicLink calendly.connectedAt calendly.tokenExpiresAt +calendly.accessToken +calendly.refreshToken',
+            '_id userId companyName calendly.userUri calendly.enabled calendly.publicLink calendly.connectedAt calendly.tokenExpiresAt',
         },
       })
       .populate({
@@ -1533,15 +1534,35 @@ export const scheduleCalendlyInterview = async (
         ? companyIdValue
         : new mongoose.Types.ObjectId(String(companyIdValue));
 
-    const companyCalendly = job?.companyId?.calendly as
-      | {
-          enabled?: boolean;
-          userUri?: string;
-          accessToken?: string;
-          refreshToken?: string;
-          tokenExpiresAt?: Date;
+    // Fetch company - the + syntax for nested select: false fields is tricky
+    // Fetch without select first, then the fields should be accessible
+    // The test shows this pattern works: Company.findOne({ userId }).select('+calendly.accessToken +calendly.refreshToken')
+    const companyDoc = await Company.findById(companyId).select(
+      '+calendly.accessToken +calendly.refreshToken'
+    );
+
+    if (!companyDoc) {
+      res.status(404).json({ message: 'Company not found' });
+      return;
+    }
+
+    // Access calendly fields - for nested select: false fields, we may need to use get()
+    // Try direct access first, then fallback to get() method
+    const calendly = companyDoc.calendly;
+    const accessToken =
+      calendly?.accessToken ?? companyDoc.get('calendly.accessToken');
+    const refreshToken =
+      calendly?.refreshToken ?? companyDoc.get('calendly.refreshToken');
+
+    const companyCalendly = calendly
+      ? {
+          enabled: calendly.enabled,
+          userUri: calendly.userUri,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          tokenExpiresAt: calendly.tokenExpiresAt,
         }
-      | undefined;
+      : undefined;
 
     if (
       !companyCalendly ||

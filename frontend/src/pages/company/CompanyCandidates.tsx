@@ -21,7 +21,6 @@ import {
 } from '../../utils/candidate.utils';
 import { LoadingSpinner } from '../../index';
 import { EmptyState } from '../../components/ui';
-import { MdFilterList } from 'react-icons/md';
 import { ApiApplication, ApiMatch } from '../../types/api';
 
 const CompanyCandidates = () => {
@@ -32,7 +31,7 @@ const CompanyCandidates = () => {
   const [activeStatus, setActiveStatus] = useState<CandidateStatus | 'all'>(
     'all'
   );
-  const [selectedJobId, setSelectedJobId] = useState<string | 'all'>('all');
+  const [selectedJobId] = useState<string | 'all'>('all');
   const [selectedCandidate, setSelectedCandidate] =
     useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,8 +56,7 @@ const CompanyCandidates = () => {
     if (candidateStatus === 'all') return undefined;
     if (candidateStatus === 'hired') return 'hired';
     if (candidateStatus === 'matched') return undefined;
-    // For 'applied', fetch all applications (pending, accepted, shortlisted, reviewed, interviewed)
-    // Client-side filter will handle showing only those with applications
+
     if (candidateStatus === 'applied') return undefined;
     if (candidateStatus === 'pending') return undefined;
     return undefined;
@@ -426,34 +424,7 @@ const CompanyCandidates = () => {
                 className="w-[659px] px-[20px] py-[10px] rounded-[10px] border border-[#DCE5D5] bg-white pl-[46px] pr-[16px] text-[14px] text-[#1C1C1C] placeholder:text-[#1C1C1C66] focus:outline-none focus:border-button transition"
               />
             </div>
-            <button
-              type="button"
-              className=" w-[50px] p-[10px] rounded-[14px] border border-[#DCE5D5] bg-white text-[#1C1C1C] flex items-center justify-center hover:border-button hover:text-button transition"
-            >
-              <MdFilterList className="text-[20px]" />
-            </button>
           </div>
-
-          {/* Job Filter Dropdown */}
-          {availableJobs.length > 0 && (
-            <div className="flex items-center gap-[12px] justify-end">
-              <label className="text-[14px] font-medium text-[#1C1C1C]">
-                Filter by Job:
-              </label>
-              <select
-                value={selectedJobId}
-                onChange={(e) => setSelectedJobId(e.target.value)}
-                className="px-[16px] py-[10px] rounded-[10px] border border-[#DCE5D5] bg-white text-[14px] text-[#1C1C1C] focus:outline-none focus:border-button transition min-w-[250px]"
-              >
-                <option value="all">All Jobs</option>
-                {availableJobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Filter Pills */}
           <div className="flex gap-[10px] flex-wrap justify-end">

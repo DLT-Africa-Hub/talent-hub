@@ -7,7 +7,6 @@ import DropdownMenu, {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
-import { RiHomeSmile2Line } from 'react-icons/ri';
 
 const FloatingNavbar = () => {
   const navigationItems = [
@@ -25,10 +24,13 @@ const FloatingNavbar = () => {
           <div className="relative flex items-center justify-between px-6">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <div className="relative flex items-center text-[24px] gap-[5px]">
-                <RiHomeSmile2Line className="text-fade" />
-                <p className="text-[#1C1C1C] font-medium">Talent Match</p>
-              </div>
+              <Link to="/">
+                <img
+                  src="/Recruita green & black.svg"
+                  alt="Recruita Logo"
+                  className="h-8 w-auto"
+                />
+              </Link>
             </div>
 
             {/* Desktop Nav */}

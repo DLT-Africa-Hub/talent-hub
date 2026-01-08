@@ -90,6 +90,7 @@ const SideBar: React.FC = () => {
   }, [role, jobsQuery.data]);
 
   const messageCount = unreadMessageCount;
+  console.log(messageCount);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
-import { RiHomeSmile2Line } from 'react-icons/ri';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { companyApi } from '../../api/company';
 import { graduateApi } from '../../api/graduate';
@@ -172,9 +172,14 @@ const DashboardHeader = () => {
 
   return (
     <div className="hidden lg:flex items-center gap-[32px] sticky z-10 top-0 w-full h-[100px] font-inter">
-      <div className="p-[30px] h-full flex items-center justify-center gap-[6px] text-[18px] font-medium text-[#1C1C1C] border border-fade rounded-br-[16px] bg-[#F8F8F8] w-[240px]">
-        <RiHomeSmile2Line className="text-button text-[22px]" />
-        <p>Talent Match</p>
+      <div className="p-[30px] h-full flex items-center justify-center border border-fade rounded-br-[16px] bg-[#F8F8F8] w-[240px]">
+        <Link to="/">
+          <img
+            src="/Recruita green & black.svg"
+            alt="Recruita Logo"
+            className="h-8 w-auto"
+          />
+        </Link>
       </div>
 
       <div className="flex items-center justify-between px-[24px] py-[32px] bg-[#F8F8F8] h-full grow border border-fade rounded-bl-[16px]">

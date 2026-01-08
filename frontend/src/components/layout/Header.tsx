@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { RiHomeSmile2Line } from 'react-icons/ri';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { graduateApi } from '../../api/graduate';
 
@@ -68,9 +68,14 @@ const Header = () => {
 
   return (
     <div className="hidden lg:flex items-center gap-[43px] sticky z-10 top-0 w-full h-[130px] font-inter">
-      <div className="p-[50px] flex items-center justify-center gap-[5px] text-[24px] font-medium text-[#1C1C1C] border border-fade rounded-br-[20px] bg-[#F8F8F8]">
-        <RiHomeSmile2Line className="text-button" />
-        <p>Talent Match</p>
+      <div className="p-[50px] flex items-center justify-center border border-fade rounded-br-[20px] bg-[#F8F8F8]">
+        <Link to="/">
+          <img
+            src="/Recruita green & black.svg"
+            alt="Recruita Logo"
+            className="h-8 w-auto"
+          />
+        </Link>
       </div>
       <div className="flex items-center justify-between px-[30px] py-[50px] bg-[#F8F8F8]  h-full grow border border-fade  rounded-bl-[20px]">
         <p className="font-medium text-[22px] text-[#1c1c1c]">{displayName}</p>

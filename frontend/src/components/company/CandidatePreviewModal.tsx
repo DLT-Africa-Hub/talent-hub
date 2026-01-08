@@ -59,10 +59,15 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 
   const applicationStatus = candidate.statusLabel?.toLowerCase() || '';
   const isAccepted = applicationStatus === 'accepted';
-  // Only consider offer_sent or hired as offer sent, not pending
+  // Check if offer is sent (offer_sent or hired) or applicant is rejected
   const isOfferSent =
-    applicationStatus === 'offer_sent' || candidate.status === 'hired';
-  const canAcceptOrReject = !isOfferSent && (onAccept || onReject);
+    applicationStatus === 'offer sent' ||
+    applicationStatus === 'offer_sent' ||
+    candidate.status === 'hired';
+  const isRejected = applicationStatus === 'rejected';
+  // Hide buttons if offer is sent or applicant is rejected
+  const canAcceptOrReject =
+    !isOfferSent && !isRejected && (onAccept || onReject);
 
   // Check if there's a completed interview (not missed or rescheduled)
   const hasCompletedInterview = candidate.interviewStatus === 'completed';
@@ -296,8 +301,24 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
           </div>
 
           {!showScheduleForm ? (
-            (canAcceptOrReject || onScheduleInterview) && (
+            (canAcceptOrReject ||
+              onScheduleInterview ||
+              isOfferSent ||
+              isRejected) && (
               <div className="flex flex-col gap-3">
+                {/* Show status if offer is sent or applicant is rejected */}
+                {(isOfferSent || isRejected) && (
+                  <div
+                    className={`p-3 rounded-xl border font-medium text-center ${
+                      isOfferSent
+                        ? 'border-green-200 bg-green-50 text-green-800'
+                        : 'border-red-200 bg-red-50 text-red-800'
+                    }`}
+                  >
+                    Status: {candidate.statusLabel || 'N/A'}
+                  </div>
+                )}
+                {/* Show accept/reject buttons only if not offer sent and not rejected */}
                 {canAcceptOrReject && (
                   <div className="flex gap-2">
                     {onAccept && (

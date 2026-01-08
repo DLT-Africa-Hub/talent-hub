@@ -55,9 +55,7 @@ const ExploreGraduates = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy] = useState<'createdAt' | 'name' | 'rank'>(
-    'createdAt'
-  );
+  const [sortBy] = useState<'createdAt' | 'name' | 'rank'>('createdAt');
   const [filterRank, setFilterRank] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCandidate, setSelectedCandidate] =

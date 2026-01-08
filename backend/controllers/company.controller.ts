@@ -2499,10 +2499,37 @@ export const updateApplicationStatus = async (
           }
         }
 
+        // Reload application to get updated status (offer_sent)
+        const updatedApplication = await Application.findById(applicationId)
+          .populate({
+            path: 'graduateId',
+            select:
+              'firstName lastName skills education rank profilePictureUrl summary cv expYears position location salaryPerAnnum userId',
+          })
+          .populate({
+            path: 'jobId',
+            select: 'title jobType location salary directContact companyId',
+            populate: {
+              path: 'companyId',
+              select: 'companyName',
+            },
+          })
+          .populate({
+            path: 'interviewId',
+            select:
+              'status scheduledAt selectedTimeSlot suggestedTimeSlots durationMinutes roomSlug',
+          })
+          .populate({
+            path: 'matchId',
+            select: 'score',
+          })
+          .lean();
+
         res.json({
           message: 'Application accepted and offer sent successfully',
           offerSent: true,
           graduateUserId: graduateUserId,
+          application: updatedApplication,
         });
         return;
       } catch (error) {

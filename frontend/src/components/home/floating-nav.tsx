@@ -26,7 +26,7 @@ const FloatingNavbar = () => {
             <div className="flex items-center space-x-3">
               <Link to="/">
                 <img
-                  src="/Recruita green & black.svg"
+                  src="/RecruitaGreenBlack.svg"
                   alt="Recruita Logo"
                   className="h-8 w-auto"
                 />

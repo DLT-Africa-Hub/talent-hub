@@ -28,9 +28,10 @@ const CompanyHeader = () => {
       <div className="p-[32px] flex items-center justify-center border border-fade rounded-br-[16px] bg-[#F8F8F8]">
         <Link to="/">
           <img
-            src="/Recruita green & black.svg"
+            src="/RecruitaGreenBlack.svg"
             alt="Recruita Logo"
             className="h-8 w-auto"
+            loading="lazy"
           />
         </Link>
       </div>

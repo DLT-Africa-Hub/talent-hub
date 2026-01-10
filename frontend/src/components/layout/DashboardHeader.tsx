@@ -175,9 +175,10 @@ const DashboardHeader = () => {
       <div className="p-[30px] h-full flex items-center justify-center border border-fade rounded-br-[16px] bg-[#F8F8F8] w-[240px]">
         <Link to="/">
           <img
-            src="/Recruita green & black.svg"
+            src="/RecruitaGreenBlack.svg"
             alt="Recruita Logo"
             className="h-8 w-auto"
+            loading="lazy"
           />
         </Link>
       </div>

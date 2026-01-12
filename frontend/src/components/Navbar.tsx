@@ -14,7 +14,7 @@ const Navbar = () => {
     <nav style={navbarStyle}>
       <div style={containerStyle}>
         <Link to="/" style={logoStyle}>
-          Talent Hub
+          Recruita
         </Link>
         <div style={linksStyle}>
           {isAuthenticated ? (

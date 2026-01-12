@@ -15,17 +15,14 @@ export const io = initializeSocket(httpServer);
 // Only connect to MongoDB and start server if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   mongoose
-    .connect(
-      process.env.MONGODB_URI || 'mongodb://localhost:27017/talent-hub',
-      {
-        serverSelectionTimeoutMS: 30000,
-        socketTimeoutMS: 45000,
-        connectTimeoutMS: 30000,
-        maxPoolSize: 10,
-        retryWrites: true,
-        w: 'majority',
-      } as mongoose.ConnectOptions
-    )
+    .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/recruita', {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 30000,
+      maxPoolSize: 10,
+      retryWrites: true,
+      w: 'majority',
+    } as mongoose.ConnectOptions)
     .then(() => {
       console.log('✅ Connected to MongoDB');
       httpServer.listen(PORT, () => {

@@ -2084,7 +2084,7 @@ export const scheduleInterviewForApplicant = async (
           relatedType: 'interview',
           email: {
             subject: `Interview Scheduled: ${jobData.title || 'Position'} at ${companyData.companyName}`,
-            text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData.title || 'the position'}" at ${companyData.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+            text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData.title || 'the position'}" at ${companyData.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Recruita Interviews tab when it's time.\n\nBest of luck!`,
           },
         }),
         createNotification({
@@ -2406,7 +2406,7 @@ export const suggestTimeSlotsForApplicant = async (
         relatedType: 'interview',
         email: {
           subject: `Interview Time Slots: ${jobData.title}`,
-          text: `Hello ${graduateName || 'there'},\n\nDLT Africa has suggested ${suggestedSlots.length} time slot${suggestedSlots.length > 1 ? 's' : ''} for your interview for "${jobData.title}".\n\nPlease log in to Talent Hub to view the available times and select your preferred slot.\n\nBest of luck!`,
+          text: `Hello ${graduateName || 'there'},\n\nDLT Africa has suggested ${suggestedSlots.length} time slot${suggestedSlots.length > 1 ? 's' : ''} for your interview for "${jobData.title}".\n\nPlease log in to Recruita to view the available times and select your preferred slot.\n\nBest of luck!`,
         },
       });
     } catch (error) {

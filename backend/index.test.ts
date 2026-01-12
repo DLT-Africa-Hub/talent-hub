@@ -23,7 +23,7 @@ async function startTestServer() {
       );
       uri =
         process.env.MONGODB_URI ||
-        'mongodb://localhost:27017/talent-hub-e2e-test';
+        'mongodb://localhost:27017/recruita-e2e-test';
       console.log(`✅ Using local MongoDB: ${uri}`);
     }
 
@@ -34,14 +34,14 @@ async function startTestServer() {
     const PORT = process.env.PORT || 3090;
 
     await mongoose.connect(uri, {
-      dbName: 'talent-hub-e2e-test',
+      dbName: 'recruita-e2e-test',
     });
 
     console.log('✅ Connected to test MongoDB');
 
     const server = app.listen(PORT, () => {
       console.log(`🧪 Test server running on port ${PORT}`);
-      console.log(`📊 Using database: talent-hub-e2e-test`);
+      console.log(`📊 Using database: recruita-e2e-test`);
     });
 
     // Graceful shutdown

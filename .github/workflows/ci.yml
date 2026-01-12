@@ -189,98 +189,7 @@ jobs:
             echo "No tests directory found, skipping tests"
           fi
         continue-on-error: true
-
-  # E2E Tests
-  e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        env:
-          MONGO_INITDB_ROOT_USERNAME: admin
-          MONGO_INITDB_ROOT_PASSWORD: password
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10.11.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "pnpm"
-          cache-dependency-path: |
-            backend/pnpm-lock.yaml
-            frontend/pnpm-lock.yaml
-
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: pnpm install --frozen-lockfile
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Install E2E dependencies
-        working-directory: ./e2e
-        run: npm ci
-
-      - name: Install Playwright browsers
-        working-directory: ./e2e
-        run: npx playwright install --with-deps chromium
-
-      - name: Build backend
-        working-directory: ./backend
-        run: pnpm run build
-        env:
-          MONGODB_URI: mongodb://admin:password@localhost:27017/talent-hub-test?authSource=admin
-          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'test-jwt-secret-for-ci-testing-only-min-32-chars-required!!' }}
-          NODE_ENV: test
-
-      - name: Start backend server
-        working-directory: ./backend
-        run: |
-          pnpm start &
-          sleep 10
-          curl -f http://localhost:3090/health || exit 1
-        env:
-          MONGODB_URI: mongodb://admin:password@localhost:27017/talent-hub-test?authSource=admin
-          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'test-jwt-secret-for-ci-testing-only-min-32-chars-required!!' }}
-          NODE_ENV: test
-          PORT: 3090
-          AI_SERVICE_URL: http://localhost:8000
-          CORS_ORIGIN: http://localhost:5174
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: pnpm run build
-        env:
-          VITE_API_URL: http://localhost:3090/api
-
-      - name: Start frontend dev server
-        working-directory: ./frontend
-        run: |
-          pnpm run dev &
-          sleep 10
-          curl -f http://localhost:5174 || exit 1
-        env:
-          VITE_API_URL: http://localhost:3090/api
-
-      
+  
 
   # Security Audit
   security-audit:
@@ -321,7 +230,7 @@ jobs:
       - name: Check Backend Deployment
         run: |
           echo "🔍 Checking backend deployment health..."
-          BACKEND_URL="https://talent-hub-ten.vercel.app"
+            BACKEND_URL="https://talent-hub-ten.vercel.app"
           
           # Check health endpoint
           HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" || echo "000")

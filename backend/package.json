@@ -1,7 +1,7 @@
 {
-  "name": "talent-hub-backend",
+  "name": "recruita-backend",
   "version": "1.0.0",
-  "description": "Backend API for Talent Hub job matching platform",
+  "description": "Backend API for Recruita job matching platform",
   "main": "dist/index.js",
   "packageManager": "pnpm@10.11.0",
   "scripts": {

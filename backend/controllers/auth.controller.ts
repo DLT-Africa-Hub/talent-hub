@@ -107,7 +107,7 @@ const CLIENT_BASE_URL =
   process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:5174';
 
 const REFRESH_TOKEN_COOKIE_NAME =
-  process.env.REFRESH_TOKEN_COOKIE_NAME || 'talent_hub_refresh';
+  process.env.REFRESH_TOKEN_COOKIE_NAME || 'recruita_refresh';
 const isProduction = process.env.NODE_ENV === 'production';
 
 const buildUrlWithToken = (path: string, token: string): string => {

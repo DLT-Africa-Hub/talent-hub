@@ -135,7 +135,7 @@ export async function generateOfferPDF(offerData: OfferData): Promise<Buffer> {
       doc.moveDown();
       doc.fontSize(12);
       doc.text(
-        'Please review this offer carefully. To accept, please sign this document and upload it through the Talent Hub platform.',
+        'Please review this offer carefully. To accept, please sign this document and upload it through the Recruita platform.',
         { align: 'left' }
       );
       doc.moveDown(2);
@@ -387,7 +387,7 @@ export async function createAndSendOffer(
       relatedType: 'application',
       email: {
         subject: `Job Offer: ${jobTitle} at ${companyName}`,
-        text: `${offerMessage}\n\nDownload your offer letter from the Talent Hub platform.`,
+        text: `${offerMessage}\n\nDownload your offer letter from the Recruita platform.`,
       },
     });
   }

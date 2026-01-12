@@ -63,7 +63,7 @@ app.use(userRateLimiter);
 app.get('/', (_req, res) => {
   res.success({
     status: 'ok',
-    message: 'Talent Hub API',
+    message: 'Recruita API',
     version: '1.0.0',
     endpoints: {
       health: '/health',
@@ -76,11 +76,11 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/health', (_req, res) => {
-  res.success({ status: 'ok', message: 'Talent Hub API is running' });
+  res.success({ status: 'ok', message: 'Recruita API is running' });
 });
 
 app.get(`${API_PREFIX}/health`, (_req, res) => {
-  res.success({ status: 'ok', message: 'Talent Hub API is running' });
+  res.success({ status: 'ok', message: 'Recruita API is running' });
 });
 
 // Simple test endpoint that doesn't require MongoDB

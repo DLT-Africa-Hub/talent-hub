@@ -1,8 +1,8 @@
 // MongoDB initialization script
 // This script runs when the MongoDB container is first created
 
-// Switch to the talent-hub database
-db = db.getSiblingDB('talent-hub');
+// Switch to the Recruita database
+db = db.getSiblingDB('Recruita');
 
 // Create collections with validation (optional)
 db.createCollection('users');

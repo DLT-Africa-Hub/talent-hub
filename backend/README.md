@@ -1,6 +1,6 @@
 # Backend API
 
-Node.js + Express + TypeScript backend for Talent Hub.
+Node.js + Express + TypeScript backend for Recruita.
 
 ## Setup
 

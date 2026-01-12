@@ -1954,7 +1954,7 @@ export const updateMatchStatus = async (
             `Hi ${graduateData.firstName ?? 'there'},`,
             '',
             `${company.companyName} has ${validatedStatus} your match for "${job.title}".`,
-            'Sign in to Talent Hub to review the details.',
+            'Sign in to Recruita to review the details.',
           ].join('\n'),
         },
       });
@@ -3167,7 +3167,7 @@ export const scheduleInterview = async (
         relatedType: 'interview',
         email: {
           subject: `Interview Scheduled: ${jobData?.title || 'Position'} at ${company.companyName}`,
-          text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData?.title || 'the position'}" at ${company.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+          text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData?.title || 'the position'}" at ${company.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Recruita Interviews tab when it's time.\n\nBest of luck!`,
         },
       }),
       createNotification({

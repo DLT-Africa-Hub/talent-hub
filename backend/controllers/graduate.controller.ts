@@ -2482,7 +2482,7 @@ export const updateApplicationStatus = async (
                 `Hi ${company.companyName || 'there'},`,
                 '',
                 `${graduate.firstName} ${graduate.lastName} has withdrawn their application for "${job.title}".`,
-                'Sign in to Talent Hub to update your pipeline if needed.',
+                'Sign in to Recruita to update your pipeline if needed.',
               ].join('\n'),
             },
           });

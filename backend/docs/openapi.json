@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Talent Hub API",
+    "title": "Recruita API",
     "version": "1.0.0",
-    "description": "API documentation for the Talent Hub platform."
+    "description": "API documentation for the Recruita platform."
   },
   "servers": [
     {

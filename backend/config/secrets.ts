@@ -278,7 +278,7 @@ const emailConfigSchema = z.object({
     }),
   }),
   from: z.object({
-    name: z.string().default('Talent Hub'),
+    name: z.string().default('Recruita'),
     email: z.string().email('From email must be valid'),
   }),
   retry: z.object({
@@ -307,8 +307,8 @@ const parseEmailConfig = () => {
         },
       },
       from: {
-        name: 'Talent Hub',
-        email: process.env.EMAIL_FROM || 'noreply@talenthub.com',
+        name: 'Recruita',
+        email: process.env.EMAIL_FROM || 'noreply@recruita.com',
       },
       retry: {
         maxAttempts: 3,
@@ -339,8 +339,8 @@ const parseEmailConfig = () => {
         },
       },
       from: {
-        name: 'Talent Hub',
-        email: process.env.EMAIL_FROM || smtpUser || 'noreply@talenthub.com',
+        name: 'Recruita',
+        email: process.env.EMAIL_FROM || smtpUser || 'noreply@recruita.com',
       },
       retry: {
         maxAttempts: 3,
@@ -363,7 +363,7 @@ const parseEmailConfig = () => {
       },
     },
     from: {
-      name: process.env.EMAIL_FROM_NAME || 'Talent Hub',
+      name: process.env.EMAIL_FROM_NAME || 'Recruita',
       email: process.env.EMAIL_FROM || smtpUser,
     },
     retry: {

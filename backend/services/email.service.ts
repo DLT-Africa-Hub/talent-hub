@@ -228,7 +228,7 @@ class EmailService {
     const variables = getEmailVerificationVariables(verificationLink);
     await this.sendTemplatedEmail({
       to,
-      subject: 'Verify your Talent Hub email',
+      subject: 'Verify your Recruita email',
       template: 'email-verification',
       templateVariables: variables,
     });
@@ -241,7 +241,7 @@ class EmailService {
     const variables = getPasswordResetVariables(resetLink);
     await this.sendTemplatedEmail({
       to,
-      subject: 'Reset your Talent Hub password',
+      subject: 'Reset your Recruita password',
       template: 'password-reset',
       templateVariables: variables,
     });

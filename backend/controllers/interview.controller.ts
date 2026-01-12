@@ -598,7 +598,7 @@ export const suggestTimeSlots = async (
       relatedType: 'interview',
       email: {
         subject: `Interview Time Slots: ${jobData.title} at ${company.companyName}`,
-        text: `Hello ${graduateName || 'there'},\n\n${company.companyName} has suggested ${suggestedSlots.length} time slot${suggestedSlots.length > 1 ? 's' : ''} for your interview for "${jobData.title}".\n\nPlease log in to Talent Hub to view the available times and select your preferred slot.\n\nBest of luck!`,
+        text: `Hello ${graduateName || 'there'},\n\n${company.companyName} has suggested ${suggestedSlots.length} time slot${suggestedSlots.length > 1 ? 's' : ''} for your interview for "${jobData.title}".\n\nPlease log in to Recruita to view the available times and select your preferred slot.\n\nBest of luck!`,
       },
     });
   } catch (error) {
@@ -930,7 +930,7 @@ export const selectTimeSlot = async (
           relatedType: 'interview',
           email: {
             subject: `Interview Confirmed: ${jobTitle || 'Position'}`,
-            text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
+            text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Recruita Interviews tab when it's time.`,
           },
         });
       } else {
@@ -949,7 +949,7 @@ export const selectTimeSlot = async (
           relatedType: 'interview',
           email: {
             subject: `Interview Confirmed: ${jobTitle || 'Position'}`,
-            text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
+            text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Recruita Interviews tab when it's time.`,
           },
         });
       }
@@ -1832,7 +1832,7 @@ export const scheduleCalendlyInterview = async (
         relatedType: 'interview',
         email: {
           subject: `Interview Scheduled: ${job.title || 'Position'} at ${companyName}${stageInfoData.stageInfo}`,
-          text: `Hello ${graduateName},\n\nYour interview${stageInfoData.stageInfo} for "${job.title || 'the position'}" at ${companyName} has been scheduled via Calendly.\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}${stageInfoData.totalStagesInfo}\n\n📅 Add to Calendar: The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+          text: `Hello ${graduateName},\n\nYour interview${stageInfoData.stageInfo} for "${job.title || 'the position'}" at ${companyName} has been scheduled via Calendly.\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}${stageInfoData.totalStagesInfo}\n\n📅 Add to Calendar: The interview has been added to your Calendly calendar. You can also join directly from your Recruita Interviews tab when it's time.\n\nBest of luck!`,
         },
       });
 
@@ -1854,7 +1854,7 @@ export const scheduleCalendlyInterview = async (
           relatedType: 'interview',
           email: {
             subject: `Interview Scheduled: ${graduateName} - ${job.title || 'Position'}${stageInfoData.stageInfo}`,
-            text: `Hello,\n\n${graduateName} has scheduled an interview${stageInfoData.stageInfo} via Calendly for "${job.title || 'the position'}".\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}${stageInfoData.totalStagesInfo}\n\n📅 The interview has been added to your Calendly calendar. You can also join directly from your Talent Hub Interviews tab when it's time.`,
+            text: `Hello,\n\n${graduateName} has scheduled an interview${stageInfoData.stageInfo} via Calendly for "${job.title || 'the position'}".\n\nDate & Time: ${formattedDate}\nDuration: ${durationMinutes} minutes\nJoin Link: ${roomUrl}${stageInfoData.totalStagesInfo}\n\n📅 The interview has been added to your Calendly calendar. You can also join directly from your Recruita Interviews tab when it's time.`,
           },
         });
       }
@@ -2463,7 +2463,7 @@ export const rescheduleMissedInterview = async (
           relatedType: 'interview',
           email: {
             subject: `Interview Rescheduled: ${jobTitle} at ${company.companyName}`,
-            text: `Hello ${graduateName},\n\n${company.companyName} has rescheduled your interview for "${jobTitle}". ${suggestedSlots.length} new time slot${suggestedSlots.length > 1 ? 's have' : ' has'} been suggested.\n\nPlease log in to Talent Hub to view the available times and select your preferred slot.\n\nBest of luck!`,
+            text: `Hello ${graduateName},\n\n${company.companyName} has rescheduled your interview for "${jobTitle}". ${suggestedSlots.length} new time slot${suggestedSlots.length > 1 ? 's have' : ' has'} been suggested.\n\nPlease log in to Recruita to view the available times and select your preferred slot.\n\nBest of luck!`,
           },
         });
       } catch (error) {

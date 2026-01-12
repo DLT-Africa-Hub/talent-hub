@@ -1,6 +1,6 @@
 # Frontend
 
-React + Vite frontend for Talent Hub.
+React + Vite frontend for Recruita.
 
 ## Setup
 

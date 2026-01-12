@@ -15,7 +15,7 @@ export const connectTestDb = async (): Promise<void> => {
   process.env.MONGODB_URI = uri;
 
   await mongoose.connect(uri, {
-    dbName: 'talent-hub-test',
+    dbName: 'recruita-test',
   });
 };
 

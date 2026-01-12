@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Talent Hub AI Service",
+    title="Recruita AI Service",
     description="AI microservice for job matching and candidate evaluation",
     version="1.0.0",
     lifespan=lifespan,
@@ -237,7 +237,7 @@ class FeedbackResponse(BaseModel):
 async def root():
     """Root endpoint"""
     return {
-        "service": "Talent Hub AI Service",
+        "service": "Recruita AI Service",
         "version": "1.0.0",
         "status": "running",
         "endpoints": {

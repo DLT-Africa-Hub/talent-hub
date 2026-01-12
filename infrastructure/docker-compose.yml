@@ -4,7 +4,7 @@ services:
   # MongoDB Database
   mongodb:
     image: mongo:7
-    container_name: talent-hub-mongodb
+    container_name: recruita-mongodb
     ports:
       - "27017:27017"
     volumes:
@@ -13,9 +13,9 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: talent-hub
+      MONGO_INITDB_DATABASE: recruita
     networks:
-      - talent-hub-network
+      - recruita-network
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
@@ -27,13 +27,13 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: talent-hub-backend
+    container_name: recruita-backend
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGODB_URI=mongodb://admin:password@mongodb:27017/talent-hub?authSource=admin
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/recruita?authSource=admin
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - JWT_EXPIRE=7d
       - AI_SERVICE_URL=http://ai-service:8000
@@ -44,7 +44,7 @@ services:
       ai-service:
         condition: service_started
     networks:
-      - talent-hub-network
+      - recruita-network
     volumes:
       - ../backend:/app
       - /app/node_modules
@@ -55,7 +55,7 @@ services:
     build:
       context: ../ai-service
       dockerfile: Dockerfile
-    container_name: talent-hub-ai-service
+    container_name: recruita-ai-service
     ports:
       - "8000:8000"
     environment:
@@ -63,7 +63,7 @@ services:
       - PORT=8000
       - HOST=0.0.0.0
     networks:
-      - talent-hub-network
+      - recruita-network
     volumes:
       - ../ai-service:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -73,7 +73,7 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
-    container_name: talent-hub-frontend
+    container_name: recruita-frontend
     ports:
       - "5174:5174"
     environment:
@@ -81,14 +81,14 @@ services:
     depends_on:
       - backend
     networks:
-      - talent-hub-network
+      - recruita-network
     volumes:
       - ../frontend:/app
       - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
 
 networks:
-  talent-hub-network:
+  recruita-network:
     driver: bridge
 
 volumes:
